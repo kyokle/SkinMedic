@@ -1,0 +1,298 @@
+/* ============================================================
+   patient_page.css
+   ============================================================ */
+
+body {
+    display: flex;
+    min-height: 100vh;
+}
+
+.main {
+    margin-left: 260px;
+    flex: 1;
+    padding: 32px 36px;
+    min-height: 100vh;
+    background: #f5f4f0;
+}
+
+/* ── Topbar ── */
+.topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 24px;
+}
+
+.topbar h2 {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: #1a1f16;
+}
+
+.date-box {
+    background: #fff;
+    border: 1px solid #e2e6ea;
+    border-radius: 8px;
+    padding: 8px 16px;
+    text-align: right;
+    font-size: 0.8rem;
+    color: #666;
+}
+
+.date-box strong {
+    display: block;
+    color: #1a1f16;
+    font-size: 0.9rem;
+}
+
+/* ── Welcome Banner ── */
+.welcome-banner {
+    background: linear-gradient(135deg, #80a833 0%, #5f7f24 100%);
+    border-radius: 14px;
+    padding: 24px 28px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 22px;
+    color: #fff;
+    overflow: hidden;
+    position: relative;
+}
+
+.welcome-banner::after {
+    content: '';
+    position: absolute;
+    right: -30px;
+    top: -40px;
+    width: 180px;
+    height: 180px;
+    background: rgba(255, 255, 255, 0.07);
+    border-radius: 50%;
+}
+
+.welcome-banner::before {
+    content: '';
+    position: absolute;
+    right: 60px;
+    bottom: -60px;
+    width: 140px;
+    height: 140px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 50%;
+}
+
+.welcome-banner h3 {
+    font-size: 1.3rem;
+    font-weight: 700;
+    margin-bottom: 4px;
+}
+
+.welcome-banner p {
+    font-size: 0.85rem;
+    opacity: 0.85;
+    margin: 0;
+}
+
+.welcome-banner img {
+    width: 110px;
+    opacity: 0.92;
+    position: relative;
+    z-index: 1;
+}
+
+.book-now-btn {
+    display: inline-block;
+    margin-top: 12px;
+    background: #fff;
+    color: #5f7f24;
+    padding: 8px 18px;
+    border-radius: 20px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    text-decoration: none;
+    transition: 0.2s;
+}
+.book-now-btn:hover { background: #f0f8e0; }
+
+/* ── Stat Cards ── */
+.status {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.card {
+    background: #fff;
+    border: 1px solid #e2e6ea;
+    border-radius: 12px;
+    padding: 20px 22px;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+    position: relative;
+    overflow: hidden;
+}
+
+.card::before {
+    content: attr(data-icon);
+    position: absolute;
+    right: 14px;
+    top: 12px;
+    font-size: 1.6rem;
+    opacity: 0.18;
+}
+
+.card h2 {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #1a1f16;
+    margin-bottom: 4px;
+}
+
+.card p {
+    font-size: 0.82rem;
+    color: #8a9080;
+    margin: 0;
+}
+
+/* ── Section Header ── */
+.section-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin: 22px 0 12px;
+}
+
+.section-head h3 {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #333;
+}
+
+.section-head a {
+    font-size: 0.8rem;
+    color: #80a833;
+    text-decoration: none;
+    background: #eef4e0;
+    padding: 5px 12px;
+    border-radius: 20px;
+    font-weight: 500;
+}
+.section-head a:hover { background: #d4e8a0; }
+
+/* ── Appointments Table ── */
+.table-wrap {
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+}
+
+.appt-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.88rem;
+}
+
+.appt-table th {
+    background: #80a833;
+    color: #fff;
+    padding: 10px 12px;
+    text-align: left;
+    font-weight: 600;
+}
+
+.appt-table td {
+    padding: 10px 12px;
+    border-bottom: 1px solid #eee;
+}
+
+.appt-table tr:last-child td { border-bottom: none; }
+
+.appt-table tr.clickable-row {
+    cursor: pointer;
+    transition: background 0.15s;
+}
+.appt-table tr.clickable-row:hover td { background: #fafff2; }
+
+.pill { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 0.75rem; font-weight: 600; }
+.pill-pending   { background: #fef3c7; color: #92400e; }
+.pill-approved  { background: #dcfce7; color: #166534; }
+.pill-completed { background: #dbeafe; color: #1e40af; }
+.pill-cancelled { background: #fee2e2; color: #991b1b; }
+
+.no-data-box {
+    text-align: center;
+    padding: 36px;
+    color: #aaa;
+    font-size: 0.88rem;
+    border: 2px dashed #e5e7eb;
+    border-radius: 10px;
+}
+
+/* ── Modal ── */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0; top: 0;
+    width: 100%; height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    justify-content: center;
+    align-items: center;
+}
+
+.modal.open { display: flex; }
+
+.modal-content {
+    background: #fff;
+    padding: 26px;
+    width: 420px;
+    border-radius: 14px;
+    position: relative;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+    animation: popIn 0.22s ease;
+}
+
+@keyframes popIn {
+    from { opacity: 0; transform: scale(0.95) translateY(-8px); }
+    to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.modal-content h3 { margin-bottom: 16px; font-size: 1rem; color: #333; }
+
+.modal-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-bottom: 1px solid #f3f3f3;
+    font-size: 0.86rem;
+}
+.modal-row:last-of-type { border-bottom: none; }
+.modal-row span:first-child { color: #888; font-weight: 500; }
+.modal-row span:last-child  { color: #333; font-weight: 600; }
+
+.close {
+    position: absolute;
+    right: 16px; top: 12px;
+    font-size: 20px;
+    cursor: pointer;
+    color: #999;
+}
+.close:hover { color: #333; }
+
+.cancel-btn {
+    margin-top: 18px;
+    width: 100%;
+    padding: 10px;
+    background: #ef4444;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.88rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+.cancel-btn:hover { background: #dc2626; }
+#cancelForm { display: block; }

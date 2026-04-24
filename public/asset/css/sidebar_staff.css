@@ -1,0 +1,207 @@
+/* ============================================================
+   sidebar_staff.css
+   ============================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Fraunces:ital,wght@0,700;1,400&display=swap');
+
+:root {
+    --sb-bg: #1a1f16;
+    --sb-w: 260px;
+    --accent: #80a833;
+    --accent-light: #b5d45a;
+    --accent-muted: rgba(128, 168, 51, 0.15);
+    --tx: #f0f0ec;
+    --tm: #8a9080;
+    --bd: rgba(255, 255, 255, 0.06);
+    --hv: rgba(128, 168, 51, 0.12);
+}
+
+body {
+    font-family: 'DM Sans', sans-serif;
+    background: #f5f4f0;
+    color: #1a1f16;
+    display: flex;
+    min-height: 100vh;
+}
+
+.sidebar {
+    width: var(--sb-w);
+    min-height: 100vh;
+    background: var(--sb-bg);
+    position: fixed;
+    top: 0; left: 0;
+    display: flex;
+    flex-direction: column;
+    z-index: 200;
+    border-right: 1px solid var(--bd);
+    transition: transform 0.28s ease;
+}
+
+/* ── Profile Section ── */
+.sb-profile {
+    padding: 24px 22px 18px;
+    border-bottom: 1px solid var(--bd);
+    text-align: center;
+}
+
+.sb-pic-wrap {
+    position: relative;
+    width: 64px;
+    height: 64px;
+    margin: 0 auto 12px;
+    cursor: pointer;
+}
+
+.sb-pic-wrap img {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid var(--accent);
+    display: block;
+}
+
+.sb-pic-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,0.55);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.2s;
+    font-size: 18px;
+}
+.sb-pic-wrap:hover .sb-pic-overlay { opacity: 1; }
+
+.sb-name  { font-weight: 600; font-size: 14px; color: var(--tx); margin-bottom: 3px; }
+.sb-email { font-size: 11px; color: var(--tm); margin-bottom: 8px; word-break: break-all; }
+
+.sb-badge {
+    display: inline-block;
+    background: var(--accent-muted);
+    color: var(--accent-light);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    padding: 3px 10px;
+    border-radius: 20px;
+    border: 1px solid rgba(128, 168, 51, 0.3);
+}
+
+/* ── Navigation ── */
+.sb-nav {
+    flex: 1;
+    padding: 16px 12px;
+    overflow-y: auto;
+}
+
+.sb-label {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--tm);
+    padding: 10px 10px 5px;
+    display: block;
+}
+
+.sb-nav a {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    text-decoration: none;
+    color: var(--tm);
+    font-size: 13.5px;
+    font-weight: 400;
+    transition: all 0.18s;
+    margin-bottom: 2px;
+}
+
+.sb-nav a .ni {
+    width: 20px;
+    text-align: center;
+    font-size: 15px;
+    flex-shrink: 0;
+}
+
+.sb-nav a:hover  { background: var(--hv); color: var(--tx); }
+.sb-nav a.active { background: var(--accent); color: #fff; font-weight: 600; }
+
+/* ── Footer / Logout ── */
+.sb-footer {
+    padding: 16px 12px;
+    border-top: 1px solid var(--bd);
+}
+
+.sb-logout {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 10px 12px;
+    background: rgba(220, 38, 38, 0.1);
+    border: 1px solid rgba(220, 38, 38, 0.2);
+    border-radius: 8px;
+    color: #f87171;
+    font-size: 13.5px;
+    font-weight: 500;
+    cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+    transition: all 0.18s;
+}
+.sb-logout:hover { background: rgba(220, 38, 38, 0.2); color: #fca5a5; }
+
+/* ── Main content ── */
+.main, main.content {
+    margin-left: var(--sb-w);
+    flex: 1;
+    min-height: 100vh;
+    transition: margin-left 0.28s ease;
+}
+
+/* ── Hamburger button ── */
+.sb-hamburger {
+    display: none;
+    position: fixed;
+    top: 14px;
+    left: 14px;
+    z-index: 300;
+    background: var(--sb-bg);
+    border: 1px solid var(--bd);
+    border-radius: 8px;
+    padding: 8px 10px;
+    cursor: pointer;
+    flex-direction: column;
+    gap: 5px;
+}
+.sb-hamburger span {
+    display: block;
+    width: 22px;
+    height: 2px;
+    background: var(--tx);
+    border-radius: 2px;
+    transition: all 0.2s;
+}
+
+/* ── Overlay ── */
+.sb-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 150;
+}
+.sb-overlay.active { display: block; }
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+    .sb-hamburger { display: flex; }
+    .sidebar { transform: translateX(-100%); }
+    .sidebar.open { transform: translateX(0); }
+    .main, main.content { margin-left: 0; width: 100%; }
+}

@@ -1,0 +1,104 @@
+/* =============================================
+   admin_add-account.css — Create Account Page
+   Add/merge into users_style.css or link separately
+============================================= */
+
+:root {
+  --accent: #80a833;
+  --bg:     #f5f4f0;
+  --card:   #ffffff;
+  --border: #e8e6e0;
+  --muted:  #7a8070;
+  --text:   #1a1f16;
+}
+
+body  { background: var(--bg); font-family: 'DM Sans', sans-serif; color: var(--text); display: flex; min-height: 100vh; }
+.main { margin-left: 260px; padding: 32px 36px; flex: 1; min-height: 100vh; }
+
+.page-title { font-family: 'Fraunces', serif; font-size: 28px; margin-bottom: 4px; }
+.page-sub   { font-size: 13px; color: var(--muted); margin-bottom: 28px; }
+
+/* ── Layout ── */
+.create-layout { display: grid; grid-template-columns: 1fr 340px; gap: 24px; align-items: start; }
+
+/* ── Main form card ── */
+.card           { background: var(--card); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; }
+.card-head      { padding: 20px 28px; border-bottom: 1px solid var(--border); background: #fafaf8; display: flex; align-items: center; gap: 12px; }
+.card-head-icon { width: 38px; height: 38px; background: var(--accent); border-radius: 9px; display: flex; align-items: center; justify-content: center; font-size: 18px; }
+.card-head h3   { font-size: 15px; font-weight: 600; margin: 0; }
+.card-head p    { font-size: 12px; color: var(--muted); margin: 2px 0 0; }
+.card-body      { padding: 28px; }
+
+/* ── Form elements ── */
+.form-row   { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.form-group { margin-bottom: 18px; }
+.form-group label { display: block; font-size: 11.5px; font-weight: 600; text-transform: uppercase; letter-spacing: .8px; color: var(--muted); margin-bottom: 6px; }
+.form-group input,
+.form-group select {
+  width: 100%; padding: 11px 14px;
+  border: 1.5px solid var(--border); border-radius: 10px;
+  font-size: 14px; font-family: 'DM Sans', sans-serif;
+  background: #fff; color: var(--text);
+  outline: none; transition: border-color .2s, box-shadow .2s;
+  box-sizing: border-box;
+}
+.form-group input:focus,
+.form-group select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(128,168,51,.12); }
+
+.section-divider {
+  font-size: 11px; font-weight: 600; text-transform: uppercase;
+  letter-spacing: 1px; color: var(--muted);
+  padding: 4px 0 12px; border-bottom: 1px solid var(--border); margin-bottom: 18px;
+}
+
+/* ── Password field ── */
+.pw-wrap          { position: relative; }
+.pw-toggle        { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; font-size: 14px; color: var(--muted); }
+.strength-bar     { height: 4px; border-radius: 4px; background: #e8e6e0; margin-top: 6px; overflow: hidden; }
+.strength-fill    { height: 100%; width: 0%; border-radius: 4px; transition: width .35s, background .35s; }
+.strength-label   { font-size: 11px; color: var(--muted); margin-top: 4px; min-height: 15px; }
+.pw-checklist     { list-style: none; margin-top: 8px; display: grid; grid-template-columns: 1fr 1fr; gap: 3px 16px; }
+.pw-checklist li  { font-size: 12px; color: var(--muted); display: flex; align-items: center; gap: 5px; transition: color .2s; }
+.pw-checklist li.ok { color: var(--accent); }
+.pw-checklist li .chk { width: 14px; text-align: center; }
+
+/* ── Role selector ── */
+.role-grid          { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 6px; }
+.role-card          { border: 2px solid var(--border); border-radius: 10px; padding: 14px 10px; cursor: pointer; transition: all .18s; text-align: center; }
+.role-card input[type="radio"] { display: none; }
+.role-card .role-icon { font-size: 24px; margin-bottom: 6px; }
+.role-card .role-name { font-size: 12px; font-weight: 600; color: var(--muted); }
+.role-card:hover        { border-color: #b5d45a; }
+.role-card.selected     { border-color: var(--accent); background: #f0f7e0; }
+.role-card.selected .role-name { color: var(--accent); }
+
+/* ── Submit button ── */
+.submit-btn {
+  width: 100%; padding: 13px; background: var(--accent); color: #fff;
+  border: none; border-radius: 10px; font-size: 15px; font-weight: 600;
+  font-family: 'DM Sans', sans-serif; cursor: pointer; transition: background .2s; margin-top: 8px;
+}
+.submit-btn:hover { background: #6b8f28; }
+
+/* ── Sidebar info cards ── */
+.info-card          { background: var(--card); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; margin-bottom: 16px; }
+.info-card-head     { padding: 18px 22px; }
+.info-card-head h3  { font-family: 'Fraunces', serif; font-size: 16px; margin-bottom: 3px; }
+.info-card-head p   { font-size: 12px; opacity: .8; margin: 0; }
+.info-card-body     { padding: 18px 22px; }
+.info-rule          { display: flex; gap: 10px; align-items: flex-start; margin-bottom: 14px; }
+.info-rule-icon     { font-size: 17px; flex-shrink: 0; margin-top: 1px; }
+.info-rule-text     { font-size: 13px; color: var(--text); }
+.info-rule-text strong { display: block; font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 2px; }
+
+/* ── Alert banners ── */
+.alert          { border-radius: 10px; padding: 14px 18px; margin-bottom: 20px; font-size: 13.5px; display: flex; gap: 10px; align-items: flex-start; }
+.alert-success  { background: #dcfce7; border: 1px solid #86efac; color: #166534; }
+.alert-error    { background: #fee2e2; border: 1px solid #fca5a5; color: #991b1b; }
+.alert-icon     { font-size: 17px; flex-shrink: 0; }
+
+/* ── Responsive ── */
+@media (max-width: 1000px) {
+  .create-layout { grid-template-columns: 1fr; }
+  .form-row      { grid-template-columns: 1fr; }
+}

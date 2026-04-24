@@ -1,0 +1,45 @@
+.add-service-container {
+    margin: 40px auto;
+    background: #fff;
+    border-radius: 20px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    padding: 40px;
+    max-width: 600px;
+}
+
+.add-service-container h2 {
+    text-align: center;
+    margin-bottom: 20px;
+    color: #333;
+}
+
+.add-service-container form {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.add-service-container input, 
+.add-service-container textarea, 
+.add-service-container select {
+    padding: 10px;
+    font-size: 1rem;
+    border-radius: 10px;
+    border: 1px solid #ccc;
+    outline: none;
+}
+
+.add-service-container button {
+    background-color: #008080;
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    padding: 12px;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background 0.2s ease;
+}
+
+.add-service-container button:hover {
+    background-color: #006666;
+}

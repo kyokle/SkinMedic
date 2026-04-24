@@ -1,0 +1,239 @@
+/* =============================================
+   book_appointment.css — Patient Booking Page
+============================================= */
+
+*, *::before, *::after { box-sizing: border-box; }
+
+body {
+  font-family: Arial, sans-serif;
+  background: #f5f5f5;
+  padding: 20px;
+  margin: 0;
+}
+
+.container {
+  max-width: 520px;
+  margin: 40px auto;
+  background: #fff;
+  padding: 28px;
+  border-radius: 12px;
+  box-shadow: 0 3px 12px rgba(0,0,0,0.1);
+}
+
+h2 {
+  text-align: center;
+  margin-bottom: 20px;
+  font-size: 1.4rem;
+  color: #1a1a1a;
+}
+
+/* ── Alerts ── */
+.alert {
+  padding: 12px 14px;
+  border-radius: 8px;
+  margin-bottom: 16px;
+  font-size: 0.9rem;
+}
+.alert-success {
+  background: #d1fae5;
+  border: 1px solid #6ee7b7;
+  color: #065f46;
+}
+.alert-error {
+  background: #fee2e2;
+  border: 1px solid #fca5a5;
+  color: #991b1b;
+}
+
+/* ── Service Summary Card ── */
+.service-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: #f0f7e4;
+  border: 1px solid #c2dfa0;
+  border-left: 5px solid #80a833;
+  border-radius: 10px;
+  padding: 14px 16px;
+  margin-bottom: 20px;
+}
+.service-card-icon {
+  font-size: 1.8rem;
+  flex-shrink: 0;
+}
+.service-card-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.service-card-label {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: #6b7280;
+}
+.service-card-name {
+  font-weight: 700;
+  font-size: 1rem;
+  color: #1a1a1a;
+}
+.service-card-price {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #80a833;
+}
+
+/* ── Regular badge ── */
+.regular-badge {
+  display: inline-block;
+  background: #fef9c3;
+  border: 1px solid #fde68a;
+  color: #854d0e;
+  font-size: 0.82rem;
+  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: 999px;
+  margin-bottom: 16px;
+}
+
+/* ── Form layout ── */
+form {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-bottom: 14px;
+}
+
+label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #374151;
+}
+
+.req {
+  color: #dc2626;
+  margin-left: 2px;
+}
+
+/* ── Inputs & Selects ── */
+input, select {
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1.5px solid #d1d5db;
+  font-size: 0.95rem;
+  font-family: Arial, sans-serif;
+  color: #1a1a1a;
+  background: #fff;
+  width: 100%;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+input:focus, select:focus {
+  outline: none;
+  border-color: #80a833;
+  box-shadow: 0 0 0 3px rgba(128,168,51,0.15);
+}
+
+input[readonly], input:disabled {
+  background: #f9fafb;
+  color: #6b7280;
+  cursor: not-allowed;
+}
+
+select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236b7280' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  padding-right: 2rem;
+}
+
+select:disabled {
+  background-color: #f9fafb;
+  color: #9ca3af;
+  cursor: not-allowed;
+}
+
+/* ── Validation states ── */
+input.is-invalid, select.is-invalid {
+  border-color: #dc2626;
+  background-color: #fff5f5;
+}
+input.is-valid, select.is-valid {
+  border-color: #16a34a;
+}
+.field-error {
+  font-size: 0.8rem;
+  color: #dc2626;
+  margin-top: 2px;
+}
+
+/* ── Locked time box ── */
+.locked-time {
+  padding: 10px 12px;
+  background: #fef9c3;
+  border: 1.5px solid #fde68a;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  color: #854d0e;
+  font-weight: 600;
+}
+
+/* ── Time loading text ── */
+.time-loading {
+  font-size: 0.82rem;
+  color: #6b7280;
+  display: none;
+  margin-bottom: 4px;
+}
+
+/* ── Submit button ── */
+button[type="submit"] {
+  background: #80a833;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 12px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 8px;
+  transition: background 0.2s, transform 0.1s;
+  width: 100%;
+}
+button[type="submit"]:hover    { background: #6f8e2d; }
+button[type="submit"]:active   { transform: scale(0.99); }
+button[type="submit"]:disabled { background: #a3c47a; cursor: not-allowed; }
+
+/* ── Back link ── */
+.back-btn {
+  display: block;
+  text-align: center;
+  margin-top: 14px;
+  color: #80a833;
+  text-decoration: none;
+  font-size: 0.9rem;
+  transition: color 0.2s;
+}
+.back-btn:hover { color: #4e7a1e; }
+
+/* ── Mobile ── */
+@media (max-width: 540px) {
+  body        { padding: 12px; }
+  .container  { margin: 16px auto; padding: 20px 16px; }
+  .form-row   { grid-template-columns: 1fr; gap: 0; }
+  h2          { font-size: 1.2rem; }
+}

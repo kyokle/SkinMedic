@@ -1,0 +1,197 @@
+/* =============================================
+   staff_inventory.css — matches admin_inventory.css
+============================================= */
+
+.main {
+    padding: 32px 36px;
+    background: #f4f4f4;
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    margin-left: 260px;
+}
+
+/* ── Topbar ── */
+.topbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 18px;
+}
+
+.topbar h2 {
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: #222;
+}
+
+.date-box {
+    background: #fff;
+    border: 1px solid #e2e6ea;
+    border-radius: 8px;
+    padding: 8px 16px;
+    text-align: right;
+    font-size: 0.8rem;
+    color: #666;
+}
+
+.date-box p      { margin: 0; }
+.date-box strong { display: block; color: #1a1f16; font-size: 0.9rem; }
+
+/* ── Alert banners ── */
+.alert-block {
+    padding: 12px 16px;
+    border-radius: 8px;
+    margin-bottom: 14px;
+    font-size: 0.92rem;
+    line-height: 1.8;
+}
+
+.alert-block.warning {
+    background: #fffbe6;
+    border-left: 4px solid #f0c040;
+    color: #7a5c00;
+}
+
+.alert-block.danger {
+    background: #fff0f0;
+    border-left: 4px solid #e53e3e;
+    color: #7a0000;
+}
+
+/* ── Table wrapper ── */
+.table-wrapper {
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    max-width: 100%;
+}
+
+/* ── Table ── */
+.inventory-table {
+    width: 100%;
+    min-width: 900px;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+}
+
+.inventory-table thead tr {
+    border-bottom: 2px solid #e8e8e8;
+}
+
+.inventory-table th {
+    padding: 13px 14px;
+    text-align: center;
+    font-weight: 600;
+    color: #444;
+    white-space: nowrap;
+    background: #fff;
+}
+
+.inventory-table td {
+    padding: 13px 14px;
+    text-align: center;
+    border-bottom: 1px solid #f0f0f0;
+    color: #333;
+    vertical-align: middle;
+}
+
+.inventory-table tbody tr:last-child td { border-bottom: none; }
+.inventory-table tbody tr:hover         { background: #f9fdf2; }
+
+.product-name {
+    text-align: left !important;
+    font-weight: 500;
+    color: #222;
+}
+
+/* ── Status badges ── */
+.status-badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 0.82rem;
+    font-weight: 600;
+}
+
+.status-badge.in  { color: #2e7d32; background: #edf7ee; }
+.status-badge.low { color: #b45309; background: #fffbeb; }
+.status-badge.out { color: #c62828; background: #fff0f0; }
+
+/* ── Expiry colour coding ── */
+.exp-ok        { color: #333;    font-weight: 600; }
+.exp-warning   { color: #d97706; font-weight: 700; }
+.exp-danger    { color: #dc2626; font-weight: 700; }
+.exp-next      { color: #999;    font-size: 0.85em; }
+.expired-label { color: #dc2626; font-weight: 600; }
+
+/* ── Add-stock inline form ── */
+.add-stock-form {
+    display: flex;
+    gap: 5px;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.input-qty {
+    width: 58px;
+    padding: 5px 6px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    text-align: center;
+}
+
+.input-date {
+    width: 130px;
+    padding: 5px 6px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    font-size: 0.85rem;
+}
+
+.add-btn {
+    padding: 6px 14px;
+    background: #80a833;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 600;
+    white-space: nowrap;
+    transition: background 0.2s;
+}
+
+.add-btn:hover { background: #629b2a; }
+
+/* ── Responsive ── */
+@media (max-width: 1024px) {
+    .main { padding: 24px 20px; }
+}
+
+@media (max-width: 768px) {
+    .main         { padding: 16px 14px; margin-left: 0; }
+    .topbar       { flex-direction: column; align-items: flex-start; gap: 10px; }
+    .topbar h2    { font-size: 1.3rem; }
+    .alert-block  { font-size: 0.85rem; padding: 10px 12px; }
+
+    .inventory-table th,
+    .inventory-table td { font-size: 0.82rem; padding: 10px; }
+
+    .input-date { width: 115px; }
+}
+
+@media (max-width: 480px) {
+    .main { padding: 12px 10px; }
+    .topbar h2 { font-size: 1.1rem; }
+
+    .inventory-table th,
+    .inventory-table td { font-size: 0.75rem; padding: 8px; }
+
+    .input-qty  { width: 48px; }
+    .input-date { width: 105px; }
+    .add-btn    { padding: 5px 10px; font-size: 0.78rem; }
+}
