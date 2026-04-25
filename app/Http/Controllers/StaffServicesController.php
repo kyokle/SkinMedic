@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\SidebarDataController;
+use CloudinaryLabs\CloudinaryLaravel\Facades\Cloudinary;
 
 class StaffServicesController extends Controller
 {
@@ -28,10 +29,10 @@ class StaffServicesController extends Controller
         $status = $request->input('status');
 
         $imgName = 'default.png';
-        if ($request->hasFile('image') && $request->file('image')->isValid()) {
-            $imgName = time() . '_' . $request->file('image')->getClientOriginalName();
-            $request->file('image')->move(public_path('uploads'), $imgName);
-        }
+if ($request->hasFile('image') && $request->file('image')->isValid()) {
+    $uploaded = cloudinary()->uploadApi()->upload($request->file('image')->getRealPath());
+    $imgName = $uploaded['secure_url'];
+}
 
         DB::insert(
             "INSERT INTO services (name, description, price, image, status) VALUES (?, ?, ?, ?, ?)",
@@ -40,7 +41,6 @@ class StaffServicesController extends Controller
 
         $serviceId = DB::getPdo()->lastInsertId();
 
-        // Attach products used in this service
         if ($request->has('products')) {
             foreach ($request->input('products') as $prodId) {
                 $prodId = (int) $prodId;
@@ -55,10 +55,6 @@ class StaffServicesController extends Controller
         return redirect()->route('staff.services');
     }
 
-    /* =========================================
-       UPDATE — edit an existing service
-       PUT /staff/services/{id}
-    ========================================= */
     public function update(Request $request)
     {
         $serviceId = (int) $request->input('service_id');
@@ -68,12 +64,12 @@ class StaffServicesController extends Controller
         $status    = $request->input('status');
 
         if ($request->hasFile('image') && $request->file('image')->isValid()) {
-            $imgName = time() . '_' . $request->file('image')->getClientOriginalName();
-            $request->file('image')->move(public_path('uploads'), $imgName);
-            DB::update(
-                "UPDATE services SET name=?, description=?, price=?, image=?, status=? WHERE service_id=?",
-                [$name, $desc, $price, $imgName, $status, $serviceId]
-            );
+    $uploaded = cloudinary()->uploadApi()->upload($request->file('image')->getRealPath());
+    $imgName = $uploaded['secure_url'];
+    DB::update(
+        "UPDATE services SET name=?, description=?, price=?, image=?, status=? WHERE service_id=?",
+        [$name, $desc, $price, $imgName, $status, $serviceId]
+    );
         } else {
             DB::update(
                 "UPDATE services SET name=?, description=?, price=?, status=? WHERE service_id=?",
@@ -84,10 +80,6 @@ class StaffServicesController extends Controller
         return redirect()->route('staff.services');
     }
 
-    /* =========================================
-       DELETE — remove a service
-       DELETE /staff/services/{id}
-    ========================================= */
     public function delete(Request $request)
     {
         $serviceId = (int) $request->input('service_id');

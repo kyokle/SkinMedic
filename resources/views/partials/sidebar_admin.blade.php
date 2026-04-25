@@ -30,7 +30,7 @@
         <div class="sb-pic-wrap"
              onclick="document.getElementById('adminPicInput').click()"
              title="Click to change photo">
-            <img src="{{ asset('uploads/' . basename($sidebarProfile)) }}" alt="Profile">
+            <img src="{{ basename($sidebarProfile) }}" alt="Profile">
             <div class="sb-pic-overlay">📷</div>
         </div>
 

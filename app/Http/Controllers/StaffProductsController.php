@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\SidebarDataController;
+use CloudinaryLabs\CloudinaryLaravel\Facades\Cloudinary;
 
 class StaffProductsController extends Controller
 {
@@ -35,10 +36,10 @@ class StaffProductsController extends Controller
         $status          = $request->input('status');
 
         $imgName = 'default.png';
-        if ($request->hasFile('image') && $request->file('image')->isValid()) {
-            $imgName = time() . '_' . $request->file('image')->getClientOriginalName();
-            $request->file('image')->move(public_path('uploads'), $imgName);
-        }
+if ($request->hasFile('image') && $request->file('image')->isValid()) {
+    $uploaded = cloudinary()->uploadApi()->upload($request->file('image')->getRealPath());
+    $imgName = $uploaded['secure_url'];
+}
 
         DB::insert("
             INSERT INTO products

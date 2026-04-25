@@ -6,6 +6,7 @@ use App\Http\Controllers\SidebarDataController;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use CloudinaryLabs\CloudinaryLaravel\Facades\Cloudinary;
 
 class AdminServicesController extends Controller
 {
@@ -30,10 +31,10 @@ class AdminServicesController extends Controller
     public function add(Request $request)
     {
         $imgName = 'default.png';
-        if ($request->hasFile('image')) {
-            $imgName = time() . '_' . $request->file('image')->getClientOriginalName();
-            $request->file('image')->move(public_path('uploads'), $imgName);
-        }
+if ($request->hasFile('image')) {
+    $uploaded = cloudinary()->uploadApi()->upload($request->file('image')->getRealPath());
+    $imgName = $uploaded['secure_url'];
+}
 
         $serviceId = DB::table('services')->insertGetId([
             'name'        => $request->input('name'),
@@ -71,10 +72,9 @@ class AdminServicesController extends Controller
         ];
 
         if ($request->hasFile('image')) {
-            $imgName       = time() . '_' . $request->file('image')->getClientOriginalName();
-            $request->file('image')->move(public_path('uploads'), $imgName);
-            $data['image'] = $imgName;
-        }
+    $uploaded = cloudinary()->uploadApi()->upload($request->file('image')->getRealPath());
+    $data['image'] = $uploaded['secure_url'];
+}
 
         DB::table('services')->where('service_id', $serviceId)->update($data);
 

@@ -34,10 +34,10 @@
                     '{{ addslashes($service->name) }}',
                     '{{ addslashes($service->description) }}',
                     '{{ $service->price }}',
-                    '{{ asset('uploads/' . $service->image) }}',
+                    '{{ $service->image }}',
                     {{ $service->service_id }}
                  )">
-                <img src="{{ asset('uploads/' . $service->image) }}" alt="{{ $service->name }}">
+                <img src="{{ $service->image }}" alt="{{ $service->name }}">
                 <div class="details">
                     <h4>{{ $service->name }}</h4>
                     <p>₱{{ $service->price }}</p>

@@ -4,8 +4,9 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use CloudinaryLabs\CloudinaryLaravel\Facades\Cloudinary;
 
-class AddProductController extends Controller  // ← was ProductController
+class AddProductController extends Controller
 {
     public function index()
     {
@@ -26,10 +27,10 @@ class AddProductController extends Controller  // ← was ProductController
         ]);
 
         $imgName = null;
-        if ($request->hasFile('image')) {
-            $imgName = $request->file('image')->getClientOriginalName();
-            $request->file('image')->move(public_path('uploads'), $imgName);
-        }
+if ($request->hasFile('image')) {
+    $uploaded = cloudinary()->uploadApi()->upload($request->file('image')->getRealPath());
+    $imgName = $uploaded['secure_url'];
+}
 
         DB::table('products')->insert([
             'product_name'     => $request->product_name,

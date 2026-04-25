@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use CloudinaryLabs\CloudinaryLaravel\Facades\Cloudinary;
 
 class AddServiceController extends Controller  // ← was ServiceController
 {
@@ -21,18 +22,18 @@ class AddServiceController extends Controller  // ← was ServiceController
             'image'       => 'nullable|image|mimes:jpg,jpeg,png,gif',
         ]);
 
-        $imgName = null;
-        if ($request->hasFile('image')) {
-            $imgName = $request->file('image')->getClientOriginalName();
-            $request->file('image')->move(public_path('uploads'), $imgName);
-        }
+        $imgUrl = null;
+if ($request->hasFile('image')) {
+    $uploaded = cloudinary()->uploadApi()->upload($request->file('image')->getRealPath());
+    $imgUrl = $uploaded['secure_url'];
+}
 
-        DB::table('services')->insert([
-            'name'        => $request->name,
-            'description' => $request->description,
-            'image'       => $imgName,
-            'status'      => $request->status,
-        ]);
+DB::table('services')->insert([
+    'name'        => $request->name,
+    'description' => $request->description,
+    'image'       => $imgUrl,
+    'status'      => $request->status,
+]);
 
         return redirect()->route('admin.services')->with('success', 'Service added successfully.');
     }

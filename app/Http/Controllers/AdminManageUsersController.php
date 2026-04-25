@@ -1,5 +1,4 @@
 <?php
-// app/Http/Controllers/Admin/AdminManageUsersController.php
 
 namespace App\Http\Controllers;
 
@@ -17,9 +16,6 @@ class AdminManageUsersController extends Controller
         if (session('role') !== 'admin') abort(redirect('index?login=true'));
     }
 
-    // ─────────────────────────────────────────
-    // GET  /admin/manage-users
-    // ─────────────────────────────────────────
     public function index(Request $request)
     {
         $this->checkAuth();
@@ -57,9 +53,6 @@ class AdminManageUsersController extends Controller
         ));
     }
 
-    // ─────────────────────────────────────────
-    // POST /admin/manage-users/update
-    // ─────────────────────────────────────────
     public function update(Request $request)
     {
         $this->checkAuth();
@@ -78,9 +71,7 @@ class AdminManageUsersController extends Controller
         return redirect()->route('admin.manage-users', ['tab' => $tab]);
     }
 
-    // ─────────────────────────────────────────
-    // POST /admin/manage-users/delete
-    // ─────────────────────────────────────────
+
     public function delete(Request $request)
     {
         $this->checkAuth();
@@ -92,9 +83,6 @@ class AdminManageUsersController extends Controller
         return redirect()->route('admin.manage-users', ['tab' => $tab]);
     }
 
-    // ─────────────────────────────────────────
-    // POST /admin/manage-users/set-preferred-time
-    // ─────────────────────────────────────────
     public function setPreferredTime(Request $request)
     {
         $this->checkAuth();
@@ -109,9 +97,6 @@ class AdminManageUsersController extends Controller
         return redirect()->route('admin.manage-users', ['tab' => 'patient']);
     }
 
-    // ─────────────────────────────────────────
-    // POST /admin/manage-users/remove-regular
-    // ─────────────────────────────────────────
     public function removeRegular(Request $request)
     {
         $this->checkAuth();

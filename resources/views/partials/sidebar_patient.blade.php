@@ -17,7 +17,7 @@
     {{-- Profile Section --}}
     <div class="sb-profile">
         <div class="sb-pic-wrap" title="Profile Photo">
-            <img src="{{ asset('uploads/' . $sidebarProfile) }}">
+            <img src="{{ $sidebarProfile }}">
         </div>
         <div class="sb-name">{{ $sidebarFirstName . ' ' . $sidebarLastName }}</div>
         <div class="sb-email">{{ $sidebarEmail }}</div>

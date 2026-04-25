@@ -31,7 +31,6 @@ class SkinAnalysisController extends Controller
 
         $file = $request->file('photo');
 
-        // ── Convert image to base64 and send as JSON (new api.py format) ──
         $base64  = base64_encode(file_get_contents($file->getRealPath()));
         $dataUri = 'data:' . $file->getMimeType() . ';base64,' . $base64;
 
@@ -51,7 +50,6 @@ class SkinAnalysisController extends Controller
             return back()->with('error', 'Analysis failed: ' . $e->getMessage());
         }
 
-        // ── Map new api.py response fields ──
         $label         = $result['label']          ?? 'Unknown';
         $confidence    = $result['confidence']     ?? 0;
         $severityScore = $result['severity_score'] ?? 0;

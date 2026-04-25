@@ -8,6 +8,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Session;
+use CloudinaryLabs\CloudinaryLaravel\Facades\Cloudinary;
 
 class AdminProductsController extends Controller
 {
@@ -31,10 +32,10 @@ class AdminProductsController extends Controller
     public function add(Request $request)
     {
         $imgName = 'default.png';
-        if ($request->hasFile('image')) {
-            $imgName = time() . '_' . $request->file('image')->getClientOriginalName();
-            $request->file('image')->move(public_path('uploads'), $imgName);
-        }
+if ($request->hasFile('image')) {
+    $uploaded = cloudinary()->uploadApi()->upload($request->file('image')->getRealPath());
+    $imgName = $uploaded['secure_url'];
+}
 
         $productId = DB::table('products')->insertGetId([
             'product_name'     => $request->input('product_name'),
@@ -85,10 +86,9 @@ class AdminProductsController extends Controller
         ];
 
         if ($request->hasFile('image')) {
-            $imgName       = time() . '_' . $request->file('image')->getClientOriginalName();
-            $request->file('image')->move(public_path('uploads'), $imgName);
-            $data['image'] = $imgName;
-        }
+    $uploaded = cloudinary()->uploadApi()->upload($request->file('image')->getRealPath());
+    $data['image'] = $uploaded['secure_url'];
+}
 
         DB::table('products')->where('product_id', $productId)->update($data);
 

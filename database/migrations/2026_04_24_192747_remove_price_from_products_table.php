@@ -11,8 +11,15 @@ return new class extends Migration
      */
     public function up()
 {
-    Schema::table('patient', function (Blueprint $table) {
-        $table->text('medical_history')->nullable();
+    Schema::table('products', function (Blueprint $table) {
+        $table->dropColumn('price');
+    });
+}
+
+public function down()
+{
+    Schema::table('products', function (Blueprint $table) {
+        $table->decimal('price', 8, 2)->nullable();
     });
 }
 };

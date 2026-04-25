@@ -8,7 +8,7 @@ return new class extends Migration
 {
     public function up()
 {
-    Schema::table('Patient', function (Blueprint $table) {
+    Schema::table('patient', function (Blueprint $table) {
         $table->string('allergies')->nullable();
         $table->string('emergency_contact_name')->nullable();
         $table->string('emergency_contact_phone')->nullable();
@@ -17,7 +17,7 @@ return new class extends Migration
 
 public function down()
 {
-    Schema::table('Patient', function (Blueprint $table) {
+    Schema::table('patient', function (Blueprint $table) {
         $table->dropColumn([
             'allergies',
             'emergency_contact_name',

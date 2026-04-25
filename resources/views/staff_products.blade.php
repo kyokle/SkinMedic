@@ -31,7 +31,7 @@
         @forelse ($products as $row)
             @php $statusClass = strtolower($row->status) === 'available' ? 'on' : 'off'; @endphp
             <div class="product-card">
-                <img src="{{ asset('uploads/' . $row->image) }}"
+                <img src="{{ $row->image }}"
      alt="{{ $row->product_name }}"
      onerror="this.src='{{ asset('uploads/default.png') }}'">
                 <h3>{{ $row->product_name }}</h3>
@@ -125,7 +125,7 @@
         <div class="modal-body">
             <form method="POST" action="{{ route('staff.products.update') }}" enctype="multipart/form-data">
                 @csrf
-                @method('PUT')
+                {{-- removed @method('PUT') --}}
                 <input type="hidden" name="product_id" id="edit_id">
                 <label>Product Name</label>
                 <input type="text" name="product_name" id="edit_name" required>

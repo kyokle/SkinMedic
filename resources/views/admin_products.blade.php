@@ -31,7 +31,7 @@
       @forelse ($products as $row)
         @php $statusClass = strtolower($row->status) === 'available' ? 'on' : 'off'; @endphp
         <div class="product-card">
-          <img src="{{ asset('uploads/' . $row->image) }}"
+          <img src="{{  $row->image }}"
                alt="{{ $row->product_name }}"
                onerror="this.src='{{ asset('uploads/default.png') }}'">
           <h3>{{ $row->product_name }}</h3>
