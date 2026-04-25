@@ -13,15 +13,13 @@ class PatientProfileController extends Controller
     {
         $userId = (int) Session::get('user_id');
 
-
-        // Auto-create patient record if missing
-        $exists = DB::table('Patient')->where('user_id', $userId)->exists();
+        $exists = DB::table('patient')->where('user_id', $userId)->exists();
         if (!$exists) {
-            DB::table('Patient')->insert(['user_id' => $userId]);
+            DB::table('patient')->insert(['user_id' => $userId]);
         }
 
         $data = DB::table('users as u')
-            ->leftJoin('Patient as p', 'u.user_id', '=', 'p.user_id')
+            ->leftJoin('patient as p', 'u.user_id', '=', 'p.user_id')
             ->where('u.user_id', $userId)
             ->select(
                 'u.user_id', 'u.firstName', 'u.lastName', 'u.email',
@@ -33,8 +31,8 @@ class PatientProfileController extends Controller
             ->first();
 
         $profilePic = (!empty($data->profile_picture) && $data->profile_picture !== 'default.png')
-    ? $data->profile_picture
-    : 'default.png';
+            ? $data->profile_picture
+            : 'default.png';
 
         return view('patient_profile', array_merge(
             $this->sidebarData(),
@@ -50,13 +48,14 @@ class PatientProfileController extends Controller
             'profile_pic' => 'required|image|mimes:jpg,jpeg,png|max:5120',
         ]);
 
-        $file     = $request->file('profile_pic');
-        $filename = time() . '.' . $file->getClientOriginalExtension();
-        $file->move(public_path('uploads'), $filename);
+        $uploaded = cloudinary()->upload($request->file('profile_pic')->getRealPath(), [
+            'folder' => 'patient_profiles',
+        ]);
+        $imgUrl = $uploaded->getSecurePath();
 
-        DB::table('Patient')
+        DB::table('patient')
             ->where('user_id', $userId)
-            ->update(['profile_picture' => $filename]);
+            ->update(['profile_picture' => $imgUrl]);
 
         return redirect()->route('patient.profile');
     }
@@ -97,7 +96,7 @@ class PatientProfileController extends Controller
             'emergency_contact_phone' => 'nullable|string|max:20',
         ]);
 
-        DB::table('Patient')
+        DB::table('patient')
             ->where('user_id', $userId)
             ->update([
                 'medical_history'         => $request->medical_history,

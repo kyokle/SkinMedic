@@ -36,8 +36,8 @@ class StaffProfileController extends Controller
         }
 
         $profilePic = !empty($staff->profile_picture)
-    ? 'uploads/' . $staff->profile_picture
-    : 'uploads/default.png';
+            ? $staff->profile_picture
+            : 'uploads/default.png';
 
         return view('staff_profile', array_merge(
             $this->sidebarData(),
@@ -88,9 +88,11 @@ class StaffProfileController extends Controller
             $ext     = strtolower($file->getClientOriginalExtension());
 
             if (in_array($ext, $allowed)) {
-                $filename = time() . '.' . $ext;
-                $file->move(public_path('uploads'), $filename);
-                DB::update("UPDATE staff SET profile_picture=? WHERE user_id=?", [$filename, $userId]);
+                $uploaded = cloudinary()->upload($file->getRealPath(), [
+                    'folder' => 'staff_profiles',
+                ]);
+                $imgUrl = $uploaded->getSecurePath();
+                DB::update("UPDATE staff SET profile_picture=? WHERE user_id=?", [$imgUrl, $userId]);
             }
         }
 

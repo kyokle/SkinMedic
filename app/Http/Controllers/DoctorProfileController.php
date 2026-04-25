@@ -11,7 +11,6 @@ class DoctorProfileController extends Controller
     {
         $userId = session('user_id');
 
-        // Auto-create doctor record if missing
         $exists = DB::table('doctor')->where('user_id', $userId)->exists();
         if (!$exists) {
             DB::table('doctor')->insert(['user_id' => $userId]);
@@ -36,10 +35,11 @@ class DoctorProfileController extends Controller
         ];
 
         $profilePic = !empty($doctor['profile_picture'])
-            ? 'uploads/' . $doctor['profile_picture']
+            ? $doctor['profile_picture']
             : 'uploads/default.png';
+
         $sidebarData = (new SidebarDoctorController)->getSidebarData();
-        
+
         return view('doctor_profile', array_merge(compact('doctor', 'profilePic'), $sidebarData));
     }
 
@@ -49,13 +49,16 @@ class DoctorProfileController extends Controller
             'profile_pic' => 'required|image|mimes:jpg,jpeg,png',
         ]);
 
-        $userId   = session('user_id');
-        $filename = time() . '.' . $request->file('profile_pic')->getClientOriginalExtension();
-        $request->file('profile_pic')->move(public_path('uploads'), $filename);
+        $userId = session('user_id');
+
+        $uploaded = cloudinary()->upload($request->file('profile_pic')->getRealPath(), [
+            'folder' => 'doctor_profiles',
+        ]);
+        $imgUrl = $uploaded->getSecurePath();
 
         DB::table('doctor')
             ->where('user_id', $userId)
-            ->update(['profile_picture' => $filename]);
+            ->update(['profile_picture' => $imgUrl]);
 
         return redirect()->route('doctor.profile');
     }
@@ -86,11 +89,11 @@ class DoctorProfileController extends Controller
     public function updateDoctor(Request $request)
     {
         $request->validate([
-            'license_number'       => 'nullable|string|max:100',
-            'specialization'       => 'nullable|string|max:100',
-            'years_of_experience'  => 'nullable|integer|min:0',
-            'consultation_fee'     => 'nullable|numeric|min:0',
-            'availability_schedule'=> 'nullable|string|max:255',
+            'license_number'        => 'nullable|string|max:100',
+            'specialization'        => 'nullable|string|max:100',
+            'years_of_experience'   => 'nullable|integer|min:0',
+            'consultation_fee'      => 'nullable|numeric|min:0',
+            'availability_schedule' => 'nullable|string|max:255',
         ]);
 
         DB::table('doctor')
@@ -102,7 +105,7 @@ class DoctorProfileController extends Controller
                 'consultation_fee'      => $request->consultation_fee,
                 'availability_schedule' => $request->availability_schedule,
             ]);
-        
+
         return redirect()->route('doctor.profile');
     }
 }

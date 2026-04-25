@@ -18,13 +18,14 @@ class AdminProfileController extends Controller
             'profile_pic' => 'required|image|mimes:jpg,jpeg,png|max:5120',
         ]);
 
-        $file     = $request->file('profile_pic');
-        $filename = time() . '.' . $file->getClientOriginalExtension();
-        $file->move(public_path('uploads'), $filename);
+        $uploaded = cloudinary()->upload($request->file('profile_pic')->getRealPath(), [
+            'folder' => 'admin_profiles',
+        ]);
+        $imgUrl = $uploaded->getSecurePath();
 
         DB::table('users')
             ->where('user_id', $userId)
-            ->update(['profile_image' => $filename]);
+            ->update(['profile_image' => $imgUrl]);
 
         return redirect()->back();
     }
