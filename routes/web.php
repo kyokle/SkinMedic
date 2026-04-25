@@ -38,6 +38,14 @@ use App\Http\Controllers\StaffProductsController;
 use App\Http\Controllers\StaffReviewsController;
 
 
+Route::get('/clear-cache', function() {
+    Artisan::call('view:clear');
+    Artisan::call('cache:clear');
+    Artisan::call('config:clear');
+    Artisan::call('route:clear');
+    return 'All caches cleared!';
+});
+
 // ── Landing, Auth, & Booking ──────────────────────────────
 Route::get('/',                 [IndexController::class, 'index'])->name('index');
 Route::get('/login',            [IndexController::class, 'index'])->name('login');
