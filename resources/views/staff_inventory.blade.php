@@ -125,7 +125,7 @@
                 '{{ addslashes($row->product_name) }}',
                 {{ $row->quantity }}
             )">
-        ✏ Edit Stock
+        ✏ Deduct Stock
     </button>
 </td>
                     </tr>
