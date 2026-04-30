@@ -140,7 +140,7 @@
 <div id="deductModal" class="modal-overlay" onclick="closeDeductModal(event)">
     <div class="modal-box">
         <button class="modal-close" onclick="closeDeductModal()">×</button>
-        <h3 id="deductTitle">Edit Stock</h3>
+        <h3 id="deductTitle">Deduct Stock</h3>
         <p id="deductCurrent" class="deduct-current"></p>
 
         <form method="POST" action="{{ route('staff.inventory.deduct-stock') }}" id="deductForm">
