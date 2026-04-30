@@ -1,4 +1,4 @@
-{{-- resources/views/admin_reviews.blade.php --}}
+{{-- resources/views/staff_reviews.blade.php --}}
 
 @extends('layouts.app')
 
@@ -6,12 +6,12 @@
 <meta name="csrf-token" content="{{ csrf_token() }}">
 
 @push('styles')
-    <link rel="stylesheet" href="{{ asset('asset/css/admin_reviews.css') }}">
+    <link rel="stylesheet" href="{{ asset('asset/css/staff_reviews.css') }}">
 @endpush
 
 @section('content')
 
-@include('partials.sidebar_admin')
+@include('partials.sidebar_staff')
 
 <div class="main">
 

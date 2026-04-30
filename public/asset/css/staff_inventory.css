@@ -195,3 +195,98 @@
     .input-date { width: 105px; }
     .add-btn    { padding: 5px 10px; font-size: 0.78rem; }
 }
+
+/* Deduct button */
+.deduct-btn {
+    background: #e8f0fe;
+    color: #3b5bdb;
+    border: 1.5px solid #b3c6f7;
+    border-radius: 6px;
+    padding: 5px 12px;
+    font-size: 0.78rem;
+    cursor: pointer;
+    font-weight: 500;
+    transition: background .15s;
+    white-space: nowrap;
+}
+.deduct-btn:hover { background: #d0e0ff; }
+
+/* Modal overlay */
+.modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 999;
+    justify-content: center;
+    align-items: center;
+}
+
+/* Modal box */
+.modal-box {
+    background: #fff;
+    border-radius: 14px;
+    padding: 28px 32px;
+    width: 420px;
+    max-width: 95vw;
+    position: relative;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+}
+.modal-box h3 {
+    margin: 0 0 4px;
+    font-size: 1rem;
+    color: #1a1f16;
+}
+.deduct-current {
+    font-size: 0.82rem;
+    color: #888;
+    margin: 0 0 18px;
+}
+.modal-close {
+    position: absolute;
+    top: 14px; right: 18px;
+    background: none; border: none;
+    font-size: 22px; color: #999;
+    cursor: pointer; line-height: 1;
+}
+.modal-close:hover { color: #333; }
+
+.deduct-row {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    margin-bottom: 14px;
+}
+.deduct-row label {
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: #555;
+    text-transform: uppercase;
+    letter-spacing: .4px;
+}
+.deduct-row input,
+.deduct-row select {
+    padding: 9px 12px;
+    border: 1.5px solid #ddd;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    outline: none;
+    transition: border-color .2s;
+}
+.deduct-row input:focus,
+.deduct-row select:focus { border-color: #80a833; }
+
+.save-deduct-btn {
+    width: 100%;
+    background: #80a833;
+    color: #fff;
+    border: none;
+    padding: 11px;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    margin-top: 6px;
+    transition: background .2s;
+}
+.save-deduct-btn:hover { background: #6b9228; }

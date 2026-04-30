@@ -351,3 +351,17 @@ function fpCheckMatch() {
     el.className   = 'match-msg match-no';
   }
 }
+
+
+  const hamburger = document.getElementById('hamburgerBtn');
+  const sidebar   = document.querySelector('.sidebar');
+  const overlay   = document.getElementById('sidebarOverlay');
+
+  hamburger.addEventListener('click', () => {
+    sidebar.classList.toggle('open');
+    overlay.classList.toggle('open');
+  });
+  overlay.addEventListener('click', () => {
+    sidebar.classList.remove('open');
+    overlay.classList.remove('open');
+  });

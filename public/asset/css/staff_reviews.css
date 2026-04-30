@@ -1,154 +1,236 @@
 /* =============================================
    admin_reviews.css — Manage Reviews Styles
+   Restyled to match patient_reviews.css
 ============================================= */
 
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Poppins:wght@300;400;600&display=swap');
+/* ── Topbar ── */
+.topbar {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    padding: 32px 16px;
+}
 
+.topbar-text h2 {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: #1a1f16;
+    margin: 0 0 2px;
+}
+
+.topbar-text p {
+    font-size: 0.84rem;
+    color: #8a9080;
+    margin: 0;
+}
+
+.date-box {
+    background: #fff;
+    border: 1px solid #e2e6ea;
+    border-radius: 8px;
+    padding: 8px 16px;
+    text-align: right;
+    font-size: 0.8rem;
+    color: #666;
+}
+
+.date-box strong {
+    display: block;
+    color: #1a1f16;
+    font-size: 0.9rem;
+}
+
+
+
+/* ── Page ── */
 .mr-page {
-    font-family: 'Poppins', sans-serif;
-    padding: 10px 0 60px;
+    font-family: 'DM Sans', sans-serif;
+    padding: 28px 32px;
+    background: #f5f4f0;
+    min-height: 100%;
 }
 
 /* ── Header ── */
-.mr-header { margin-bottom: 24px; }
+.mr-header { margin-bottom: 20px; }
+
 .kicker {
     font-size: 11px;
-    font-weight: 600;
-    letter-spacing: .12em;
+    font-weight: 500;
+    letter-spacing: .1em;
     color: #80a833;
     text-transform: uppercase;
     margin: 0 0 4px;
 }
+
 .mr-title {
-    font-family: 'Playfair Display', serif;
-    font-size: 38px;
-    color: #5d595f;
-    margin: 4px 0 0;
+    font-size: 1.4rem;
     font-weight: 700;
+    color: #1a1f16;
+    margin: 0;
 }
 
 /* ── Stats ── */
 .mr-stats {
-    display: flex;
-    gap: 16px;
-    margin-bottom: 24px;
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 12px;
+    margin-bottom: 20px;
 }
+
 .mr-stat-card {
-    background: #faf9f8;
-    border-radius: 14px;
-    padding: 18px 24px;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.06), inset 0 0 0 2px #e0d8cf;
-    min-width: 130px;
+    background: #fff;
+    border: 1px solid #e2e6ea;
+    border-radius: 12px;
+    padding: 14px 18px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.05);
 }
+
 .mr-stat-num {
-    font-family: 'Playfair Display', serif;
-    font-size: 32px;
-    color: #80a833;
-    margin: 0 0 4px;
+    font-size: 1.5rem;
     font-weight: 700;
+    color: #80a833;
+    margin: 0 0 2px;
 }
+
 .mr-stat-label {
-    font-size: 12px;
-    color: #9c8f83;
+    font-size: 11px;
+    color: #8a9080;
     margin: 0;
+    text-transform: uppercase;
+    letter-spacing: .06em;
 }
+
 .mr-avg-stars {
     display: flex;
-    gap: 3px;
-    margin-bottom: 4px;
+    gap: 2px;
+    margin-bottom: 2px;
 }
 
 /* ── Filter Bar ── */
 .mr-filter-bar {
     display: flex;
     gap: 8px;
-    margin-bottom: 20px;
+    margin-bottom: 16px;
     flex-wrap: wrap;
 }
-.mr-filter-btn {
-    background: #f0ebe4;
-    border: none;
-    border-radius: 20px;
-    padding: 7px 16px;
-    font-size: 12px;
-    font-family: 'Poppins', sans-serif;
-    font-weight: 600;
-    color: #6b5f57;
-    cursor: pointer;
-    transition: background .15s, color .15s;
-}
-.mr-filter-btn:hover  { background: #e0d8cf; }
-.mr-filter-btn.active { background: #80a833; color: #fff; }
 
-/* ── Table ── */
-.mr-table-wrap {
-    overflow-x: auto;
-    border-radius: 16px;
-    box-shadow: 0 6px 14px rgba(0,0,0,0.06), inset 0 0 0 2px #e0d8cf;
+.mr-filter-btn {
+    background: #fff;
+    border: 1px solid #e2e6ea;
+    border-radius: 20px;
+    padding: 6px 14px;
+    font-size: 12px;
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 500;
+    color: #8a9080;
+    cursor: pointer;
+    transition: background .15s, color .15s, border-color .15s;
 }
+
+.mr-filter-btn:hover  { background: #f5f4f0; }
+.mr-filter-btn.active { background: #80a833; color: #fff; border-color: #80a833; }
+
+/* ── Table Card ── */
+.mr-table-wrap {
+    background: #fff;
+    border: 1px solid #e2e6ea;
+    border-radius: 12px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+    overflow: hidden;
+}
+
+.mr-table-label {
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .1em;
+    color: #8a9080;
+    padding: 14px 18px 10px;
+    border-bottom: 1px solid #e2e6ea;
+}
+
+.mr-table-scroll { overflow-x: auto; }
+
 .mr-table {
     width: 100%;
     border-collapse: collapse;
     font-size: 13px;
-    background: #faf9f8;
+    table-layout: fixed;
 }
-.mr-table thead tr { background: #f0ebe4; }
+
+.mr-table thead tr { background: #fafaf8; }
+
 .mr-table th {
-    padding: 12px 16px;
+    padding: 10px 14px;
     text-align: left;
     font-size: 11px;
-    font-weight: 700;
+    font-weight: 500;
     text-transform: uppercase;
     letter-spacing: .08em;
-    color: #9c8f83;
+    color: #8a9080;
     white-space: nowrap;
 }
+
 .mr-table td {
-    padding: 12px 16px;
-    border-top: 1px solid #ece5dc;
-    vertical-align: top;
-    color: #2e2420;
+    padding: 11px 14px;
+    border-top: 1px solid #e2e6ea;
+    color: #1a1f16;
+    vertical-align: middle;
 }
-.mr-table tr:hover td { background: #f5f0ea; }
+
+.mr-table tr:hover td { background: #fafaf8; }
 .mr-table tr.hidden   { display: none; }
 
 /* ── Table Cells ── */
 .mr-td-patient {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
     white-space: nowrap;
 }
+
 .mr-avatar {
-    width: 32px;
-    height: 32px;
+    width: 28px;
+    height: 28px;
     border-radius: 50%;
-    background: #f7dd9e;
-    color: #6a4b2f;
+    background: #e6f1fb;
+    color: #185fa5;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 13px;
-    font-weight: 700;
+    font-size: 11px;
+    font-weight: 500;
     flex-shrink: 0;
 }
+
 .mr-td-service {
-    white-space: nowrap;
     color: #80a833;
     font-weight: 500;
+    font-size: 12px;
+    white-space: nowrap;
 }
+
 .mr-td-rating  { white-space: nowrap; }
-.mr-inline-stars { display: flex; gap: 2px; }
-.mr-td-comment {
-    max-width: 300px;
-    color: #5a5248;
-    line-height: 1.5;
+
+.mr-inline-stars {
+    display: flex;
+    gap: 2px;
 }
+
+.mr-td-comment {
+    color: #4a5240;
+    font-size: 12px;
+    line-height: 1.5;
+    max-width: 240px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 .mr-td-date {
     white-space: nowrap;
-    color: #9c8f83;
-    font-size: 12px;
+    color: #8a9080;
+    font-size: 11px;
 }
 
 /* ── Delete Button ── */
@@ -157,19 +239,33 @@
     border: 1px solid #f5c4b3;
     color: #993c1d;
     border-radius: 8px;
-    padding: 6px 8px;
+    padding: 5px 10px;
+    font-size: 11px;
+    font-family: 'DM Sans', sans-serif;
     cursor: pointer;
     transition: background .15s;
-    display: flex;
+    display: inline-flex;
     align-items: center;
 }
+
 .mr-delete-btn:hover    { background: #f5c4b3; }
 .mr-delete-btn:disabled { opacity: .5; cursor: not-allowed; }
 
 /* ── Empty State ── */
 .mr-empty {
     text-align: center;
-    padding: 60px 0;
-    color: #b5a898;
+    padding: 48px 20px;
 }
-.mr-empty p { margin: 12px 0 0; font-size: 14px; }
+
+.mr-empty-icon  { font-size: 2rem; margin-bottom: 10px; opacity: .5; }
+.mr-empty-title { font-size: 0.95rem; font-weight: 600; color: #4a5240; margin: 0 0 6px; }
+.mr-empty-sub   { font-size: 0.82rem; color: #8a9080; margin: 0; }
+
+/* ── Utility ── */
+.hidden { display: none !important; }
+
+/* ── Responsive ── */
+@media (max-width: 820px) {
+    .mr-page { padding: 20px 16px; }
+    .mr-stats { grid-template-columns: 1fr 1fr; }
+}

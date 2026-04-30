@@ -95,9 +95,52 @@ class StaffInventoryController extends Controller
     {
         DB::update("
             UPDATE products p SET quantity = (
-                SELECT IFNULL(SUM(quantity), 0) FROM inventory_logs
-                WHERE product_id = p.product_id AND type = 'IN' AND quantity > 0
+                SELECT IFNULL(SUM(CASE WHEN type = 'IN' THEN quantity ELSE -quantity END), 0)
+                FROM inventory_logs
+                WHERE product_id = p.product_id AND quantity > 0
             )
         ");
+    }
+
+    public function deductStock(Request $request)
+    {
+        $request->validate([
+            'product_id' => 'required|integer',
+            'quantity'   => 'required|integer|min:1',
+            'action'     => 'required|in:deduct,set',
+        ]);
+
+        $product = DB::table('products')->where('product_id', $request->product_id)->first();
+
+        if (!$product) return back()->with('error', 'Product not found.');
+
+        if ($request->action === 'set') {
+            // Calculate the difference needed to reach the desired quantity
+            $diff = $product->quantity - $request->quantity;
+            if ($diff <= 0) return back()->with('error', 'Set quantity must be less than current stock.');
+            $deductQty = $diff;
+        } else {
+            if ($request->quantity > $product->quantity) {
+                return back()->with('error', 'Cannot deduct more than current stock.');
+            }
+            $deductQty = $request->quantity;
+        }
+
+        // Insert an OUT log entry so syncProductQuantities() reflects the change on next load
+        DB::insert(
+            "INSERT INTO inventory_logs (product_id, quantity, type, created_at) VALUES (?, ?, 'OUT', NOW())",
+            [$request->product_id, $deductQty]
+        );
+
+        // Immediately sync this product's quantity in the products table
+        DB::update("
+            UPDATE products SET quantity = (
+                SELECT IFNULL(SUM(CASE WHEN type = 'IN' THEN quantity ELSE -quantity END), 0)
+                FROM inventory_logs
+                WHERE product_id = ? AND quantity > 0
+            ) WHERE product_id = ?
+        ", [$request->product_id, $request->product_id]);
+
+        return back()->with('success', 'Stock updated successfully.');
     }
 }

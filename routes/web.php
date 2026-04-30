@@ -38,14 +38,6 @@ use App\Http\Controllers\StaffProductsController;
 use App\Http\Controllers\StaffReviewsController;
 
 
-Route::get('/clear-cache', function() {
-    Artisan::call('view:clear');
-    Artisan::call('cache:clear');
-    Artisan::call('config:clear');
-    Artisan::call('route:clear');
-    return 'All caches cleared!';
-});
-
 // ── Landing, Auth, & Booking ──────────────────────────────
 Route::get('/',                 [IndexController::class, 'index'])->name('index');
 Route::get('/login',            [IndexController::class, 'index'])->name('login');
@@ -125,6 +117,9 @@ Route::post('/staff/services/delete',  [StaffServicesController::class, 'delete'
 Route::get('/staff/inventory', [StaffInventoryController::class, 'index'])
     ->name('staff.inventory')
     ->middleware('check.staff.role');
+
+Route::post('/staff/inventory/deduct-stock', [StaffInventoryController::class, 'deductStock'])
+     ->name('staff.inventory.deduct-stock');
 
 Route::post('/staff/inventory/add-stock', [StaffInventoryController::class, 'addStock'])
     ->name('staff.inventory.add-stock')

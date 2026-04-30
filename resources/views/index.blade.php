@@ -10,6 +10,16 @@
 </head>
 <body>
 
+<!-- Hamburger button -->
+<button class="hamburger-btn" id="hamburgerBtn" aria-label="Open menu">
+  <span></span><span></span><span></span>
+</button>
+
+<!-- Overlay backdrop -->
+<div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+<!-- your existing .sidebar ... -->
+
   <!-- ═══════════════════ SIDEBAR ═══════════════════ -->
   <aside class="sidebar">
     <div class="logo-wrap">
@@ -67,11 +77,13 @@
               <input type="password" name="password" id="loginPw" placeholder="Password" required>
               <button type="button" class="pw-toggle" onclick="togglePw('loginPw',this)">👁</button>
             </div>
-            <button type="submit" class="login-btn">Login</button>
-            <a href="#" class="create-link" onclick="openSignupPopup()">Create an Account</a>
-            <a href="#" class="create-link" style="color:#888;font-size:12px;" onclick="closePopup();openForgotPopup();">Forgot Password?</a>
-          </form>
-          <button class="admin-btn" onclick="openAdminPopup()">Are you an admin?</button>
+           <button type="submit" class="login-btn">Login</button>
+<a href="#" class="create-link" onclick="openSignupPopup()">Create an Account</a>
+<div style="display:flex; justify-content:space-between; align-items:center; margin-top:10px;">
+    <a href="#" style="color:#888;font-size:12px;text-decoration:none;" onclick="closePopup();openForgotPopup();">Forgot Password?</a>
+    <button class="admin-btn" onclick="openAdminPopup()" style="position:static;">Are you an admin?</button>
+</div>
+</form>
         </div>
       </div>
     </div>

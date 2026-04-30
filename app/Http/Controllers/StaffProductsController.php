@@ -1,109 +1,108 @@
 <?php
+// app/Http/Controllers/Admin/AdminProductsController.php
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\SidebarDataController;
+use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use App\Http\Controllers\SidebarDataController;
-use CloudinaryLabs\CloudinaryLaravel\Facades\Cloudinary;
+use Illuminate\Support\Facades\Session;
 
 class StaffProductsController extends Controller
 {
     use SidebarDataController;
+
+    // ─────────────────────────────────────────
+    // GET  /admin/products
+    // ─────────────────────────────────────────
     public function index()
     {
-        $products = collect(DB::select("SELECT * FROM products"));
-        return view('staff_products', array_merge(
+        $products = DB::table('products')->get();
+        return view('admin_products', array_merge(
             $this->sidebarData(),
             compact('products')
-            ));
+        ));
     }
 
-    public function store(Request $request)
+    // ─────────────────────────────────────────
+    // POST /admin/products/add
+    // ─────────────────────────────────────────
+    public function add(Request $request)
     {
-        $name            = $request->input('product_name');
-        $desc            = $request->input('description');
-        $category        = $request->input('category');
-        $brand           = $request->input('brand');
-        $supplier        = $request->input('supplier');
-        $batchNumber     = $request->input('batch_number');
-        $quantity        = (int) $request->input('quantity');
-        $reorderLevel    = (int) $request->input('reorder_level');
-        $costPrice       = (float) $request->input('cost_price');
-        $sellingPrice    = (float) $request->input('selling_price');
-        $expiryDate      = $request->input('expiry_date');
-        $storageLocation = $request->input('storage_location');
-        $status          = $request->input('status');
-
         $imgName = 'default.png';
-if ($request->hasFile('image') && $request->file('image')->isValid()) {
-    $uploaded = cloudinary()->uploadApi()->upload($request->file('image')->getRealPath());
-    $imgName = $uploaded['secure_url'];
-}
+        if ($request->hasFile('image')) {
+            $imgName = time() . '_' . $request->file('image')->getClientOriginalName();
+            $request->file('image')->move(public_path('uploads'), $imgName);
+        }
 
-        DB::insert("
-            INSERT INTO products
-                (product_name, description, category, brand, supplier, batch_number, quantity, reorder_level,
-                 cost_price, selling_price, storage_location, status, date_added, image)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?)
-        ", [
-            $name, $desc, $category, $brand, $supplier, $batchNumber,
-            $quantity, $reorderLevel, $costPrice, $sellingPrice,
-            $storageLocation, $status, $imgName,
+        $productId = DB::table('products')->insertGetId([
+            'product_name'     => $request->input('product_name'),
+            'description'      => $request->input('description'),
+            'category'         => $request->input('category'),
+            'brand'            => $request->input('brand'),
+            'supplier'         => $request->input('supplier'),
+            'batch_number'     => $request->input('batch_number'),
+            'quantity'         => (int) $request->input('quantity', 0),
+            'reorder_level'    => (int) $request->input('reorder_level', 0),
+            'cost_price'       => (float) $request->input('cost_price', 0),
+            'selling_price'    => (float) $request->input('selling_price', 0),
+            'storage_location' => $request->input('storage_location'),
+            'status'           => $request->input('status'),
+            'date_added'       => now(),
+            'image'            => $imgName,
         ]);
 
-        $productId = DB::getPdo()->lastInsertId();
+        // Log the initial stock batch
+        DB::table('inventory_logs')->insert([
+            'product_id'  => $productId,
+            'quantity'    => (int) $request->input('quantity', 0),
+            'type'        => 'IN',
+            'expiry_date' => $request->input('expiry_date'),
+            'created_at'  => now(),
+        ]);
 
-        // Create first inventory log (IN) for the initial stock
-        DB::insert(
-            "INSERT INTO inventory_logs (product_id, quantity, type, expiry_date, created_at)
-             VALUES (?, ?, 'IN', ?, NOW())",
-            [$productId, $quantity, $expiryDate]
-        );
-
-        return redirect()->route('staff.products');
+        return redirect()->route('admin.products');
     }
 
-    /* =========================================
-       UPDATE — edit a product (no qty/expiry change here)
-       PUT /staff/products/{id}
-    ========================================= */
+    // ─────────────────────────────────────────
+    // POST /admin/products/update
+    // ─────────────────────────────────────────
     public function update(Request $request)
     {
-        $productId       = (int) $request->input('product_id');
-        $name            = $request->input('product_name');
-        $desc            = $request->input('description');
-        $category        = $request->input('category');
-        $brand           = $request->input('brand');
-        $supplier        = $request->input('supplier');
-        $batchNumber     = $request->input('batch_number');
-        $costPrice       = (float) $request->input('cost_price');
-        $sellingPrice    = (float) $request->input('selling_price');
-        $storageLocation = $request->input('storage_location');
-        $status          = $request->input('status');
+        $productId = (int) $request->input('product_id');
+        $data = [
+            'product_name'     => $request->input('product_name'),
+            'description'      => $request->input('description'),
+            'category'         => $request->input('category'),
+            'brand'            => $request->input('brand'),
+            'supplier'         => $request->input('supplier'),
+            'batch_number'     => $request->input('batch_number'),
+            'cost_price'       => (float) $request->input('cost_price'),
+            'selling_price'    => (float) $request->input('selling_price'),
+            'storage_location' => $request->input('storage_location'),
+            'status'           => $request->input('status'),
+        ];
 
-        DB::update("
-            UPDATE products
-            SET product_name=?, description=?, category=?, brand=?, supplier=?, batch_number=?,
-                cost_price=?, selling_price=?, storage_location=?, status=?
-            WHERE product_id=?
-        ", [
-            $name, $desc, $category, $brand, $supplier, $batchNumber,
-            $costPrice, $sellingPrice, $storageLocation, $status, $productId,
-        ]);
+        if ($request->hasFile('image')) {
+            $imgName       = time() . '_' . $request->file('image')->getClientOriginalName();
+            $request->file('image')->move(public_path('uploads'), $imgName);
+            $data['image'] = $imgName;
+        }
 
-        return redirect()->route('staff.products');
+        DB::table('products')->where('product_id', $productId)->update($data);
+
+        return redirect()->route('admin.products');
     }
 
-    /* =========================================
-       DELETE — remove a product and its logs
-       DELETE /staff/products/{id}
-    ========================================= */
+    // ─────────────────────────────────────────
+    // POST /admin/products/delete
+    // ─────────────────────────────────────────
     public function delete(Request $request)
     {
         $productId = (int) $request->input('product_id');
-        DB::delete("DELETE FROM inventory_logs WHERE product_id = ?", [$productId]);
-        DB::delete("DELETE FROM products WHERE product_id = ?", [$productId]);
+        DB::table('inventory_logs')->where('product_id', $productId)->delete();
+        DB::table('products')->where('product_id', $productId)->delete();
 
         return redirect()->route('staff.products');
     }

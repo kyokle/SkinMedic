@@ -1,33 +1,42 @@
-{{-- staff_bookings.blade.php --}}
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-<title>SkinMedic - All Appointments</title>
-<meta name="csrf-token" content="{{ csrf_token() }}">
-<link rel="stylesheet" href="{{ asset('asset/css/staff_bookings.css') }}">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <title>All Appointments — SkinMedic</title>
+    <link rel="stylesheet" href="{{ asset('asset/css/staff_bookings.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Fraunces:wght@700&display=swap" rel="stylesheet">
 </head>
 
 <body>
-@include('partials.sidebar_staff')
+
+@if(session('role') === 'staff')
+    @include('partials.sidebar_staff')
+@else
+    @include('partials.sidebar_admin')
+@endif
 
 <div class="main">
     <div class="topbar">
-        <h2>All Appointments</h2>
+        <h2 style="font-size:1.4rem;font-weight:700;">All Appointments</h2>
         <div class="date-box">
-            <p>Today's Date</p>
-            <strong>{{ date("Y-m-d") }}</strong>
-        </div>
+    <p>Today's Date</p>
+    <strong>{{ now()->format('Y-m-d') }}</strong>
+</div>
     </div>
 
+    {{-- ── Filter tabs ── --}}
     <div class="filter-tabs">
-        <button class="{{ $activeFilter === 'all'       ? 'active' : '' }}" onclick="filterTable('all',this)">All</button>
-        <button class="{{ $activeFilter === 'pending'   ? 'active' : '' }}" onclick="filterTable('pending',this)">Pending</button>
-        <button class="{{ $activeFilter === 'approved'  ? 'active' : '' }}" onclick="filterTable('approved',this)">Approved</button>
-        <button class="{{ $activeFilter === 'completed' ? 'active' : '' }}" onclick="filterTable('completed',this)">Completed</button>
-        <button class="{{ $activeFilter === 'cancelled' ? 'active' : '' }}" onclick="filterTable('cancelled',this)">Cancelled</button>
+        <button class="{{ $activeFilter === 'all'       ? 'active' : '' }}" onclick="filterTable('all', this)">All</button>
+        <button class="{{ $activeFilter === 'pending'   ? 'active' : '' }}" onclick="filterTable('pending', this)">Pending</button>
+        <button class="{{ $activeFilter === 'approved'  ? 'active' : '' }}" onclick="filterTable('approved', this)">Approved</button>
+        <button class="{{ $activeFilter === 'completed' ? 'active' : '' }}" onclick="filterTable('completed', this)">Completed</button>
+        <button class="{{ $activeFilter === 'cancelled' ? 'active' : '' }}" onclick="filterTable('cancelled', this)">Cancelled</button>
     </div>
 
-    <table id="bookingsTable">
+    {{-- ── Bookings table ── --}}
+    <table class="data-table" id="bookingsTable" style="background:#fff;border-radius:10px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,0.06);">
         <thead>
             <tr>
                 <th>ID</th>
@@ -40,51 +49,87 @@
             </tr>
         </thead>
         <tbody>
-        @foreach ($bookings as $row)
-            @php $cls = strtolower($row->status); @endphp
-            <tr data-status="{{ $row->status }}" onclick="openModal(
-                '{{ $row->appointment_id }}',
-                '{{ addslashes(htmlspecialchars($row->patient_name)) }}',
-                '{{ addslashes(htmlspecialchars($row->service_name)) }}',
-                '{{ addslashes(htmlspecialchars($row->doctor_name))  }}',
-                '{{ $row->appointment_date }}',
-                '{{ $row->appointment_time }}',
-                '{{ $row->status }}'
-            )">
-                <td>{{ $row->appointment_id }}</td>
-                <td>{{ $row->patient_name }}</td>
-                <td>{{ $row->service_name }}</td>
-                <td>{{ $row->doctor_name ? 'Dr. ' . $row->doctor_name : 'Not Assigned' }}</td>
-                <td>{{ $row->appointment_date }}</td>
-                <td>{{ date("g:i A", strtotime($row->appointment_time)) }}</td>
-                <td><span class="badge {{ $cls }}">{{ $row->status }}</span></td>
-            </tr>
-        @endforeach
+            @foreach($bookings as $row)
+                @php $cls = strtolower($row->status); @endphp
+                <tr data-status="{{ $row->status }}"
+                    onclick="openModal(
+                        '{{ $row->appointment_id }}',
+                        '{{ addslashes($row->patient_name) }}',
+                        '{{ addslashes($row->service_name) }}',
+                        '{{ addslashes($row->doctor_name) }}',
+                        '{{ $row->appointment_date }}',
+                        '{{ $row->appointment_time }}',
+                        '{{ $row->status }}'
+                    )"
+                    style="cursor:pointer;">
+                    <td>{{ $row->appointment_id }}</td>
+                    <td>{{ $row->patient_name }}</td>
+                    <td>{{ $row->service_name }}</td>
+                    <td>{{ $row->doctor_name ? 'Dr. ' . $row->doctor_name : 'Not Assigned' }}</td>
+                    <td>{{ $row->appointment_date }}</td>
+                    <td>{{ \Carbon\Carbon::parse($row->appointment_time)->format('g:i A') }}</td>
+                    <td><span class="badge {{ $cls }}">{{ $row->status }}</span></td>
+                </tr>
+            @endforeach
         </tbody>
     </table>
 </div>
 
-{{-- Booking Detail Modal --}}
+{{-- ── Booking detail modal ── --}}
 <div id="bookingModal" class="modal">
-    <div class="modal-content">
-        <span class="close" onclick="closeModal()">&times;</span>
-        <h3>Booking Details</h3>
-        <div class="modal-row"><span>ID</span><span id="m_id"></span></div>
-        <div class="modal-row"><span>Patient</span><span id="m_patient"></span></div>
-        <div class="modal-row"><span>Service</span><span id="m_service"></span></div>
-        <div class="modal-row"><span>Doctor</span><span id="m_doctor"></span></div>
-        <div class="modal-row"><span>Date</span><span id="m_date"></span></div>
-        <div class="modal-row"><span>Time</span><span id="m_time"></span></div>
-        <div class="modal-row"><span>Status</span><span id="m_status"></span></div>
-        <form method="POST" action="{{ route('staff.bookings.update-status') }}">
-            @csrf
-            <input type="hidden" name="appointment_id" id="appointment_id">
-            <input type="hidden" name="status" id="status_value">
-            <div id="actionButtons" class="modal-actions">
-                <button type="submit" name="update_status" class="approve-btn"   onclick="setStatus('approved')">✔ Approve</button>
-                <button type="submit" name="update_status" class="cancelled-btn" onclick="setStatus('cancelled')">✖ Cancel</button>
+    <div class="modal-content" style="max-width:440px;text-align:center;">
+        <div class="modal-header">
+            <h2>Booking Details</h2>
+            <span class="close-btn" onclick="closeModal()">&times;</span>
+        </div>
+        <div class="modal-body" style="gap:0;">
+            <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f3f3f3;font-size:0.86rem;">
+                <span style="color:#888;font-weight:500;">ID</span>
+                <span id="m_id" style="font-weight:600;"></span>
             </div>
-        </form>
+            <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f3f3f3;font-size:0.86rem;">
+                <span style="color:#888;font-weight:500;">Patient</span>
+                <span id="m_patient" style="font-weight:600;"></span>
+            </div>
+            <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f3f3f3;font-size:0.86rem;">
+                <span style="color:#888;font-weight:500;">Service</span>
+                <span id="m_service" style="font-weight:600;"></span>
+            </div>
+            <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f3f3f3;font-size:0.86rem;">
+                <span style="color:#888;font-weight:500;">Doctor</span>
+                <span id="m_doctor" style="font-weight:600;"></span>
+            </div>
+            <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f3f3f3;font-size:0.86rem;">
+                <span style="color:#888;font-weight:500;">Date</span>
+                <span id="m_date" style="font-weight:600;"></span>
+            </div>
+            <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f3f3f3;font-size:0.86rem;">
+                <span style="color:#888;font-weight:500;">Time</span>
+                <span id="m_time" style="font-weight:600;"></span>
+            </div>
+            <div style="display:flex;justify-content:space-between;padding:8px 0;font-size:0.86rem;">
+                <span style="color:#888;font-weight:500;">Status</span>
+                <span id="m_status" style="font-weight:600;"></span>
+            </div>
+
+            <form method="POST" action="{{ route('admin.bookings.update-status') }}" style="margin-top:18px;">
+                @csrf
+                <input type="hidden" name="appointment_id" id="appointment_id">
+                <input type="hidden" name="status"         id="status_value">
+                <div id="actionButtons" style="display:flex;gap:8px;justify-content:center;">
+                    <button type="submit"
+                            onclick="setStatus('approved')"
+                            style="background:#28a745;color:white;border:none;border-radius:6px;padding:9px 18px;cursor:pointer;font-size:0.88rem;">
+                        Approve
+                    </button>
+                    <button type="submit"
+                            onclick="setStatus('cancelled')"
+                            style="background:#ef4444;color:white;border:none;border-radius:6px;padding:9px 18px;cursor:pointer;font-size:0.88rem;">
+                        Cancel
+                    </button>
+                </div>
+            </form>
+        </div>
     </div>
 </div>
 
@@ -111,13 +156,8 @@ function openModal(id, patient, service, doctor, date, time, status) {
         (status === 'cancelled' || status === 'completed') ? 'none' : 'flex';
 }
 
-function closeModal() {
-    document.getElementById('bookingModal').style.display = 'none';
-}
-
-function setStatus(s) {
-    document.getElementById('status_value').value = s;
-}
+function closeModal() { document.getElementById('bookingModal').style.display = 'none'; }
+function setStatus(s) { document.getElementById('status_value').value = s; }
 
 window.onclick = e => {
     if (e.target === document.getElementById('bookingModal')) closeModal();
@@ -131,5 +171,6 @@ window.addEventListener('DOMContentLoaded', function () {
     }
 });
 </script>
+
 </body>
 </html>

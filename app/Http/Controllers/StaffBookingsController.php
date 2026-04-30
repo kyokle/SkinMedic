@@ -2,139 +2,163 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\SidebarDataController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use App\Http\Controllers\SidebarDataController;
+use Illuminate\Support\Facades\Session;
 
 class StaffBookingsController extends Controller
 {
     use SidebarDataController;
+
+    // ── Auto-complete helper ──────────────────────────────────
+    private function autoComplete(): void
+    {
+        $expired = DB::table('appointments')
+            ->where('status', 'approved')
+            ->whereRaw("TIMESTAMP(appointment_date, appointment_time) <= (NOW() - INTERVAL 1 HOUR)")
+            ->get();
+
+        foreach ($expired as $appt) {
+            DB::table('appointments')
+                ->where('appointment_id', $appt->appointment_id)
+                ->update(['status' => 'completed']);
+
+            $alreadyDeducted = DB::table('inventory_logs')
+                ->where('appointment_id', $appt->appointment_id)
+                ->where('type', 'OUT')
+                ->exists();
+
+            if (!$alreadyDeducted) {
+                $this->deductInventory($appt->appointment_id, $appt->service_id);
+            }
+        }
+    }
+
+    // ── FIFO deduction helper ─────────────────────────────────
+    private function deductInventory(int $appointmentId, int $serviceId): void
+    {
+        $serviceProducts = DB::table('service_products')
+            ->where('service_id', $serviceId)
+            ->get();
+
+        foreach ($serviceProducts as $prod) {
+            $remaining = $prod->quantity_used;
+
+            $batches = DB::table('inventory_logs')
+                ->where('product_id', $prod->product_id)
+                ->where('type', 'IN')
+                ->where('quantity', '>', 0)
+                ->orderBy('expiry_date')
+                ->orderBy('id')
+                ->get();
+
+            foreach ($batches as $batch) {
+                if ($remaining <= 0) break;
+
+                if ($batch->quantity >= $remaining) {
+                    DB::table('inventory_logs')
+                        ->where('id', $batch->id)
+                        ->decrement('quantity', $remaining);
+                    $deducted  = $remaining;
+                    $remaining = 0;
+                } else {
+                    DB::table('inventory_logs')
+                        ->where('id', $batch->id)
+                        ->update(['quantity' => 0]);
+                    $deducted   = $batch->quantity;
+                    $remaining -= $batch->quantity;
+                }
+
+                if ($deducted > 0) {
+                    DB::table('inventory_logs')->insert([
+                        'product_id'     => $prod->product_id,
+                        'quantity'       => $deducted,
+                        'type'           => 'OUT',
+                        'appointment_id' => $appointmentId,
+                        'created_at'     => now(),
+                    ]);
+
+                    $total = DB::table('inventory_logs')
+                        ->where('product_id', $prod->product_id)
+                        ->where('type', 'IN')
+                        ->where('quantity', '>', 0)
+                        ->sum('quantity');
+
+                    DB::table('products')
+                        ->where('product_id', $prod->product_id)
+                        ->update(['quantity' => $total]);
+                }
+            }
+        }
+    }
+
+    // ── GET /admin/bookings ───────────────────────────────────
     public function index(Request $request)
     {
-        $this->autoCompleteAppointments();
+        if (!in_array(Session::get('role'), ['admin', 'staff'])) {
+            return redirect()->route('index');
+        }
 
-        $activeFilter = $request->get('filter', 'all');
+        $this->autoComplete();
 
-        $bookings = DB::select("
-            SELECT
+        $bookings = DB::table('appointments as a')
+            ->leftJoin('services as s', 'a.service_id', '=', 's.service_id')
+            ->leftJoin('users as p',    'a.user_id',    '=', 'p.user_id')
+            ->leftJoin('doctor as doc',  'a.doctor_id',     '=', 'doc.doctor_id')
+            ->leftJoin('users as d',     'doc.user_id',     '=', 'd.user_id')
+            ->selectRaw("
                 a.appointment_id,
-                s.name            AS service_name,
+                s.name AS service_name,
                 CONCAT(p.firstName,' ',p.lastName) AS patient_name,
                 CONCAT(d.firstName,' ',d.lastName) AS doctor_name,
                 a.appointment_date,
                 a.appointment_time,
                 a.status
-            FROM appointments a
-            LEFT JOIN services s ON a.service_id = s.service_id
-            LEFT JOIN users    p ON a.user_id    = p.user_id
-            LEFT JOIN doctor doc ON a.doctor_id = doc.doctor_id
-            LEFT JOIN users d ON doc.user_id = d.user_id
-            ORDER BY a.appointment_date, a.appointment_time
-        ");
+            ")
+            ->orderBy('a.appointment_date')
+            ->orderBy('a.appointment_time')
+            ->get();
 
-        return view('staff_bookings', array_merge(
+        $activeFilter = $request->query('filter', 'all');
+
+        return view('admin_bookings', array_merge(
             $this->sidebarData(),
             compact('bookings', 'activeFilter')
         ));
     }
 
+    // ── POST /admin/bookings/update-status ────────────────────
     public function updateStatus(Request $request)
     {
+        if (!in_array(Session::get('role'), ['admin', 'staff'])) {
+            return redirect()->route('index');
+        }
+
         $id     = (int) $request->input('appointment_id');
         $status = $request->input('status');
 
-        $row = DB::selectOne(
-            "SELECT status, service_id FROM appointments WHERE appointment_id = ?",
-            [$id]
-        );
+        $appt = DB::table('appointments')->where('appointment_id', $id)->first();
 
-        if (!$row || $row->status === 'cancelled') {
+        if ($appt->status === 'cancelled') {
             return back()->with('error', 'This booking was already cancelled.');
         }
 
-        DB::update("UPDATE appointments SET status = ? WHERE appointment_id = ?", [$status, $id]);
+        DB::table('appointments')
+            ->where('appointment_id', $id)
+            ->update(['status' => $status]);
 
         if ($status === 'completed') {
-            $this->deductInventory($id, (int) $row->service_id);
+            $alreadyDeducted = DB::table('inventory_logs')
+                ->where('appointment_id', $id)
+                ->where('type', 'OUT')
+                ->exists();
+
+            if (!$alreadyDeducted) {
+                $this->deductInventory($id, $appt->service_id);
+            }
         }
 
         return redirect()->route('staff.bookings');
-    }
-
-    private function autoCompleteAppointments(): void
-    {
-        $appointments = DB::select("
-            SELECT appointment_id, service_id FROM appointments
-            WHERE status = 'approved'
-            AND TIMESTAMP(appointment_date, appointment_time) <= (NOW() - INTERVAL 1 HOUR)
-        ");
-
-        foreach ($appointments as $appt) {
-            DB::update("UPDATE appointments SET status = 'completed' WHERE appointment_id = ?", [$appt->appointment_id]);
-
-            $existing = DB::selectOne(
-                "SELECT id FROM inventory_logs WHERE appointment_id = ? AND type = 'OUT'",
-                [$appt->appointment_id]
-            );
-
-            if (!$existing) {
-                $this->deductInventory($appt->appointment_id, (int) $appt->service_id);
-            }
-        }
-    }
-
-    private function deductInventory(int $appointmentId, int $serviceId): void
-    {
-        $alreadyDone = DB::selectOne(
-            "SELECT id FROM inventory_logs WHERE appointment_id = ? AND type = 'OUT'",
-            [$appointmentId]
-        );
-        if ($alreadyDone) return;
-
-        $products = DB::select(
-            "SELECT product_id, quantity_used FROM service_products WHERE service_id = ?",
-            [$serviceId]
-        );
-
-        foreach ($products as $prod) {
-            $productId = (int) $prod->product_id;
-            $needed    = (int) $prod->quantity_used;
-            $remaining = $needed;
-
-            $stocks = DB::select("
-                SELECT id, quantity FROM inventory_logs
-                WHERE product_id = ? AND type = 'IN' AND quantity > 0
-                ORDER BY expiry_date ASC, id ASC
-            ", [$productId]);
-
-            foreach ($stocks as $stock) {
-                if ($remaining <= 0) break;
-                $available = (int) $stock->quantity;
-
-                if ($available >= $remaining) {
-                    DB::update("UPDATE inventory_logs SET quantity = quantity - ? WHERE id = ?", [$remaining, $stock->id]);
-                    $remaining = 0;
-                } else {
-                    DB::update("UPDATE inventory_logs SET quantity = 0 WHERE id = ?", [$stock->id]);
-                    $remaining -= $available;
-                }
-            }
-
-            $deducted = $needed - $remaining;
-
-            if ($deducted > 0) {
-                DB::insert(
-                    "INSERT INTO inventory_logs (product_id, quantity, type, appointment_id, created_at) VALUES (?, ?, 'OUT', ?, NOW())",
-                    [$productId, $deducted, $appointmentId]
-                );
-
-                DB::update("
-                    UPDATE products SET quantity = (
-                        SELECT IFNULL(SUM(quantity), 0) FROM inventory_logs
-                        WHERE product_id = ? AND type = 'IN' AND quantity > 0
-                    ) WHERE product_id = ?
-                ", [$productId, $productId]);
-            }
-        }
     }
 }

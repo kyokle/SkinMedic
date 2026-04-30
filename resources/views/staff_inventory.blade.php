@@ -62,6 +62,7 @@
                     <th>Current Batch Qty</th>
                     <th>Next Batch Expiry</th>
                     <th>Add Stock (Qty + Expiry)</th>
+                    <th>Edit Stock</th>
                 </tr>
             </thead>
             <tbody>
@@ -117,6 +118,16 @@
                                 <button type="submit" class="add-btn">Add</button>
                             </form>
                         </td>
+                        <td>
+    <button class="deduct-btn"
+            onclick="openDeductModal(
+                {{ $row->product_id }},
+                '{{ addslashes($row->product_name) }}',
+                {{ $row->quantity }}
+            )">
+        ✏ Edit Stock
+    </button>
+</td>
                     </tr>
                 @endforeach
             </tbody>
@@ -124,5 +135,49 @@
     </div>
 
 </div>
+
+{{-- Deduct / Edit Stock Modal --}}
+<div id="deductModal" class="modal-overlay" onclick="closeDeductModal(event)">
+    <div class="modal-box">
+        <button class="modal-close" onclick="closeDeductModal()">×</button>
+        <h3 id="deductTitle">Edit Stock</h3>
+        <p id="deductCurrent" class="deduct-current"></p>
+
+        <form method="POST" action="{{ route('staff.inventory.deduct-stock') }}" id="deductForm">
+            @csrf
+            <input type="hidden" name="product_id" id="deductProductId">
+
+            <input type="hidden" name="action" value="deduct">
+
+            <div class="deduct-row">
+                <label>Quantity to Deduct</label>
+                <input type="number" name="quantity" id="deductQty"
+                       min="1" required placeholder="Enter quantity">
+            </div>
+
+            <button type="submit" class="save-deduct-btn">Save Changes</button>
+        </form>
+    </div>
+</div>
+
+@push('scripts')
+<script>
+function openDeductModal(id, name, qty) {
+    document.getElementById('deductModal').style.display = 'flex';
+    document.getElementById('deductProductId').value = id;
+    document.getElementById('deductTitle').textContent = 'Edit Stock — ' + name;
+    document.getElementById('deductCurrent').textContent = 'Current quantity: ' + qty;
+    document.getElementById('deductQty').max = qty;
+    document.getElementById('deductQty').value = '';
+}
+
+function closeDeductModal(event) {
+    if (!event || event.target === document.getElementById('deductModal')) {
+        document.getElementById('deductModal').style.display = 'none';
+    }
+}
+
+</script>
+@endpush
 
 @endsection
