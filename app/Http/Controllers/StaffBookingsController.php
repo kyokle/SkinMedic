@@ -93,10 +93,10 @@ class StaffBookingsController extends Controller
         }
     }
 
-    // ── GET /admin/bookings ───────────────────────────────────
+    // ── GET /staff/bookings ───────────────────────────────────
     public function index(Request $request)
     {
-        if (!in_array(Session::get('role'), ['admin', 'staff'])) {
+        if (!in_array(Session::get('role'), ['staff', 'admin'])) {
             return redirect()->route('index');
         }
 
@@ -122,16 +122,16 @@ class StaffBookingsController extends Controller
 
         $activeFilter = $request->query('filter', 'all');
 
-        return view('admin_bookings', array_merge(
-            $this->sidebarData(),
-            compact('bookings', 'activeFilter')
-        ));
+        return view('staff_bookings', array_merge(
+    $this->sidebarData(),
+    compact('bookings', 'activeFilter')
+    ));
     }
 
-    // ── POST /admin/bookings/update-status ────────────────────
+    // ── POST /staff/bookings/update-status ────────────────────
     public function updateStatus(Request $request)
     {
-        if (!in_array(Session::get('role'), ['admin', 'staff'])) {
+        if (!in_array(Session::get('role'), ['staff', 'admin'])) {
             return redirect()->route('index');
         }
 

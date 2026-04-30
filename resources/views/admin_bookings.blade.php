@@ -116,17 +116,14 @@
                 @csrf
                 <input type="hidden" name="appointment_id" id="appointment_id">
                 <input type="hidden" name="status"         id="status_value">
-                <div id="actionButtons" style="display:flex;gap:8px;justify-content:center;">
-                    <button type="submit"
-                            onclick="setStatus('approved')"
-                            style="background:#28a745;color:white;border:none;border-radius:6px;padding:9px 18px;cursor:pointer;font-size:0.88rem;">
-                        Approve
-                    </button>
-                    <button type="submit"
-                            onclick="setStatus('cancelled')"
-                            style="background:#ef4444;color:white;border:none;border-radius:6px;padding:9px 18px;cursor:pointer;font-size:0.88rem;">
-                        Cancel
-                    </button>
+                <div id="actionButtons" style="display:none; margin-top:18px; gap:8px; justify-content:center;">
+                    <button type="submit" class="approve-btn"   onmousedown="setStatus('approved')">Approve</button>
+                    <button type="submit" class="cancelled-btn" onmousedown="setStatus('cancelled')">Cancel</button>
+                </div>
+
+                <div id="actionButtonsApproved" style="display:none; margin-top:18px; gap:8px; justify-content:center;">
+                    <button type="submit" class="complete-btn"  onmousedown="setStatus('completed')">Completed</button>
+                    <button type="submit" class="cancelled-btn" onmousedown="setStatus('cancelled')">Cancel</button>
                 </div>
             </form>
         </div>
@@ -143,6 +140,11 @@ function filterTable(status, btn) {
 }
 
 function openModal(id, patient, service, doctor, date, time, status) {
+    // Force hide with !important-equivalent via setAttribute
+    document.getElementById('actionButtons').setAttribute('style', 'display:none; margin-top:18px; gap:8px; justify-content:center;');
+    document.getElementById('actionButtonsApproved').setAttribute('style', 'display:none; margin-top:18px; gap:8px; justify-content:center;');
+
+    // ... rest of your code ...
     document.getElementById('bookingModal').style.display = 'flex';
     document.getElementById('m_id').innerText      = id;
     document.getElementById('m_patient').innerText = patient;
@@ -152,8 +154,13 @@ function openModal(id, patient, service, doctor, date, time, status) {
     document.getElementById('m_time').innerText    = time;
     document.getElementById('m_status').innerText  = status;
     document.getElementById('appointment_id').value = id;
-    document.getElementById('actionButtons').style.display =
-        (status === 'cancelled' || status === 'completed') ? 'none' : 'flex';
+
+    const s = status.trim().toLowerCase();
+    if (s === 'pending') {
+        document.getElementById('actionButtons').setAttribute('style', 'display:flex; margin-top:18px; gap:8px; justify-content:center;');
+    } else if (s === 'approved') {
+        document.getElementById('actionButtonsApproved').setAttribute('style', 'display:flex; margin-top:18px; gap:8px; justify-content:center;');
+    }
 }
 
 function closeModal() { document.getElementById('bookingModal').style.display = 'none'; }

@@ -1,58 +1,53 @@
 {{-- resources/views/admin_inventory.blade.php --}}
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>Inventory — SkinMedic</title>
+
+@extends('layouts.app')
+
+@section('title', 'Inventory — SkinMedic')
+
+@push('styles')
     <link rel="stylesheet" href="{{ asset('asset/css/admin_inventory.css') }}">
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Fraunces:wght@700&display=swap" rel="stylesheet">
-</head>
+@endpush
 
-<body>
+@section('content')
 
-@if(session('role') === 'admin')
-    @include('partials.sidebar_admin')
-@else
-    @include('partials.sidebar_staff')
-@endif
+@include('partials.sidebar_admin')
 
 <div class="main">
-    <div class="topbar">
-    <div class="page-title">Inventory System</div>
-    <div class="date-box">
-        <p>Today's Date</p>
-        <strong>{{ now()->format('Y-m-d') }}</strong>
-    </div>
-</div>
 
-    {{-- ── Near-expiry alert (yellow banner, matches screenshot) ── --}}
-    @if($nearExpiryItems->isNotEmpty())
+    {{-- Topbar --}}
+    <div class="topbar">
+        <h2>Inventory System</h2>
+        <div class="date-box">
+            <p>Today's Date</p>
+            <strong>{{ now()->format('Y-m-d') }}</strong>
+        </div>
+    </div>
+
+    {{-- Near Expiry Alert --}}
+    @if($nearExpiry->isNotEmpty())
     <div class="alert-block warning">
         <b>⚠ Near Expiry (within 7 days)</b><br>
-        @foreach($nearExpiryItems as $n)
-            • {{ $n->product_name }}
-              → Exp: <b>{{ $n->expiry_date }}</b>
-              (Qty: {{ $n->total_qty }})<br>
+        @foreach($nearExpiry as $n)
+            • {{ $n->product_name }} → Exp: <b>{{ $n->expiry_date }}</b> (Qty: {{ $n->total_qty }})<br>
         @endforeach
     </div>
     @endif
 
-    {{-- ── Low / out-of-stock alert (red banner) ── --}}
-    @if($lowStockItems->isNotEmpty() || $outOfStockItems->isNotEmpty())
+    {{-- Low / Out-of-Stock Alert --}}
+    @if($lowStock->isNotEmpty() || $outOfStock->isNotEmpty())
     <div class="alert-block danger">
         <b>⚠ Low / Out-of-Stock Alert</b><br>
-        @foreach($lowStockItems as $l)
+        @foreach($lowStock as $l)
             • {{ $l->product_name }} — only <b>{{ $l->quantity }}</b> left<br>
         @endforeach
-        @foreach($outOfStockItems as $z)
+        @foreach($outOfStock as $z)
             • {{ $z->product_name }} — <b>OUT OF STOCK</b><br>
         @endforeach
     </div>
     @endif
 
-    {{-- ── Inventory table ── --}}
+    {{-- Inventory Table --}}
     <div class="table-wrapper">
         <table class="inventory-table">
             <thead>
@@ -67,10 +62,11 @@
                     <th>Current Batch Qty</th>
                     <th>Next Batch Expiry</th>
                     <th>Add Stock (Qty + Expiry)</th>
+                    <th>Deduct Stock</th>
                 </tr>
             </thead>
             <tbody>
-                @foreach($inventoryItems as $row)
+                @foreach($products as $row)
                     @php
                         $expClass = 'exp-ok';
                         $daysLeft = null;
@@ -85,7 +81,6 @@
                         <td class="product-name">{{ $row->product_name }}</td>
                         <td>{{ $row->quantity }}</td>
                         <td>{{ $row->reorder_level }}</td>
-
                         <td>
                             @if($row->quantity == 0)
                                 <span class="status-badge out">❌ Out of Stock</span>
@@ -95,9 +90,7 @@
                                 <span class="status-badge in">✓ In Stock</span>
                             @endif
                         </td>
-
                         <td>{{ $row->last_added ? \Carbon\Carbon::parse($row->last_added)->format('Y-m-d H:i') : '—' }}</td>
-
                         <td class="{{ $expClass }}">
                             @if($row->current_expiry)
                                 {{ $row->current_expiry }}
@@ -110,30 +103,81 @@
                                 —
                             @endif
                         </td>
-
                         <td>{{ $row->current_batch_qty ?? '—' }}</td>
-
                         <td class="exp-next">{{ $row->next_expiry ?: '—' }}</td>
-
                         <td>
                             <form method="POST"
                                   action="{{ route('admin.inventory.add-stock') }}"
                                   class="add-stock-form">
                                 @csrf
-                                <input type="hidden"  name="product_id"  value="{{ $row->product_id }}">
-                                <input type="number"  name="quantity"     required min="1" placeholder="Qty"
+                                <input type="hidden" name="product_id"  value="{{ $row->product_id }}">
+                                <input type="number" name="quantity"     required min="1" placeholder="Qty"
                                        class="input-qty">
-                                <input type="date"    name="expiry_date" required
+                                <input type="date"   name="expiry_date" required
                                        class="input-date">
                                 <button type="submit" class="add-btn">Add</button>
                             </form>
                         </td>
+                        <td>
+    <button class="deduct-btn"
+            onclick="openDeductModal(
+                {{ $row->product_id }},
+                '{{ addslashes($row->product_name) }}',
+                {{ $row->quantity }}
+            )">
+        ✏ Deduct Stock
+    </button>
+</td>
                     </tr>
                 @endforeach
             </tbody>
         </table>
     </div>
+
 </div>
 
-</body>
-</html>
+{{-- Deduct / Edit Stock Modal --}}
+<div id="deductModal" class="modal-overlay" onclick="closeDeductModal(event)">
+    <div class="modal-box">
+        <button class="modal-close" onclick="closeDeductModal()">×</button>
+        <h3 id="deductTitle">Deduct Stock</h3>
+        <p id="deductCurrent" class="deduct-current"></p>
+
+        <form method="POST" action="{{ route('admin.inventory.deduct-stock') }}" id="deductForm">
+            @csrf
+            <input type="hidden" name="product_id" id="deductProductId">
+
+            <input type="hidden" name="action" value="deduct">
+
+            <div class="deduct-row">
+                <label>Quantity to Deduct</label>
+                <input type="number" name="quantity" id="deductQty"
+                       min="1" required placeholder="Enter quantity">
+            </div>
+
+            <button type="submit" class="save-deduct-btn">Save Changes</button>
+        </form>
+    </div>
+</div>
+
+@push('scripts')
+<script>
+function openDeductModal(id, name, qty) {
+    document.getElementById('deductModal').style.display = 'flex';
+    document.getElementById('deductProductId').value = id;
+    document.getElementById('deductTitle').textContent = 'Edit Stock — ' + name;
+    document.getElementById('deductCurrent').textContent = 'Current quantity: ' + qty;
+    document.getElementById('deductQty').max = qty;
+    document.getElementById('deductQty').value = '';
+}
+
+function closeDeductModal(event) {
+    if (!event || event.target === document.getElementById('deductModal')) {
+        document.getElementById('deductModal').style.display = 'none';
+    }
+}
+
+</script>
+@endpush
+
+@endsection

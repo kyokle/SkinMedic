@@ -1,6 +1,5 @@
 /* =============================================
-   admin_bookings.css — All Appointments Page
-   Add/merge into users_style.css or link separately
+   staff_bookings.css — All Appointments Page
 ============================================= */
 
 body {
@@ -75,7 +74,7 @@ tr[data-status]:hover td { background: #fafff2; cursor: pointer; }
 .completed { background: #3b82f6; }
 .cancelled { background: #ef4444; }
 
-/* ── Booking detail modal ── */
+/* ── Modal ── */
 .modal {
   display: none;
   position: fixed;
@@ -95,9 +94,12 @@ tr[data-status]:hover td { background: #fafff2; cursor: pointer; }
   box-shadow: 0 10px 30px rgba(0,0,0,0.2);
   position: relative;
 }
-.close { position: absolute; right: 16px; top: 12px; font-size: 22px; cursor: pointer; color: #999; }
-.close:hover { color: #333; }
-.modal-content h3 { margin-bottom: 16px; font-size: 1rem; color: #1a1f16; }
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
 .modal-row {
   display: flex;
   justify-content: space-between;
@@ -106,34 +108,45 @@ tr[data-status]:hover td { background: #fafff2; cursor: pointer; }
   font-size: 0.86rem;
   text-align: left;
 }
-.modal-row:last-of-type        { border-bottom: none; }
-.modal-row span:first-child    { color: #888; font-weight: 500; }
-.modal-row span:last-child     { color: #333; font-weight: 600; }
-.modal-actions                 { margin-top: 18px; display: flex; gap: 8px; justify-content: center; }
+.modal-row span:first-child { color: #888; font-weight: 500; }
+.modal-row span:last-child  { color: #333; font-weight: 600; }
+
+/* ── KEY FIX: NO display property here — JS controls visibility via inline style ── */
+.modal-actions {
+  margin-top: 18px;
+  gap: 8px;
+  justify-content: center;
+}
+
+.close-btn {
+  font-size: 1.4rem;
+  cursor: pointer;
+  color: #999;
+  line-height: 1;
+  background: none;
+  border: none;
+  padding: 0;
+}
+.close-btn:hover { color: #333; }
+
+/* ── Action buttons ── */
 .approve-btn {
   background: #28a745; color: white; border: none;
   border-radius: 6px; padding: 9px 18px; cursor: pointer;
   font-size: 0.88rem; font-weight: 500;
 }
+.approve-btn:hover { background: #218838; }
+
 .cancelled-btn {
   background: #ef4444; color: white; border: none;
   border-radius: 6px; padding: 9px 18px; cursor: pointer;
   font-size: 0.88rem; font-weight: 500;
 }
-.modal-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 16px;
-}
+.cancelled-btn:hover { background: #dc2626; }
 
-.close-btn {
-    font-size: 1.4rem;
-    cursor: pointer;
-    color: #999;
-    line-height: 1;
-    background: none;
-    border: none;
-    padding: 0;
+.complete-btn {
+  background: #3b82f6; color: white; border: none;
+  border-radius: 6px; padding: 9px 18px; cursor: pointer;
+  font-size: 0.88rem; font-weight: 500;
 }
-.close-btn:hover { color: #333; }
+.complete-btn:hover { background: #2563eb; }

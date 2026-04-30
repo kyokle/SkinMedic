@@ -21,9 +21,9 @@
     <div class="topbar">
         <h2 style="font-size:1.4rem;font-weight:700;">All Appointments</h2>
         <div class="date-box">
-    <p>Today's Date</p>
-    <strong>{{ now()->format('Y-m-d') }}</strong>
-</div>
+            <p>Today's Date</p>
+            <strong>{{ now()->format('Y-m-d') }}</strong>
+        </div>
     </div>
 
     {{-- ── Filter tabs ── --}}
@@ -36,7 +36,7 @@
     </div>
 
     {{-- ── Bookings table ── --}}
-    <table class="data-table" id="bookingsTable" style="background:#fff;border-radius:10px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,0.06);">
+    <table class="data-table" id="bookingsTable">
         <thead>
             <tr>
                 <th>ID</th>
@@ -53,7 +53,7 @@
                 @php $cls = strtolower($row->status); @endphp
                 <tr data-status="{{ $row->status }}"
                     onclick="openModal(
-                        '{{ $row->appointment_id }}',
+                        {{ $row->appointment_id }},
                         '{{ addslashes($row->patient_name) }}',
                         '{{ addslashes($row->service_name) }}',
                         '{{ addslashes($row->doctor_name) }}',
@@ -68,7 +68,7 @@
                     <td>{{ $row->doctor_name ? 'Dr. ' . $row->doctor_name : 'Not Assigned' }}</td>
                     <td>{{ $row->appointment_date }}</td>
                     <td>{{ \Carbon\Carbon::parse($row->appointment_time)->format('g:i A') }}</td>
-                    <td><span class="badge {{ $cls }}">{{ $row->status }}</span></td>
+                    <td><span class="badge {{ $cls }}">{{ ucfirst($row->status) }}</span></td>
                 </tr>
             @endforeach
         </tbody>
@@ -83,50 +83,28 @@
             <span class="close-btn" onclick="closeModal()">&times;</span>
         </div>
         <div class="modal-body" style="gap:0;">
-            <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f3f3f3;font-size:0.86rem;">
-                <span style="color:#888;font-weight:500;">ID</span>
-                <span id="m_id" style="font-weight:600;"></span>
-            </div>
-            <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f3f3f3;font-size:0.86rem;">
-                <span style="color:#888;font-weight:500;">Patient</span>
-                <span id="m_patient" style="font-weight:600;"></span>
-            </div>
-            <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f3f3f3;font-size:0.86rem;">
-                <span style="color:#888;font-weight:500;">Service</span>
-                <span id="m_service" style="font-weight:600;"></span>
-            </div>
-            <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f3f3f3;font-size:0.86rem;">
-                <span style="color:#888;font-weight:500;">Doctor</span>
-                <span id="m_doctor" style="font-weight:600;"></span>
-            </div>
-            <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f3f3f3;font-size:0.86rem;">
-                <span style="color:#888;font-weight:500;">Date</span>
-                <span id="m_date" style="font-weight:600;"></span>
-            </div>
-            <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f3f3f3;font-size:0.86rem;">
-                <span style="color:#888;font-weight:500;">Time</span>
-                <span id="m_time" style="font-weight:600;"></span>
-            </div>
-            <div style="display:flex;justify-content:space-between;padding:8px 0;font-size:0.86rem;">
-                <span style="color:#888;font-weight:500;">Status</span>
-                <span id="m_status" style="font-weight:600;"></span>
-            </div>
+            <div class="modal-row"><span>ID</span><span id="m_id"></span></div>
+            <div class="modal-row"><span>Patient</span><span id="m_patient"></span></div>
+            <div class="modal-row"><span>Service</span><span id="m_service"></span></div>
+            <div class="modal-row"><span>Doctor</span><span id="m_doctor"></span></div>
+            <div class="modal-row"><span>Date</span><span id="m_date"></span></div>
+            <div class="modal-row"><span>Time</span><span id="m_time"></span></div>
+            <div class="modal-row" style="border-bottom:none;"><span>Status</span><span id="m_status"></span></div>
 
-            <form method="POST" action="{{ route('admin.bookings.update-status') }}" style="margin-top:18px;">
+            <form method="POST" action="{{ route('staff.bookings.update-status') }}">
                 @csrf
                 <input type="hidden" name="appointment_id" id="appointment_id">
-                <input type="hidden" name="status"         id="status_value">
-                <div id="actionButtons" style="display:flex;gap:8px;justify-content:center;">
-                    <button type="submit"
-                            onclick="setStatus('approved')"
-                            style="background:#28a745;color:white;border:none;border-radius:6px;padding:9px 18px;cursor:pointer;font-size:0.88rem;">
-                        Approve
-                    </button>
-                    <button type="submit"
-                            onclick="setStatus('cancelled')"
-                            style="background:#ef4444;color:white;border:none;border-radius:6px;padding:9px 18px;cursor:pointer;font-size:0.88rem;">
-                        Cancel
-                    </button>
+                <input type="hidden" name="status" id="status_value">
+
+                {{-- Remove class="modal-actions" entirely, put all styles inline --}}
+                <div id="actionButtons" style="display:none; margin-top:18px; gap:8px; justify-content:center;">
+                    <button type="submit" class="approve-btn"   onmousedown="setStatus('approved')">Approve</button>
+                    <button type="submit" class="cancelled-btn" onmousedown="setStatus('cancelled')">Cancel</button>
+                </div>
+
+                <div id="actionButtonsApproved" style="display:none; margin-top:18px; gap:8px; justify-content:center;">
+                    <button type="submit" class="complete-btn"  onmousedown="setStatus('completed')">Completed</button>
+                    <button type="submit" class="cancelled-btn" onmousedown="setStatus('cancelled')">Cancel</button>
                 </div>
             </form>
         </div>
@@ -143,6 +121,11 @@ function filterTable(status, btn) {
 }
 
 function openModal(id, patient, service, doctor, date, time, status) {
+    // Force hide with !important-equivalent via setAttribute
+    document.getElementById('actionButtons').setAttribute('style', 'display:none; margin-top:18px; gap:8px; justify-content:center;');
+    document.getElementById('actionButtonsApproved').setAttribute('style', 'display:none; margin-top:18px; gap:8px; justify-content:center;');
+
+    // ... rest of your code ...
     document.getElementById('bookingModal').style.display = 'flex';
     document.getElementById('m_id').innerText      = id;
     document.getElementById('m_patient').innerText = patient;
@@ -152,8 +135,13 @@ function openModal(id, patient, service, doctor, date, time, status) {
     document.getElementById('m_time').innerText    = time;
     document.getElementById('m_status').innerText  = status;
     document.getElementById('appointment_id').value = id;
-    document.getElementById('actionButtons').style.display =
-        (status === 'cancelled' || status === 'completed') ? 'none' : 'flex';
+
+    const s = status.trim().toLowerCase();
+    if (s === 'pending') {
+        document.getElementById('actionButtons').setAttribute('style', 'display:flex; margin-top:18px; gap:8px; justify-content:center;');
+    } else if (s === 'approved') {
+        document.getElementById('actionButtonsApproved').setAttribute('style', 'display:flex; margin-top:18px; gap:8px; justify-content:center;');
+    }
 }
 
 function closeModal() { document.getElementById('bookingModal').style.display = 'none'; }

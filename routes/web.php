@@ -180,6 +180,12 @@ Route::post('/admin/products/delete',            [AdminProductsController::class
 // ── Admin Inventory ──────────────────────────────────
 Route::get('/admin/inventory',                   [AdminInventoryController::class,    'index'])->name('admin.inventory');
 Route::post('/admin/inventory/add-stock',        [AdminInventoryController::class,    'addStock'])->name('admin.inventory.add-stock');
+Route::post('/admin/inventory/deduct-stock', [AdminInventoryController::class, 'deductStock'])
+     ->name('admin.inventory.deduct-stock');
+
+Route::post('/admin/inventory/add-stock', [AdminInventoryController::class, 'addStock'])
+    ->name('admin.inventory.add-stock')
+    ->middleware('check.admin.role');
 
 // ── Admin Manage Users ──────────────────────────────────
 Route::get('/admin/users',                       [AdminManageUsersController::class, 'index'])->name('admin.users');
