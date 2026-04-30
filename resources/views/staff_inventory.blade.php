@@ -62,7 +62,7 @@
                     <th>Current Batch Qty</th>
                     <th>Next Batch Expiry</th>
                     <th>Add Stock (Qty + Expiry)</th>
-                    <th>Edit Stock</th>
+                    <th>Deduct Stock</th>
                 </tr>
             </thead>
             <tbody>
