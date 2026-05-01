@@ -149,7 +149,6 @@ Route::post('/staff/profile/update-employment', [StaffProfileController::class, 
     ->middleware('check.staff.role');
 
 // ── Staff Reviews ───────────────────────────────────────
-Route::get('/staff/reviews',     [ReviewController::class, 'index'])->name('staff.reviews');
 Route::get('/staff/reviews',          [StaffReviewsController::class, 'index'])->name('staff.reviews');
 Route::delete('/staff/reviews/{id}',  [StaffReviewsController::class, 'destroy'])->name('staff.reviews.destroy');
 
@@ -185,7 +184,7 @@ Route::post('/admin/inventory/deduct-stock', [AdminInventoryController::class, '
 
 Route::post('/admin/inventory/add-stock', [AdminInventoryController::class, 'addStock'])
     ->name('admin.inventory.add-stock')
-    ->middleware('check.admin.role');
+    ->middleware('check.staff.role');
 
 // ── Admin Manage Users ──────────────────────────────────
 Route::get('/admin/users',                       [AdminManageUsersController::class, 'index'])->name('admin.users');

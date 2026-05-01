@@ -68,22 +68,22 @@ class PatientAR_Skin_AnalysisController extends Controller
     }
 
     public function result()
-    {
-        if (!Session::has('user_id')) {
-            return redirect('/')->with('error', 'Please login first.');
-        }
-
-        $result   = session('result');
-        $photoUrl = session('photoUrl');
-
-        if (!$result) {
-            return redirect()->route('patient.skin-analysis')
-                             ->with('error', 'No result found. Please try again.');
-        }
-
-        return view('skin-analysis.result', array_merge(
-            $this->sidebarData(),
-            compact('result', 'photoUrl')
-        ));
+{
+    if (!Session::has('user_id')) {
+        return redirect('/')->with('error', 'Please login first.');
     }
+
+    $result   = session('result');
+    $photoUrl = session('photoUrl');
+
+    if (!$result) {
+        return redirect()->route('patient.skin-analysis')
+                         ->with('error', 'No result found. Please try again.');
+    }
+
+    return view('patient_skin_analysis_result', array_merge(  // ← changed view name
+        $this->sidebarData(),
+        compact('result', 'photoUrl')
+    ));
+}
 }

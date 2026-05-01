@@ -11,6 +11,28 @@
 
 @section('content')
 
+{{-- Upload success toast --}}
+@if(session('upload_success'))
+<div id="toast" style="
+    position: fixed; top: 20px; right: 20px; z-index: 9999;
+    background: #2e7d32; color: white;
+    padding: 14px 24px; border-radius: 8px;
+    font-size: 14px; box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    animation: fadeIn 0.3s ease;">
+    ✅ Profile picture updated successfully!
+</div>
+<style>
+@keyframes fadeIn { from { opacity:0; transform:translateY(-10px); } to { opacity:1; transform:translateY(0); } }
+</style>
+<script>
+    setTimeout(() => {
+        const t = document.getElementById('toast');
+        if (t) t.style.display = 'none';
+    }, 3000);
+</script>
+@endif
+
+
 @include('partials.sidebar_patient')
 
 <div class="main">

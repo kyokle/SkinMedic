@@ -348,8 +348,9 @@
           @foreach($services as $service)
             <article class="treatment-card">
               <div class="treatment-image">
-                <img src="uploads/{{ $service->image }}" alt="{{ $service->name }}"
-                     onerror="this.src='https://i.ibb.co/2s7sG4v/placeholder.png'"/>
+                <img src="{{ str_starts_with($service->image, 'http') ? $service->image : asset('uploads/' . $service->image) }}"
+     alt="{{ $service->name }}"
+     onerror="this.src='https://i.ibb.co/2s7sG4v/placeholder.png'"/>
               </div>
               <h3>{{ $service->name }}</h3>
               <p>{{ $service->description }}</p>
@@ -379,9 +380,9 @@
           @foreach($products as $product)
             <article class="shop-card">
               <div class="shop-image">
-                <img src="uploads/{{ $product->image }}"
-                     alt="{{ $product->product_name }}"
-                     onerror="this.src='https://i.ibb.co/2s7sG4v/placeholder.png'"/>
+                <img src="{{ str_starts_with($product->image, 'http') ? $product->image : asset('uploads/' . $product->image) }}"
+     alt="{{ $product->product_name }}"
+     onerror="this.src='https://i.ibb.co/2s7sG4v/placeholder.png'"/>
               </div>
               <h3>{{ $product->product_name }}</h3>
               <p>₱{{ number_format($product->selling_price, 2) }}</p>
@@ -459,16 +460,16 @@
             <span class="badge">Main Branch</span>
           </h3>
           <div class="loc-meta">
-            <p>📍 <strong>Address:</strong> Imus, Cavite, Philippines</p>
+            <p>📍 <strong>Address:</strong> Pacifica Plaza, Buhay Na Tubig, Imus, Cavite, Philippines</p>
             <p>🕐 <strong>Mon–Fri:</strong> 9:00 AM – 6:00 PM</p>
             <p>🕐 <strong>Saturday:</strong> 9:00 AM – 3:00 PM</p>
             <p>🕐 <strong>Sunday:</strong> Closed</p>
-            <p>📞 <strong>Phone:</strong> [Your phone number here]</p>
+            <p>📞 <strong>Phone:</strong> 0968-619-5061 or 0995-882-2211</p>
             <p>✉️ <strong>Email:</strong> [Your email here]</p>
           </div>
           <div class="loc-actions">
             <a href="https://maps.google.com/?q=14.4086299,120.9544516" target="_blank" class="directions">Get Directions</a>
-            <a href="tel:[yourphonenumber]" class="call">Call Us</a>
+            <a href="tel:09686195061" class="call">Call Us</a>
           </div>
         </div>
  

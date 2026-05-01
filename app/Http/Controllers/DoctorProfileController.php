@@ -4,9 +4,11 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 
 class DoctorProfileController extends Controller
 {
+    use SidebarDataController;
     public function show()
     {
         $userId = session('user_id');
@@ -38,30 +40,28 @@ class DoctorProfileController extends Controller
             ? $doctor['profile_picture']
             : 'uploads/default.png';
 
-        $sidebarData = (new SidebarDoctorController)->getSidebarData();
+        $sidebarData = $this->sidebarData();
 
         return view('doctor_profile', array_merge(compact('doctor', 'profilePic'), $sidebarData));
     }
 
     public function uploadPic(Request $request)
-    {
-        $request->validate([
-            'profile_pic' => 'required|image|mimes:jpg,jpeg,png',
-        ]);
+{
+    $request->validate([
+        'profile_pic' => 'required|image|mimes:jpg,jpeg,png|max:5120',
+    ]);
 
-        $userId = session('user_id');
+    $userId = session('user_id');
 
-        $uploaded = cloudinary()->upload($request->file('profile_pic')->getRealPath(), [
-            'folder' => 'doctor_profiles',
-        ]);
-        $imgUrl = $uploaded->getSecurePath();
+    $path = Storage::disk('cloudinary')->putFile('doctor_profiles', $request->file('profile_pic'));
+    $url  = Storage::disk('cloudinary')->url($path);
 
-        DB::table('doctor')
-            ->where('user_id', $userId)
-            ->update(['profile_picture' => $imgUrl]);
+    DB::table('doctor')
+        ->where('user_id', $userId)
+        ->update(['profile_picture' => $url]);
 
-        return redirect()->route('doctor.profile');
-    }
+    return redirect()->route('doctor.profile')->with('upload_success', true);
+}
 
     public function updatePersonal(Request $request)
     {

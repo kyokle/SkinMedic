@@ -57,9 +57,9 @@ class PatientProfileController extends Controller
             ->where('user_id', $userId)
             ->update(['profile_picture' => $url]); // ← also fixed $imgUrl bug → $url
 
-        return redirect()->route('patient.profile');
+        return redirect()->route('patient.profile')->with('upload_success', true);
     }
-    
+
     public function updatePersonal(Request $request)
     {
         $userId = (int) Session::get('user_id');

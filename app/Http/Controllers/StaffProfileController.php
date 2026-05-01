@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use App\Http\Controllers\SidebarDataController;
 
 class StaffProfileController extends Controller
@@ -79,23 +80,20 @@ class StaffProfileController extends Controller
     }
 
     public function uploadPic(Request $request)
-    {
-        $userId = session('user_id');
+{
+    $userId = session('user_id');
 
-        if ($request->hasFile('profile_pic') && $request->file('profile_pic')->isValid()) {
-            $file    = $request->file('profile_pic');
-            $allowed = ['jpg', 'jpeg', 'png'];
-            $ext     = strtolower($file->getClientOriginalExtension());
+    $request->validate([
+        'profile_pic' => 'required|image|mimes:jpg,jpeg,png|max:5120',
+    ]);
 
-            if (in_array($ext, $allowed)) {
-                $uploaded = cloudinary()->upload($file->getRealPath(), [
-                    'folder' => 'staff_profiles',
-                ]);
-                $imgUrl = $uploaded->getSecurePath();
-                DB::update("UPDATE staff SET profile_picture=? WHERE user_id=?", [$imgUrl, $userId]);
-            }
-        }
+    $path = Storage::disk('cloudinary')->putFile('staff_profiles', $request->file('profile_pic'));
+    $url  = Storage::disk('cloudinary')->url($path);
 
-        return redirect()->route('staff.profile');
-    }
+    DB::table('staff')
+        ->where('user_id', $userId)
+        ->update(['profile_picture' => $url]);
+
+    return redirect()->route('staff.profile')->with('upload_success', true);
+}
 }

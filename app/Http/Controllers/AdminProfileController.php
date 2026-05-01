@@ -2,14 +2,15 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Controllers\SidebarDataController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Session;
+use Illuminate\Support\Facades\Storage;
 
 class AdminProfileController extends Controller
 {
     use SidebarDataController;
+
     public function uploadPic(Request $request)
     {
         $userId = (int) Session::get('user_id');
@@ -18,15 +19,13 @@ class AdminProfileController extends Controller
             'profile_pic' => 'required|image|mimes:jpg,jpeg,png|max:5120',
         ]);
 
-        $uploaded = cloudinary()->upload($request->file('profile_pic')->getRealPath(), [
-            'folder' => 'admin_profiles',
-        ]);
-        $imgUrl = $uploaded->getSecurePath();
+        $path = Storage::disk('cloudinary')->putFile('admin_profiles', $request->file('profile_pic'));
+        $url  = Storage::disk('cloudinary')->url($path);
 
         DB::table('users')
             ->where('user_id', $userId)
-            ->update(['profile_image' => $imgUrl]);
+            ->update(['profile_image' => $url]);
 
-        return redirect()->back();
+        return redirect()->back()->with('upload_success', true);
     }
 }
