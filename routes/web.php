@@ -2,6 +2,8 @@
 
 use App\Http\Controllers\IndexController;
 use App\Http\Controllers\AuthController;
+use App\Mail\TestMail;
+use Illuminate\Support\Facades\Mail;
 use App\Http\Controllers\AddProductController;
 use App\Http\Controllers\AddServiceController;
 use App\Http\Controllers\SkinAnalysisController;
@@ -51,7 +53,24 @@ Route::get('/logout',           [AuthController::class,  'logout'])->name('logou
 Route::get('/book-appointment', [BookAppointmentController::class, 'show'])->name('book.appointment.show');
 Route::post('/book-appointment', [BookAppointmentController::class, 'store'])->name('book.appointment.store');
 Route::get('/get-available-times', [BookAppointmentController::class, 'getAvailableTimes']);
+Route::get('/test-mail', function () {
+    Mail::to('jlouise1425@gmail.com')->send(new TestMail());
+    return '✅ Email sent! Check your Mailtrap inbox.';
+});
+Route::get('/verify-email/{token}', function ($token) {
+    $user = DB::table('users')->where('verify_token', $token)->first();
 
+    if (!$user) {
+        abort(404, 'Invalid verification link.');
+    }
+
+    DB::table('users')->where('verify_token', $token)->update([
+        'email_verified_at' => now(),
+        'verify_token'      => null,
+    ]);
+
+    return redirect('/')->with('success', 'Email verified! You can now log in.');
+})->name('verify.email');
 
 // Review
 Route::post('/reviews',          [ReviewController::class, 'store'])->name('reviews.store');

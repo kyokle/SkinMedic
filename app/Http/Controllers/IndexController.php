@@ -6,6 +6,10 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Session;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Str;
+use App\Mail\VerifyEmailMail;
+use App\Mail\ResetOtpMail;
 
 class IndexController extends Controller
 {
@@ -70,37 +74,39 @@ class IndexController extends Controller
      * Handle client login via AJAX.
      */
     public function login(Request $request)
-    {
-        $request->validate([
-            'email'    => 'required|email',
-            'password' => 'required',
-        ]);
+{
+    $request->validate([
+        'email'    => 'required|email',
+        'password' => 'required',
+    ]);
 
-        // NOTE: Replace this block with your actual auth logic (e.g. Auth::attempt)
-        $user = DB::table('users')
-            ->where('email', $request->email)
-            ->first();
+    $user = DB::table('users')->where('email', $request->email)->first();
 
-        if (!$user || !password_verify($request->password, $user->password_hash)) {
-            return response()->json(['success' => false, 'error' => 'Invalid email or password.']);
-        }
-
-        Session::put('user_id', $user->user_id);
-        Session::put('email', $user->email);
-        Session::put('role',  $user->role);
-        Auth::loginUsingId($user->user_id);
-
-        $redirectMap = [
-            'doctor'  => route('doctor.home'),
-            'staff'   => route('staff.home'),
-            'patient' => route('patient.home'),
-        ];
-
-        return response()->json([
-            'success'  => true,
-            'redirect' => $redirectMap[$user->role] ?? '/',
-        ]);
+    if (!$user || !password_verify($request->password, $user->password_hash)) {
+        return response()->json(['success' => false, 'error' => 'Invalid email or password.']);
     }
+
+    // Block login if email not verified
+    if (is_null($user->email_verified_at)) {
+        return response()->json(['success' => false, 'error' => 'Please verify your email before logging in.']);
+    }
+
+    Session::put('user_id', $user->user_id);
+    Session::put('email', $user->email);
+    Session::put('role',  $user->role);
+    Auth::loginUsingId($user->user_id);
+
+    $redirectMap = [
+        'doctor'  => route('doctor.home'),
+        'staff'   => route('staff.home'),
+        'patient' => route('patient.home'),
+    ];
+
+    return response()->json([
+        'success'  => true,
+        'redirect' => $redirectMap[$user->role] ?? '/',
+    ]);
+}
 
     /**
      * Handle admin login via AJAX.
@@ -142,80 +148,88 @@ class IndexController extends Controller
      * Handle patient signup via AJAX.
      */
     public function signup(Request $request)
-    {
-        $request->validate([
-            'firstname' => 'required|string|max:100',
-            'lastname'  => 'required|string|max:100',
-            'email'     => 'required|email|unique:users,email',
-            'gender'    => 'required|in:male,female,others',
-            'password'  => 'required|min:8',
-        ]);
+{
+    $request->validate([
+        'firstname' => 'required|string|max:100',
+        'lastname'  => 'required|string|max:100',
+        'email'     => 'required|email|unique:users,email',
+        'gender'    => 'required|in:male,female,others',
+        'password'  => 'required|min:8',
+    ]);
 
-        $userId = DB::table('users')->insertGetId([
-            'firstname'  => $request->firstname,
-            'lastname'   => $request->lastname,
-            'email'      => $request->email,
-            'gender'     => $request->gender,
-            'phone_no'   => $request->phone_no,
-            'address'    => $request->address,
-            'password_hash' => password_hash($request->password, PASSWORD_DEFAULT),
-            'role'       => 'patient',
-        ]);
+    // Generate verification token
+    $token = Str::random(64);
 
-        Session::put('user_id', $userId);
-        Session::put('email', $request->email);
-        Session::put('role',  'patient');
-        Auth::loginUsingId($userId);
+    $userId = DB::table('users')->insertGetId([
+        'firstname'      => $request->firstname,
+        'lastname'       => $request->lastname,
+        'email'          => $request->email,
+        'gender'         => $request->gender,
+        'phone_no'       => $request->phone_no,
+        'address'        => $request->address,
+        'password_hash'  => password_hash($request->password, PASSWORD_DEFAULT),
+        'role'           => 'patient',
+        'email_verified_at' => null, // not verified yet
+        'verify_token'   => $token,  // store token
+    ]);
 
-        Session::flash('success', 'Account created successfully! Welcome to SkinMedic.');
+    // Send verification email
+    $verifyUrl = route('verify.email', ['token' => $token]);
+    Mail::to($request->email)->send(new VerifyEmailMail($verifyUrl));
 
-        return response()->json([
-            'success'  => true,
-            'redirect' => route('patient.home'),
-        ]);
-    }
-
+    // Don't log them in yet — ask them to verify first
+    return response()->json([
+        'success' => true,
+        'message' => 'Account created! Please check your email to verify your account.',
+        'redirect' => null, // stay on page
+    ]);
+}
     /**
      * Step 1 of Forgot Password: send OTP to email.
      */
     public function forgotPassword(Request $request)
-    {
-        $request->validate(['fp_email' => 'required|email']);
+{
+    $request->validate(['fp_email' => 'required|email']);
 
-        $user = DB::table('users')->where('email', $request->fp_email)->first();
+    $user = DB::table('users')->where('email', $request->fp_email)->first();
 
-        if (!$user) {
-            return response()->json(['success' => false, 'error' => 'Email not found.']);
-        }
-
-        $otp = rand(100000, 999999);
-
-        // Store OTP in session (or a password_resets table)
-        Session::put('reset_otp',   $otp);
-        Session::put('reset_email', $request->fp_email);
-
-        // TODO: Send $otp via email using Mail facade
-        // Mail::to($request->fp_email)->send(new ResetOtpMail($otp));
-
-        return response()->json([
-            'success' => true,
-            'message' => 'OTP sent! Check your inbox.',
-        ]);
+    if (!$user) {
+        return response()->json(['success' => false, 'error' => 'Email not found.']);
     }
+
+    $otp = rand(100000, 999999);
+
+    Session::put('reset_otp',   $otp);
+    Session::put('reset_email', $request->fp_email);
+    Session::put('otp_expires', now()->addMinutes(10)); // expiry
+
+    // ✅ Actually send the OTP now
+    Mail::to($request->fp_email)->send(new ResetOtpMail($otp));
+
+    return response()->json([
+        'success' => true,
+        'message' => 'OTP sent! Check your inbox.',
+    ]);
+}
 
     /**
      * Step 2 of Forgot Password: verify OTP.
      */
     public function verifyResetOtp(Request $request)
-    {
-        $request->validate(['otp' => 'required|digits:6']);
+{
+    $request->validate(['otp' => 'required|digits:6']);
 
-        if ((string) Session::get('reset_otp') !== (string) $request->otp) {
-            return response()->json(['success' => false, 'error' => 'Invalid or expired OTP.']);
-        }
-
-        return response()->json(['success' => true]);
+    // Check expiry
+    if (now()->gt(Session::get('otp_expires'))) {
+        return response()->json(['success' => false, 'error' => 'OTP has expired. Please request a new one.']);
     }
+
+    if ((string) Session::get('reset_otp') !== (string) $request->otp) {
+        return response()->json(['success' => false, 'error' => 'Invalid OTP.']);
+    }
+
+    return response()->json(['success' => true]);
+}
 
     /**
      * Step 3 of Forgot Password: reset password.
