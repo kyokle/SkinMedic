@@ -81,7 +81,7 @@ class PatientAR_Skin_AnalysisController extends Controller
                          ->with('error', 'No result found. Please try again.');
     }
 
-    return view('patient_skin_analysis_result', array_merge(  // ← changed view name
+    return view('patient_Skin_Analysis_result', array_merge(  // ← changed view name
         $this->sidebarData(),
         compact('result', 'photoUrl')
     ));
