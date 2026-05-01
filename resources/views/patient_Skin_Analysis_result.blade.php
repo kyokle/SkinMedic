@@ -154,7 +154,7 @@
       <div class="sr-cta-card">
         <h3 class="sr-cta-title">Ready to get started?</h3>
         <p class="sr-cta-sub">Book a free consultation with our skin specialists and get a personalized treatment plan tailored to your results.</p>
-        <button onclick="window.location.href='{{ route('patient.bookings') }}'"
+        <button onclick="window.location.href='{{ route('patient.services') }}'"
         class="sr-book-btn" style="border:none;cursor:pointer;width:100%;">Book an Appointment</button>
         <a href="{{ route('patient.skin-analysis') }}" class="sr-retake-link">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
