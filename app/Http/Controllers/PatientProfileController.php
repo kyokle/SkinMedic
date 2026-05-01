@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Session;
+use Illuminate\Support\Facades\Storage;
 
 class PatientProfileController extends Controller
 {
@@ -48,18 +49,17 @@ class PatientProfileController extends Controller
             'profile_pic' => 'required|image|mimes:jpg,jpeg,png|max:5120',
         ]);
 
-        $uploaded = cloudinary()->upload($request->file('profile_pic')->getRealPath(), [
-            'folder' => 'patient_profiles',
-        ]);
-        $imgUrl = $uploaded->getSecurePath();
+        $file = $request->file('profile_pic');
+        $path = Storage::disk('cloudinary')->putFile('patient_profiles', $file);
+        $url  = Storage::disk('cloudinary')->url($path);
 
         DB::table('patient')
             ->where('user_id', $userId)
-            ->update(['profile_picture' => $imgUrl]);
+            ->update(['profile_picture' => $url]); // ← also fixed $imgUrl bug → $url
 
         return redirect()->route('patient.profile');
     }
-
+    
     public function updatePersonal(Request $request)
     {
         $userId = (int) Session::get('user_id');
