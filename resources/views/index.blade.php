@@ -485,6 +485,16 @@
       </div>
     </section>
 
+<div id="emailOtpPopup" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:9999; align-items:center; justify-content:center;">
+    <div style="background:white; border-radius:12px; padding:30px; max-width:400px; width:90%; text-align:center;">
+        <h3 style="color:#80a833;">Verify Your Email</h3>
+        <p>Enter the 6-digit code sent to your email.</p>
+        <div id="emailOtpBoxes" style="display:flex; gap:8px; justify-content:center; margin:20px 0;"></div>
+        <div id="emailOtpError" style="color:red; margin-bottom:10px;"></div>
+        <button onclick="submitEmailOtp()" style="padding:12px 30px; background:#80a833; color:white; border:none; border-radius:8px; cursor:pointer; font-size:16px;">Verify</button>
+    </div>
+</div>
+
   </main>
   <script src="{{ asset('asset/js/index.js') }}"></script>
 </body>

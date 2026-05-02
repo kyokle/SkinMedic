@@ -71,6 +71,7 @@ Route::get('/verify-email/{token}', function ($token) {
 
     return redirect('/')->with('success', 'Email verified! You can now log in.');
 })->name('verify.email');
+Route::post('/verify-email-otp', [IndexController::class, 'verifyEmailOtp'])->name('verify.email.otp');
 
 // Review
 Route::post('/reviews',          [ReviewController::class, 'store'])->name('reviews.store');

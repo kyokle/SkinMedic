@@ -154,18 +154,57 @@ document.getElementById('signupForm').addEventListener('submit', function (e) {
 
   const fd = new FormData(this);
   doPost('/signup', fd, 'signupError', d => {
-  const err = document.getElementById('signupError');
-  err.style.color = 'green';
-  err.textContent = '✅ Account created! Please check your email to verify your account.';
-  // Close popup after 3 seconds
-  setTimeout(() => {
     closeSignupPopup();
-    err.style.color = '';
-    err.textContent = '';
-  }, 3000);
+    buildEmailOtp();
+    document.getElementById('emailOtpPopup').style.display = 'flex';
 });
 });
 
+// Build email OTP boxes
+function buildEmailOtp() {
+    const wrap = document.getElementById('emailOtpBoxes');
+    wrap.innerHTML = '';
+    for (let i = 0; i < 6; i++) {
+        const inp = document.createElement('input');
+        inp.type      = 'text';
+        inp.maxLength = 1;
+        inp.inputMode = 'numeric';
+        inp.style     = 'width:45px; height:50px; font-size:24px; text-align:center; border:2px solid #ccc; border-radius:8px;';
+        inp.addEventListener('input', function () {
+            this.style.borderColor = this.value ? '#80a833' : '#ccc';
+            if (this.value && this.nextElementSibling) this.nextElementSibling.focus();
+        });
+        inp.addEventListener('keydown', function (e) {
+            if (e.key === 'Backspace' && !this.value && this.previousElementSibling)
+                this.previousElementSibling.focus();
+        });
+        wrap.appendChild(inp);
+    }
+    wrap.children[0].focus();
+}
+
+function getEmailOtp() {
+    return [...document.querySelectorAll('#emailOtpBoxes input')].map(i => i.value).join('');
+}
+
+function submitEmailOtp() {
+    const otp = getEmailOtp();
+    const err = document.getElementById('emailOtpError');
+    err.textContent = '';
+
+    if (otp.length < 6) { err.textContent = 'Please enter all 6 digits.'; return; }
+
+    const fd = new FormData();
+    fd.append('otp', otp);
+    doPost('/verify-email-otp', fd, 'emailOtpError', d => {
+        document.getElementById('emailOtpPopup').style.display = 'none';
+        alert(d.message);
+        openPopup(); // open login popup
+    });
+}
+
+// Call buildEmailOtp when popup opens
+const _origCloseSignup = closeSignupPopup;
 /* ═══════════════════════════════════════════════════
    AUTO-OPEN POPUP ON URL PARAM
 ═══════════════════════════════════════════════════ */

@@ -12,16 +12,18 @@ class VerifyEmailMail extends Mailable
 {
     use Queueable, SerializesModels;
 
-    public string $verifyUrl;
+    public string $otp;
+    public string $firstName;
 
-    public function __construct(string $verifyUrl)
+    public function __construct(string $otp, string $firstName)
     {
-        $this->verifyUrl = $verifyUrl;
+        $this->otp       = $otp;
+        $this->firstName = $firstName;
     }
 
     public function envelope(): Envelope
     {
-        return new Envelope(subject: 'Verify Your Email Address');
+        return new Envelope(subject: 'Verify Your Email - SkinMedic');
     }
 
     public function content(): Content

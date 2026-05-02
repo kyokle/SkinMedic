@@ -157,31 +157,69 @@ class IndexController extends Controller
         'password'  => 'required|min:8',
     ]);
 
-    // Generate verification token
-    $token = Str::random(64);
+    $otp = rand(100000, 999999);
 
-    $userId = DB::table('users')->insertGetId([
-        'firstname'      => $request->firstname,
-        'lastname'       => $request->lastname,
-        'email'          => $request->email,
-        'gender'         => $request->gender,
-        'phone_no'       => $request->phone_no,
-        'address'        => $request->address,
-        'password_hash'  => password_hash($request->password, PASSWORD_DEFAULT),
-        'role'           => 'patient',
-        'email_verified_at' => null, // not verified yet
-        'verify_token'   => $token,  // store token
+    DB::table('users')->insertGetId([
+        'firstname'         => $request->firstname,
+        'lastname'          => $request->lastname,
+        'email'             => $request->email,
+        'gender'            => $request->gender,
+        'phone_no'          => $request->phone_no,
+        'address'           => $request->address,
+        'password_hash'     => password_hash($request->password, PASSWORD_DEFAULT),
+        'role'              => 'patient',
+        'email_verified_at' => null,
+        'verify_token'      => null,
+        'email_otp'         => $otp,
+        'otp_expires_at'    => now()->addMinutes(10),
     ]);
 
-    // Send verification email
-    $verifyUrl = route('verify.email', ['token' => $token]);
-    Mail::to($request->email)->send(new VerifyEmailMail($verifyUrl));
+    Mail::to($request->email)->send(new VerifyEmailMail((string)$otp, $request->firstname));
 
-    // Don't log them in yet — ask them to verify first
+    // Store email in session for OTP verification
+    Session::put('pending_verify_email', $request->email);
+
     return response()->json([
         'success' => true,
-        'message' => 'Account created! Please check your email to verify your account.',
-        'redirect' => null, // stay on page
+        'message' => 'Account created! Please enter the OTP sent to your email.',
+    ]);
+}
+
+public function verifyEmailOtp(Request $request)
+{
+    $request->validate(['otp' => 'required|digits:6']);
+
+    $email = Session::get('pending_verify_email');
+
+    if (!$email) {
+        return response()->json(['success' => false, 'error' => 'Session expired. Please register again.']);
+    }
+
+    $user = DB::table('users')->where('email', $email)->first();
+
+    if (!$user) {
+        return response()->json(['success' => false, 'error' => 'User not found.']);
+    }
+
+    if (now()->gt($user->otp_expires_at)) {
+        return response()->json(['success' => false, 'error' => 'OTP has expired. Please register again.']);
+    }
+
+    if ((string)$user->email_otp !== (string)$request->otp) {
+        return response()->json(['success' => false, 'error' => 'Invalid OTP. Please try again.']);
+    }
+
+    DB::table('users')->where('email', $email)->update([
+        'email_verified_at' => now(),
+        'email_otp'         => null,
+        'otp_expires_at'    => null,
+    ]);
+
+    Session::forget('pending_verify_email');
+
+    return response()->json([
+        'success' => true,
+        'message' => '✅ Email verified! You can now log in.',
     ]);
 }
     /**
