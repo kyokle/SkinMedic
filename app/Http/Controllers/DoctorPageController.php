@@ -3,10 +3,11 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Support\Facades\DB;
-use App\Http\Controllers\SidebarDoctorController;
+use App\Http\Controllers\SidebarDataController;
 
 class DoctorPageController extends Controller
 {
+    use SidebarDataController;
     public function index()
     {
         $doctorId     = session('user_id');

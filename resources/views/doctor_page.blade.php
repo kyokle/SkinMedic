@@ -27,7 +27,7 @@
     {{-- Welcome Banner --}}
     <div class="welcome-banner">
         <div>
-            <h3>Welcome back, Dr. {{ trim($docName) }}! 👋</h3>
+            <h3>Welcome back, Dr. {{ $sidebarFirstName }}! 👋</h3>
             <p>{{ $docSpec ?: 'SkinMedic Physician' }} &nbsp;|&nbsp; {{ now()->format('l') }}</p>
         </div>
         <img src="{{ asset('/asset/image/skintransparent.png') }}" alt="SkinMedic">

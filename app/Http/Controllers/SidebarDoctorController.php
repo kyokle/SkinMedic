@@ -27,11 +27,15 @@ class SidebarDoctorController extends Controller
             ->select('u.firstName', 'u.lastName', 'u.email', 'd.profile_picture')
             ->first();
 
+        $pic = $data->profile_picture ?? '';
+
         return [
             'sidebarFirstName' => $data->firstName     ?? 'Doctor',
             'sidebarLastName'  => $data->lastName      ?? '',
             'sidebarEmail'     => $data->email         ?? '',
-            'sidebarProfile' => $data->profile_picture ?? 'default.png',
+            'sidebarProfile' => $pic 
+    ? asset('uploads/profiles/' . $pic) 
+    : asset('uploads/default.png'),
             'sidebarRole'      => ucfirst(Session::get('role', 'doctor')),
         ];
     }
