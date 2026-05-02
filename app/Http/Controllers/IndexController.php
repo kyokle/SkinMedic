@@ -238,7 +238,7 @@ class IndexController extends Controller
     {
         $request->validate([
             'password'         => 'required|min:8|confirmed',
-            'confirm_password' => 'required',
+            'confirm_password' => 'required|same:password',
         ]);
 
         $email = Session::get('reset_email');
