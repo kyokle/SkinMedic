@@ -237,15 +237,18 @@ class IndexController extends Controller
     public function resetPassword(Request $request)
     {
         $request->validate([
-            'password'         => 'required|min:8|confirmed',
+            'password'         => 'required|min:8',
             'confirm_password' => 'required|same:password',
         ]);
 
         $email = Session::get('reset_email');
 
         if (!$email) {
-            return response()->json(['success' => false, 'error' => 'Session expired. Please try again.']);
-        }
+    return response()->json([
+        'success' => false, 
+        'error' => 'Session expired. Email: ' . Session::get('reset_email') . ' All: ' . json_encode(Session::all())
+    ]);
+}
 
         DB::table('users')
             ->where('email', $email)

@@ -153,15 +153,16 @@ document.getElementById('signupForm').addEventListener('submit', function (e) {
   if (!/[\W_]/.test(pw)) { err.textContent = 'Password needs a special character (!@#$…).'; return; }
 
   const fd = new FormData(this);
-  doPost('/signup', fd, 'signupError', d => { 
-  closeSignupPopup(); 
-  if (d.redirect) {
-    location.href = d.redirect;
-  } else {
-    // Show success message instead
-    document.getElementById('signupError').style.color = 'green';
-    document.getElementById('signupError').textContent = d.message;
-  }
+  doPost('/signup', fd, 'signupError', d => {
+  const err = document.getElementById('signupError');
+  err.style.color = 'green';
+  err.textContent = '✅ Account created! Please check your email to verify your account.';
+  // Close popup after 3 seconds
+  setTimeout(() => {
+    closeSignupPopup();
+    err.style.color = '';
+    err.textContent = '';
+  }, 3000);
 });
 });
 
