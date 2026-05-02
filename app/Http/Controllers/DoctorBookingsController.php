@@ -29,7 +29,7 @@ class DoctorBookingsController extends Controller
             LEFT JOIN services s ON a.service_id = s.service_id
             WHERE a.doctor_id = ?
             ORDER BY a.appointment_date, a.appointment_time", [$doctorId]);
-        $sidebarData = (new SidebarDoctorController)->getSidebarData();
+        $sidebarData = $this->sidebarData();
         return view('doctor_bookings', array_merge(compact('bookings', 'activeFilter'), $sidebarData));
     }
 }

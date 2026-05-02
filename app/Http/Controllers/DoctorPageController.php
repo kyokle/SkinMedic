@@ -61,7 +61,7 @@ class DoctorPageController extends Controller
             ORDER BY a.appointment_date ASC, a.appointment_time ASC
             LIMIT 10
         ", [$doctorId, $upcomingStart, $nextWeek]);
-        $sidebarData = (new SidebarDoctorController)->getSidebarData();
+        $sidebarData = $this->sidebarData();
 
         return view('doctor_page', array_merge(compact(
     'docName', 'docSpec', 'total', 'todayCount',
