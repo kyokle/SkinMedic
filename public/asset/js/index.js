@@ -197,10 +197,24 @@ function submitEmailOtp() {
     const fd = new FormData();
     fd.append('otp', otp);
     doPost('/verify-email-otp', fd, 'emailOtpError', d => {
+    // Change popup content to success screen
+    document.getElementById('emailOtpPopup').innerHTML = `
+        <div style="background:white; border-radius:12px; padding:40px; max-width:400px; width:90%; text-align:center;">
+            <div style="font-size:60px; margin-bottom:16px;">✅</div>
+            <h3 style="color:#80a833; font-size:22px; margin-bottom:10px;">Email Verified!</h3>
+            <p style="color:#555;">You can now log in to your account.</p>
+            <button onclick="document.getElementById('emailOtpPopup').style.display='none'; openPopup();" 
+                style="margin-top:20px; padding:12px 30px; background:#80a833; color:white; border:none; border-radius:8px; cursor:pointer; font-size:16px;">
+                Log In
+            </button>
+        </div>
+    `;
+    // Auto open login after 2.5 seconds
+    setTimeout(() => {
         document.getElementById('emailOtpPopup').style.display = 'none';
-        alert(d.message);
-        openPopup(); // open login popup
-    });
+        openPopup();
+    }, 2500);
+});
 }
 
 // Call buildEmailOtp when popup opens
