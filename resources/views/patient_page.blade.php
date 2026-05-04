@@ -61,7 +61,7 @@
     {{-- Welcome Banner --}}
     <div class="welcome-banner">
         <div>
-            <h3>Welcome back, {{ Session::get('firstName') }}! 👋</h3>
+            <h3>Welcome back, {{ $sidebarFirstName }}! 👋</h3>
             <p>Manage your appointments and stay on top of your skin health.</p>
             <a href="{{ route('patient.services') }}" class="book-now-btn">+ Book Appointment</a>
         </div>
