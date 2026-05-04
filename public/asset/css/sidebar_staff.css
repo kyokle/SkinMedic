@@ -160,7 +160,11 @@ body {
 .main, main.content {
     margin-left: var(--sb-w);
     flex: 1;
+    /* CHANGE 1: Added min-width: 0 — prevents .main from collapsing to 304px inside the flex container */
+    min-width: 0;
     min-height: 100vh;
+    /* CHANGE 2: Added overflow-x: hidden — clips content bleeding horizontally outside .main */
+    overflow-x: hidden;
     transition: margin-left 0.28s ease;
 }
 

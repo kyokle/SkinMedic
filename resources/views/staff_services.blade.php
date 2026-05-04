@@ -34,7 +34,8 @@
         @forelse ($services as $row)
             @php $statusClass = $row->status === 'available' ? 'on' : 'off'; @endphp
             <div class="service-card">
-                <img src="{{ asset('uploads/' . $row->image) }}" onerror="this.src='{{ asset('uploads/default.png') }}'">
+                <img src="{{ $row->image }}" onerror="this.src='{{ asset('uploads/default.png') }}'"
+                 alt="{{ $row->name }}">
                 <h3>{{ $row->name }}</h3>
                 <p>{{ $row->description }}</p>
                 <p><strong>₱{{ $row->price }}</strong></p>
