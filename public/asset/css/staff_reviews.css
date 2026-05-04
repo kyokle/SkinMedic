@@ -133,8 +133,6 @@
     border: 1px solid #e2e6ea;
     border-radius: 12px;
     box-shadow: 0 1px 4px rgba(0,0,0,0.05);
-    /* CHANGE 1: Changed from overflow: hidden — the old value was clipping
-       .mr-review-cards on ≤540px screens, making mobile cards invisible */
     overflow: visible;
 }
 
@@ -148,8 +146,6 @@
     border-bottom: 1px solid #e2e6ea;
 }
 
-/* CHANGE 2: Added overflow-x: auto and -webkit-overflow-scrolling: touch —
-   table now scrolls horizontally on small screens instead of squashing */
 .mr-table-scroll {
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
@@ -159,8 +155,6 @@
     width: 100%;
     border-collapse: collapse;
     font-size: 13px;
-    /* CHANGE 3: Removed table-layout: fixed — was forcing equal ~50px columns.
-       Added min-width: 620px so horizontal scroll triggers before columns collapse */
     min-width: 620px;
 }
 
@@ -270,33 +264,11 @@
 /* ── Utility ── */
 .hidden { display: none !important; }
 
-/* ── Responsive ── */
-@media (max-width: 820px) {
-    .mr-page  { padding: 20px 16px; }
-    .mr-stats { grid-template-columns: 1fr 1fr; }
-
-    .mr-filter-bar {
-        /* CHANGE 4: Changed from flex-wrap: wrap — buttons now scroll sideways instead of stacking */
-        flex-wrap: nowrap;
-        /* CHANGE 4: Added overflow-x: auto — enables horizontal scroll for filter buttons */
-        overflow-x: auto;
-        -webkit-overflow-scrolling: touch;
-        padding-bottom: 4px;
-        scrollbar-width: none;
-    }
-    .mr-filter-bar::-webkit-scrollbar { display: none; }
-    .mr-filter-btn { flex-shrink: 0; }
-}
-
-/* CHANGE 5: Added this entire block — on ≤540px hide the table and show stacked cards instead */
-@media (max-width: 540px) {
-    .mr-table-scroll { display: none; }
-    .mr-review-cards { display: block; }
-}
-
 /* ── Stacked review cards (mobile only, hidden on desktop) ── */
-/* CHANGE 6: Added this entire block — styles for the new mobile card layout */
-.mr-review-cards { display: none; }
+.mr-review-cards {
+    display: none;
+    overflow: visible !important;
+}
 
 .mr-review-card {
     padding: 12px 16px;
@@ -332,4 +304,28 @@
     line-height: 1.5;
     white-space: normal;
     overflow: visible;
+}
+
+/* ── Responsive ── */
+@media (max-width: 820px) {
+    .mr-page  { padding: 20px 16px; }
+    .mr-stats { grid-template-columns: 1fr 1fr; }
+
+    .mr-filter-bar {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        padding-bottom: 4px;
+        scrollbar-width: none;
+    }
+    .mr-filter-bar::-webkit-scrollbar { display: none; }
+    .mr-filter-btn { flex-shrink: 0; }
+}
+
+@media (max-width: 768px) {
+    .mr-table-scroll { display: none; }
+    .mr-review-cards {
+        display: block !important;
+        overflow: visible !important;
+    }
 }
