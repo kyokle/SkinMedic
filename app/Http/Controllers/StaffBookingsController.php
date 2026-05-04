@@ -6,6 +6,7 @@ use App\Http\Controllers\SidebarDataController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Session;
+use App\Helpers\NotificationHelper;
 
 class StaffBookingsController extends Controller
 {
@@ -209,7 +210,7 @@ class StaffBookingsController extends Controller
         foreach ($adminStaff as $u) {
             NotificationHelper::send($u->user_id, $title, $staffMsg, $staffType, $id);
         }
-        
+
         return redirect()->route('staff.bookings');
     }
 }
