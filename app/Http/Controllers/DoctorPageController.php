@@ -10,7 +10,7 @@ class DoctorPageController extends Controller
     use SidebarDataController;
     public function index()
     {
-        $doctorId     = session('user_id');
+        $userId     = session('user_id');
         $doctorRecord = DB::table('doctor')->where('user_id', $doctorId)->first();
         $doctorId     = $doctorRecord ? $doctorRecord->doctor_id : 0;
         $today        = date('Y-m-d');
@@ -23,7 +23,7 @@ class DoctorPageController extends Controller
             FROM users u
             LEFT JOIN doctor d ON u.user_id = d.user_id
             WHERE u.user_id = ?
-        ", [$doctorId]);
+        ", [$userId]);
 
         $docName = ($docData->firstName ?? '') . ' ' . ($docData->lastName ?? '');
         $docSpec  = $docData->specialization ?? '';
