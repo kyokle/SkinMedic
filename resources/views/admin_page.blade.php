@@ -18,21 +18,24 @@
 
     {{-- Topbar --}}
     <div class="topbar">
-    <div class="page-title">Dashboard</div>
-    <div class="date-box">
-        <p>Today's Date</p>
-        <strong>{{ now()->format('Y-m-d') }}</strong>
+        <div class="page-title">Dashboard</div>
+        <div style="display:flex;align-items:center;gap:14px;">
+            <div class="date-box">
+                <p>Today's Date</p>
+                <strong>{{ now()->format('Y-m-d') }}</strong>
+            </div>
+            @include('partials.notif_bell_admin')
+        </div>
     </div>
-</div>
 
-{{-- Welcome Banner --}}
-<div class="welcome-banner">
-    <div>
-        <h3>Welcome back, {{ $sidebarFirstName }}! 👋</h3>
-        <p>Administrator &nbsp;|&nbsp; {{ now()->format('l') }}</p>
+    {{-- Welcome Banner --}}
+    <div class="welcome-banner">
+        <div>
+            <h3>Welcome back, {{ $sidebarFirstName }}! 👋</h3>
+            <p>Administrator &nbsp;|&nbsp; {{ now()->format('l') }}</p>
+        </div>
+        <img src="{{ asset('/asset/image/skintransparent.png') }}" alt="SkinMedic">
     </div>
-    <img src="{{ asset('/asset/image/skintransparent.png') }}" alt="SkinMedic">
-</div>
 
     {{-- Stat Cards --}}
     <div class="stats-grid">
@@ -184,59 +187,59 @@ document.addEventListener("DOMContentLoaded", function () {
     const accent2 = '#b5d45a';
 
     new Chart(document.getElementById('lineChart'), {
-    type: 'line',
-    data: {
-        labels: {!! json_encode($lineLabels) !!},
-        datasets: [{
-            label: 'Bookings',
-            data: {!! json_encode($lineValues) !!},
-            borderColor: accent,
-            backgroundColor: 'rgba(128,168,51,0.1)',
-            fill: true,
-            tension: 0.4
-        }]
-    },
-    options: { responsive: true, maintainAspectRatio: true }
-});
+        type: 'line',
+        data: {
+            labels: {!! json_encode($lineLabels) !!},
+            datasets: [{
+                label: 'Bookings',
+                data: {!! json_encode($lineValues) !!},
+                borderColor: accent,
+                backgroundColor: 'rgba(128,168,51,0.1)',
+                fill: true,
+                tension: 0.4
+            }]
+        },
+        options: { responsive: true, maintainAspectRatio: true }
+    });
 
-new Chart(document.getElementById('donutChart'), {
-    type: 'doughnut',
-    data: {
-        labels: {!! json_encode($donutLabels) !!},
-        datasets: [{
-            label: 'Status',
-            data: {!! json_encode($donutData) !!},
-            backgroundColor: {!! json_encode($donutColors) !!}
-        }]
-    },
-    options: { responsive: true, maintainAspectRatio: true }
-});
+    new Chart(document.getElementById('donutChart'), {
+        type: 'doughnut',
+        data: {
+            labels: {!! json_encode($donutLabels) !!},
+            datasets: [{
+                label: 'Status',
+                data: {!! json_encode($donutData) !!},
+                backgroundColor: {!! json_encode($donutColors) !!}
+            }]
+        },
+        options: { responsive: true, maintainAspectRatio: true }
+    });
 
-new Chart(document.getElementById('barChart'), {
-    type: 'bar',
-    data: {
-        labels: {!! json_encode($svcLabels) !!},
-        datasets: [{
-            label: 'Bookings',
-            data: {!! json_encode($svcData) !!},
-            backgroundColor: accent2
-        }]
-    },
-    options: { responsive: true, maintainAspectRatio: true }
-});
+    new Chart(document.getElementById('barChart'), {
+        type: 'bar',
+        data: {
+            labels: {!! json_encode($svcLabels) !!},
+            datasets: [{
+                label: 'Bookings',
+                data: {!! json_encode($svcData) !!},
+                backgroundColor: accent2
+            }]
+        },
+        options: { responsive: true, maintainAspectRatio: true }
+    });
 
-new Chart(document.getElementById('stockChart'), {
-    type: 'bar',
-    data: {
-        labels: {!! json_encode($stockNames) !!},
-        datasets: [{
-            label: 'Stock Qty',
-            data: {!! json_encode($stockQty) !!},
-            backgroundColor: '#3b82f6'
-        }]
-    },
-    options: { responsive: true, maintainAspectRatio: true }
-});
+    new Chart(document.getElementById('stockChart'), {
+        type: 'bar',
+        data: {
+            labels: {!! json_encode($stockNames) !!},
+            datasets: [{
+                label: 'Stock Qty',
+                data: {!! json_encode($stockQty) !!},
+                backgroundColor: '#3b82f6'
+            }]
+        },
+        options: { responsive: true, maintainAspectRatio: true }
+    });
 });
 </script>
 @endpush

@@ -159,6 +159,57 @@ class StaffBookingsController extends Controller
             }
         }
 
+        $isRescheduled = $appt->is_rescheduled ?? false;
+
+        if ($status === 'approved') {
+            DB::table('appointments')
+                ->where('appointment_id', $id)
+                ->update(['is_rescheduled' => false]);
+        }
+
+        $patientMessages = [
+            'approved'  => $isRescheduled ? 'Your rescheduled appointment has been approved.' : 'Your appointment has been approved.',
+            'completed' => 'Your appointment has been marked as completed.',
+            'cancelled' => 'Your appointment has been cancelled.',
+        ];
+        $patientTypes = [
+            'approved'  => 'upcoming',
+            'completed' => 'history',
+            'cancelled' => 'cancelled',
+        ];
+
+        $staffMessages = [
+            'approved'  => 'An appointment has been approved.',
+            'completed' => 'An appointment has been marked as completed.',
+            'cancelled' => 'An appointment has been cancelled.',
+        ];
+        $staffTypes = [
+            'approved'  => 'booking',
+            'completed' => 'booking',
+            'cancelled' => 'booking',
+        ];
+
+        $title       = 'Appointment ' . ucfirst($status);
+        $patientMsg  = $patientMessages[$status] ?? 'Your appointment status has been updated.';
+        $patientType = $patientTypes[$status]    ?? 'upcoming';
+        $staffMsg    = $staffMessages[$status]   ?? 'An appointment status has been updated.';
+        $staffType   = $staffTypes[$status]      ?? 'booking';
+
+        $patient = DB::table('users')->where('user_id', $appt->user_id)->first();
+        if ($patient) {
+            NotificationHelper::send($patient->user_id, $title, $patientMsg, $patientType, $id);
+        }
+
+        $doctor = DB::table('doctor')->where('doctor_id', $appt->doctor_id)->first();
+        if ($doctor && $doctor->user_id) {
+            NotificationHelper::send($doctor->user_id, $title, $staffMsg, $staffType, $id);
+        }
+
+        $adminStaff = DB::table('users')->whereIn('role', ['admin', 'staff'])->get();
+        foreach ($adminStaff as $u) {
+            NotificationHelper::send($u->user_id, $title, $staffMsg, $staffType, $id);
+        }
+        
         return redirect()->route('staff.bookings');
     }
 }

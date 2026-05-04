@@ -23,39 +23,7 @@
                 <p>Today's Date</p>
                 <strong>{{ now()->toDateString() }}</strong>
             </div>
-
-            {{-- Notification Bell --}}
-            <div class="notif-wrapper">
-                <div class="notif-bell {{ $notifCount > 0 ? 'has-alerts' : '' }}"
-                     onclick="toggleNotif()" title="Notifications">
-                    🔔
-                    @if($notifCount > 0)
-                        <span class="notif-badge">{{ $notifCount > 9 ? '9+' : $notifCount }}</span>
-                    @endif
-                </div>
-
-                <div class="notif-dropdown" id="notifDropdown">
-                    <div class="notif-header">
-                        <span>🔔 Alerts</span>
-                        <small>{{ $notifCount }} notification{{ $notifCount !== 1 ? 's' : '' }}</small>
-                    </div>
-                    <div class="notif-list">
-                        @if($notifCount === 0)
-                            <div class="notif-empty">✅ All good — no alerts right now.</div>
-                        @else
-                            @foreach($notifications as $n)
-                                <div class="notif-item {{ $n['type'] }}">
-                                    <div class="notif-icon">{{ $n['icon'] }}</div>
-                                    <div class="notif-text">{{ $n['msg'] }}</div>
-                                </div>
-                            @endforeach
-                        @endif
-                    </div>
-                    <div class="notif-footer">
-                        <a href="{{ route('staff.inventory') }}">Go to Inventory →</a>
-                    </div>
-                </div>
-            </div>
+            @include('partials.notif_bell_staff')
         </div>
     </div>
 
@@ -158,16 +126,6 @@
 
 @push('scripts')
 <script>
-function toggleNotif() {
-    const dd = document.getElementById('notifDropdown');
-    dd.classList.toggle('open');
-}
-
-document.addEventListener('click', function(e) {
-    const wrapper = document.querySelector('.notif-wrapper');
-    if (wrapper && !wrapper.contains(e.target)) {
-        document.getElementById('notifDropdown').classList.remove('open');
-    }
-});
+// notif_bell.blade.php handles its own JS
 </script>
 @endpush

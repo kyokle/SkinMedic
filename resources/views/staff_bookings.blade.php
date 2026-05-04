@@ -8,7 +8,6 @@
     <link rel="stylesheet" href="{{ asset('asset/css/staff_bookings.css') }}">
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Fraunces:wght@700&display=swap" rel="stylesheet">
 </head>
-
 <body>
 
 @if(session('role') === 'staff')
@@ -20,13 +19,15 @@
 <div class="main">
     <div class="topbar">
         <h2 style="font-size:1.4rem;font-weight:700;">All Appointments</h2>
-        <div class="date-box">
-            <p>Today's Date</p>
-            <strong>{{ now()->format('Y-m-d') }}</strong>
+        <div style="display:flex;align-items:center;gap:14px;">
+            <div class="date-box">
+                <p>Today's Date</p>
+                <strong>{{ now()->format('Y-m-d') }}</strong>
+            </div>
+            @include('partials.notif_bell_staff')
         </div>
     </div>
 
-    {{-- ── Filter tabs ── --}}
     <div class="filter-tabs">
         <button class="{{ $activeFilter === 'all'       ? 'active' : '' }}" onclick="filterTable('all', this)">All</button>
         <button class="{{ $activeFilter === 'pending'   ? 'active' : '' }}" onclick="filterTable('pending', this)">Pending</button>
@@ -35,7 +36,6 @@
         <button class="{{ $activeFilter === 'cancelled' ? 'active' : '' }}" onclick="filterTable('cancelled', this)">Cancelled</button>
     </div>
 
-    {{-- ── Bookings table ── --}}
     <table class="data-table" id="bookingsTable">
         <thead>
             <tr>
@@ -52,6 +52,7 @@
             @foreach($bookings as $row)
                 @php $cls = strtolower($row->status); @endphp
                 <tr data-status="{{ $row->status }}"
+                    data-id="{{ $row->appointment_id }}"
                     onclick="openModal(
                         {{ $row->appointment_id }},
                         '{{ addslashes($row->patient_name) }}',
@@ -75,7 +76,6 @@
     </table>
 </div>
 
-{{-- ── Booking detail modal ── --}}
 <div id="bookingModal" class="modal">
     <div class="modal-content" style="max-width:440px;text-align:center;">
         <div class="modal-header">
@@ -95,13 +95,10 @@
                 @csrf
                 <input type="hidden" name="appointment_id" id="appointment_id">
                 <input type="hidden" name="status" id="status_value">
-
-                {{-- Remove class="modal-actions" entirely, put all styles inline --}}
                 <div id="actionButtons" style="display:none; margin-top:18px; gap:8px; justify-content:center;">
                     <button type="submit" class="approve-btn"   onmousedown="setStatus('approved')">Approve</button>
                     <button type="submit" class="cancelled-btn" onmousedown="setStatus('cancelled')">Cancel</button>
                 </div>
-
                 <div id="actionButtonsApproved" style="display:none; margin-top:18px; gap:8px; justify-content:center;">
                     <button type="submit" class="complete-btn"  onmousedown="setStatus('completed')">Completed</button>
                     <button type="submit" class="cancelled-btn" onmousedown="setStatus('cancelled')">Cancel</button>
@@ -121,19 +118,16 @@ function filterTable(status, btn) {
 }
 
 function openModal(id, patient, service, doctor, date, time, status) {
-    // Force hide with !important-equivalent via setAttribute
     document.getElementById('actionButtons').setAttribute('style', 'display:none; margin-top:18px; gap:8px; justify-content:center;');
     document.getElementById('actionButtonsApproved').setAttribute('style', 'display:none; margin-top:18px; gap:8px; justify-content:center;');
-
-    // ... rest of your code ...
     document.getElementById('bookingModal').style.display = 'flex';
-    document.getElementById('m_id').innerText      = id;
-    document.getElementById('m_patient').innerText = patient;
-    document.getElementById('m_service').innerText = service;
-    document.getElementById('m_doctor').innerText  = doctor || 'Not Assigned';
-    document.getElementById('m_date').innerText    = date;
-    document.getElementById('m_time').innerText    = time;
-    document.getElementById('m_status').innerText  = status;
+    document.getElementById('m_id').innerText       = id;
+    document.getElementById('m_patient').innerText  = patient;
+    document.getElementById('m_service').innerText  = service;
+    document.getElementById('m_doctor').innerText   = doctor || 'Not Assigned';
+    document.getElementById('m_date').innerText     = date;
+    document.getElementById('m_time').innerText     = time;
+    document.getElementById('m_status').innerText   = status;
     document.getElementById('appointment_id').value = id;
 
     const s = status.trim().toLowerCase();
@@ -156,6 +150,14 @@ window.addEventListener('DOMContentLoaded', function () {
     if (filter && filter !== 'all') {
         const activeBtn = document.querySelector('.filter-tabs button.active');
         if (activeBtn) filterTable(filter, activeBtn);
+    }
+
+    // Auto-open modal from notification click
+    const params = new URLSearchParams(window.location.search);
+    const openId = params.get('open');
+    if (openId) {
+        const row = document.querySelector(`#bookingsTable tbody tr[data-id="${openId}"]`);
+        if (row) row.click();
     }
 });
 </script>

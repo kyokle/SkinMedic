@@ -465,7 +465,7 @@
             <p>🕐 <strong>Saturday:</strong> 9:00 AM – 3:00 PM</p>
             <p>🕐 <strong>Sunday:</strong> Closed</p>
             <p>📞 <strong>Phone:</strong> 0968-619-5061 or 0995-882-2211</p>
-            <p>✉️ <strong>Email:</strong> [Your email here]</p>
+            <p>✉️ <strong>Email:</strong> imus.skinmedic@gmail.com</p>
           </div>
           <div class="loc-actions">
             <a href="https://maps.google.com/?q=14.4086299,120.9544516" target="_blank" class="directions">Get Directions</a>

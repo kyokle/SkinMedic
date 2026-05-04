@@ -16,16 +16,19 @@
 <div class="main">
 
     {{-- Topbar --}}
-    <div class="topbar">
-        <div class="topbar-text">
-            <h2>Manage Reviews</h2>
-            <p>View and moderate patient feedback to maintain quality care.</p>
-        </div>
+   <div class="topbar">
+    <div class="topbar-text">
+        <h2>Manage Reviews</h2>
+        <p>View and moderate patient feedback to maintain quality care.</p>
+    </div>
+    <div style="display:flex;align-items:center;gap:14px;">
         <div class="date-box">
             <p>Today's Date</p>
             <strong>{{ now()->toDateString() }}</strong>
         </div>
+        @include('partials.notif_bell_staff')
     </div>
+</div>
 
     <div class="mr-page">
 

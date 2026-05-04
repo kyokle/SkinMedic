@@ -15,16 +15,19 @@
 <div class="main">
 
     {{-- Topbar --}}
-    <div class="topbar">
-        <div class="topbar-text">
-            <h2>⭐ Reviews</h2>
-            <p>Share your experience to help others and improve our services.</p>
-        </div>
+   <div class="topbar">
+    <div class="topbar-text">
+        <h2>⭐ Reviews</h2>
+        <p>Share your experience to help others and improve our services.</p>
+    </div>
+    <div style="display:flex;align-items:center;gap:14px;">
         <div class="date-box">
             <p>Today's Date</p>
             <strong>{{ now()->toDateString() }}</strong>
         </div>
+        @include('partials.notif_bell_patient')
     </div>
+</div>
 
     {{-- Grid --}}
     <div class="rv-grid">

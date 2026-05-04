@@ -18,16 +18,19 @@
     {{-- Topbar --}}
     <div class="topbar">
         <h2>Home</h2>
-        <div class="date-box">
-            <p>Today's Date</p>
-            <strong>{{ now()->toDateString() }}</strong>
+        <div style="display:flex;align-items:center;gap:14px;">
+            <div class="date-box">
+                <p>Today's Date</p>
+                <strong>{{ now()->toDateString() }}</strong>
+            </div>
+            @include('partials.notif_bell_doctor')
         </div>
     </div>
 
     {{-- Welcome Banner --}}
     <div class="welcome-banner">
         <div>
-            <h3>Welcome back, Dr. {{ $sidebarFirstName }}! 👋</h3>
+            <h3>Welcome back, Dr. {{ trim($docName) }}! 👋</h3>
             <p>{{ $docSpec ?: 'SkinMedic Physician' }} &nbsp;|&nbsp; {{ now()->format('l') }}</p>
         </div>
         <img src="{{ asset('/asset/image/skintransparent.png') }}" alt="SkinMedic">

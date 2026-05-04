@@ -16,13 +16,16 @@
 <div class="main">
 
     {{-- Topbar --}}
-    <div class="topbar">
-        <h2>Services</h2>
+   <div class="topbar">
+    <h2>Services</h2>
+    <div style="display:flex;align-items:center;gap:14px;">
         <div class="date-box">
             <p>Today's Date</p>
             <strong>{{ now()->toDateString() }}</strong>
         </div>
+        @include('partials.notif_bell_patient')
     </div>
+</div>
 
     {{-- Services Grid --}}
     <div class="treatments-section">
@@ -34,10 +37,10 @@
                     '{{ addslashes($service->name) }}',
                     '{{ addslashes($service->description) }}',
                     '{{ $service->price }}',
-                    '{{ $service->image }}',
+                    '{{ asset('uploads/' . $service->image) }}',
                     {{ $service->service_id }}
                  )">
-                <img src="{{ $service->image }}" alt="{{ $service->name }}">
+                <img src="{{ asset('uploads/' . $service->image) }}" alt="{{ $service->name }}">
                 <div class="details">
                     <h4>{{ $service->name }}</h4>
                     <p>₱{{ $service->price }}</p>

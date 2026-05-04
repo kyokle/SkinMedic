@@ -1,40 +1,75 @@
 {{-- resources/views/admin_inventory.blade.php --}}
-
-@extends('layouts.app')
-
-@section('title', 'Inventory — SkinMedic')
-
-@push('styles')
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <title>Inventory — SkinMedic</title>
     <link rel="stylesheet" href="{{ asset('asset/css/admin_inventory.css') }}">
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Fraunces:wght@700&display=swap" rel="stylesheet">
-@endpush
+</head>
 
-@section('content')
+<body>
 
-@include('partials.sidebar_admin')
+@if(session('role') === 'admin')
+    @include('partials.sidebar_admin')
+@else
+    @include('partials.sidebar_staff')
+@endif
 
 <div class="main">
-
-    {{-- Topbar --}}
     <div class="topbar">
-        <h2>Inventory System</h2>
-        <div class="date-box">
-            <p>Today's Date</p>
-            <strong>{{ now()->format('Y-m-d') }}</strong>
+        <div class="page-title">Inventory System</div>
+        <div style="display:flex;align-items:center;gap:14px;">
+            <div class="date-box">
+                <p>Today's Date</p>
+                <strong>{{ now()->format('Y-m-d') }}</strong>
+            </div>
+
+            {{-- Inventory-only notification bell --}}
+            <div style="position:relative;">
+                <button id="invNotifBtn" onclick="toggleInvNotif()"
+                    style="background:#f9fff2;border:1px solid #d4edb3;border-radius:10px;
+                           padding:8px 14px;cursor:pointer;display:flex;align-items:center;
+                           gap:8px;font-family:inherit;font-size:14px;">
+                    📦
+                    <span id="invNotifBadge"
+                          style="display:none;background:red;color:white;border-radius:50%;
+                                 font-size:10px;padding:2px 6px;">0</span>
+                </button>
+
+                <div id="invNotifDropdown"
+                     style="display:none;position:absolute;top:44px;right:0;width:320px;
+                            background:white;border-radius:10px;box-shadow:0 4px 16px rgba(0,0,0,0.15);
+                            z-index:9999;max-height:350px;overflow-y:auto;">
+                    <div style="padding:10px 14px;font-weight:600;border-bottom:1px solid #eee;
+                                display:flex;justify-content:space-between;align-items:center;">
+                        <span>📦 Inventory Alerts</span>
+                        <button onclick="markAllInvRead()"
+                                style="font-size:11px;color:#80a833;background:none;border:none;cursor:pointer;">
+                            Mark all read
+                        </button>
+                    </div>
+                    <div id="invNotifList"></div>
+                </div>
+            </div>
         </div>
     </div>
 
-    {{-- Near Expiry Alert --}}
+    {{-- Near-expiry alert --}}
     @if($nearExpiry->isNotEmpty())
     <div class="alert-block warning">
         <b>⚠ Near Expiry (within 7 days)</b><br>
         @foreach($nearExpiry as $n)
-            • {{ $n->product_name }} → Exp: <b>{{ $n->expiry_date }}</b> (Qty: {{ $n->total_qty }})<br>
+            • {{ $n->product_name }}
+              → Exp: <b>{{ $n->expiry_date }}</b>
+              (Qty: {{ $n->total_qty }})<br>
         @endforeach
     </div>
     @endif
 
-    {{-- Low / Out-of-Stock Alert --}}
+    {{-- Low / out-of-stock alert --}}
     @if($lowStock->isNotEmpty() || $outOfStock->isNotEmpty())
     <div class="alert-block danger">
         <b>⚠ Low / Out-of-Stock Alert</b><br>
@@ -47,7 +82,7 @@
     </div>
     @endif
 
-    {{-- Inventory Table --}}
+    {{-- Inventory table --}}
     <div class="table-wrapper">
         <table class="inventory-table">
             <thead>
@@ -62,7 +97,7 @@
                     <th>Current Batch Qty</th>
                     <th>Next Batch Expiry</th>
                     <th>Add Stock (Qty + Expiry)</th>
-                    <th>Deduct Stock</th>
+                    <th>Edit Stock</th>
                 </tr>
             </thead>
             <tbody>
@@ -119,49 +154,115 @@
                             </form>
                         </td>
                         <td>
-    <button class="deduct-btn"
-            onclick="openDeductModal(
-                {{ $row->product_id }},
-                '{{ addslashes($row->product_name) }}',
-                {{ $row->quantity }}
-            )">
-        ✏ Deduct Stock
-    </button>
-</td>
+                            <button class="deduct-btn"
+                                    onclick="openDeductModal(
+                                        {{ $row->product_id }},
+                                        '{{ addslashes($row->product_name) }}',
+                                        {{ $row->quantity }}
+                                    )">
+                                ✏ Edit Stock
+                            </button>
+                        </td>
                     </tr>
                 @endforeach
             </tbody>
         </table>
     </div>
-
 </div>
 
 {{-- Deduct / Edit Stock Modal --}}
 <div id="deductModal" class="modal-overlay" onclick="closeDeductModal(event)">
     <div class="modal-box">
         <button class="modal-close" onclick="closeDeductModal()">×</button>
-        <h3 id="deductTitle">Deduct Stock</h3>
+        <h3 id="deductTitle">Edit Stock</h3>
         <p id="deductCurrent" class="deduct-current"></p>
-
         <form method="POST" action="{{ route('admin.inventory.deduct-stock') }}" id="deductForm">
             @csrf
             <input type="hidden" name="product_id" id="deductProductId">
-
             <input type="hidden" name="action" value="deduct">
-
             <div class="deduct-row">
                 <label>Quantity to Deduct</label>
                 <input type="number" name="quantity" id="deductQty"
                        min="1" required placeholder="Enter quantity">
             </div>
-
             <button type="submit" class="save-deduct-btn">Save Changes</button>
         </form>
     </div>
 </div>
 
-@push('scripts')
 <script>
+function loadInvUnreadCount() {
+    fetch('/notifications/unread-inventory')
+        .then(r => r.json())
+        .then(data => {
+            const badge = document.getElementById('invNotifBadge');
+            badge.textContent = data.count;
+            badge.style.display = data.count > 0 ? 'inline-block' : 'none';
+        });
+}
+
+function toggleInvNotif() {
+    const dropdown = document.getElementById('invNotifDropdown');
+    const isOpen   = dropdown.style.display === 'block';
+    dropdown.style.display = isOpen ? 'none' : 'block';
+    if (!isOpen) loadInvNotifications();
+}
+
+function loadInvNotifications() {
+    fetch('/notifications/inventory')
+        .then(r => r.json())
+        .then(items => {
+            const list = document.getElementById('invNotifList');
+            if (!items.length) {
+                list.innerHTML = '<p style="padding:12px;color:#999;text-align:center;">No inventory alerts</p>';
+                return;
+            }
+            list.innerHTML = items.map(n => `
+                <div onclick="markInvRead(${n.id}, this)"
+                     style="padding:12px 14px;border-bottom:1px solid #f0f0f0;cursor:pointer;
+                            background:${n.is_read ? '#fff' : '#f9fff2'}">
+                    <div style="font-weight:${n.is_read ? '400' : '600'};font-size:13px;">${n.title}</div>
+                    <div style="font-size:12px;color:#666;margin-top:2px;">${n.message}</div>
+                    <div style="font-size:11px;color:#aaa;margin-top:4px;">${n.created_at}</div>
+                </div>`).join('');
+        });
+}
+
+function markInvRead(id, el) {
+    fetch('/notifications/read', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+        },
+        body: JSON.stringify({ id })
+    }).then(() => {
+        el.style.background = '#fff';
+        el.querySelector('div').style.fontWeight = '400';
+        loadInvUnreadCount();
+    });
+}
+
+function markAllInvRead() {
+    fetch('/notifications/read-all-inventory', {
+        method: 'POST',
+        headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content }
+    }).then(() => {
+        loadInvUnreadCount();
+        document.querySelectorAll('#invNotifList > div').forEach(el => {
+            el.style.background = '#fff';
+        });
+    });
+}
+
+document.addEventListener('click', function(e) {
+    const btn      = document.getElementById('invNotifBtn');
+    const dropdown = document.getElementById('invNotifDropdown');
+    if (btn && dropdown && !btn.contains(e.target) && !dropdown.contains(e.target)) {
+        dropdown.style.display = 'none';
+    }
+});
+
 function openDeductModal(id, name, qty) {
     document.getElementById('deductModal').style.display = 'flex';
     document.getElementById('deductProductId').value = id;
@@ -177,7 +278,9 @@ function closeDeductModal(event) {
     }
 }
 
+loadInvUnreadCount();
+setInterval(loadInvUnreadCount, 30000);
 </script>
-@endpush
 
-@endsection
+</body>
+</html>

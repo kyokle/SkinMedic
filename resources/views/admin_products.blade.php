@@ -18,20 +18,23 @@
   @endif
 
   <main class="content">
-    <header class="header">
-      <h2>Product Management</h2>
-      <div class="date-box">
-        <p>Today's Date</p>
-        <strong>{{ now()->format('Y-m-d') }}</strong><br>
-        <button class="add-product-btn" onclick="openModal()">+ Add Product</button>
-      </div>
-    </header>
+   <header class="header">
+    <h2>Product Management</h2>
+    <div style="display:flex;align-items:center;gap:14px;">
+        <div class="date-box">
+            <p>Today's Date</p>
+            <strong>{{ now()->format('Y-m-d') }}</strong><br>
+            <button class="add-product-btn" onclick="openModal()">+ Add Product</button>
+        </div>
+        @include('partials.notif_bell_admin')
+    </div>
+</header>
 
     <div class="product-list">
       @forelse ($products as $row)
         @php $statusClass = strtolower($row->status) === 'available' ? 'on' : 'off'; @endphp
         <div class="product-card">
-          <img src="{{  $row->image }}"
+          <img src="{{ asset('uploads/' . $row->image) }}"
                alt="{{ $row->product_name }}"
                onerror="this.src='{{ asset('uploads/default.png') }}'">
           <h3>{{ $row->product_name }}</h3>

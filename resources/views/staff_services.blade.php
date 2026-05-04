@@ -19,19 +19,22 @@
 
 <main class="content">
     <header class="header">
-        <h2>Staff Service Management</h2>
+    <h2>Staff Service Management</h2>
+    <div style="display:flex;align-items:center;gap:14px;">
         <div class="date-box">
-        <p>Today's Date</p>
-        <strong>{{ now()->format('Y-m-d') }}</strong><br>
-      <button class="add-service-btn" onclick="openModal()">+ Add New Service</button>
-      </div>
-    </header>
+            <p>Today's Date</p>
+            <strong>{{ now()->format('Y-m-d') }}</strong><br>
+            <button class="add-service-btn" onclick="openModal()">+ Add New Service</button>
+        </div>
+        @include('partials.notif_bell_staff')
+    </div>
+</header>
 
     <div class="service-list">
         @forelse ($services as $row)
             @php $statusClass = $row->status === 'available' ? 'on' : 'off'; @endphp
             <div class="service-card">
-                <img src="{{ $row->image }}" onerror="this.src='{{ asset('uploads/default.png') }}'">
+                <img src="{{ asset('uploads/' . $row->image) }}" onerror="this.src='{{ asset('uploads/default.png') }}'">
                 <h3>{{ $row->name }}</h3>
                 <p>{{ $row->description }}</p>
                 <p><strong>₱{{ $row->price }}</strong></p>

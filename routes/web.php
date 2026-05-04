@@ -9,6 +9,7 @@ use App\Http\Controllers\AddServiceController;
 use App\Http\Controllers\SkinAnalysisController;
 use App\Http\Controllers\BookAppointmentController;
 use App\Http\Controllers\ReviewController;
+use App\Http\Controllers\NotificationController;
 
 use App\Http\Controllers\PatientPageController;
 use App\Http\Controllers\PatientServicesController;
@@ -235,3 +236,17 @@ Route::post('/admin/add-service', [AddServiceController::class, 'store'])->name(
 Route::get('/skin-analysis',         [SkinAnalysisController::class, 'index'])->name('skin-analysis.index');
 Route::post('/skin-analysis/analyze',[SkinAnalysisController::class, 'analyze'])->name('skin-analysis.analyze');
 Route::get('/skin-analysis/result', [SkinAnalysisController::class, 'result'])->name('skin-analysis.result');
+
+
+// ── Notifications ───────────────────────────────────────
+
+Route::get('/notifications',           [NotificationController::class, 'index']);
+Route::get('/notifications/unread',    [NotificationController::class, 'unreadCount']);
+Route::post('/notifications/read',     [NotificationController::class, 'markRead']);
+Route::post('/notifications/read-all', [NotificationController::class, 'markAllRead']);
+Route::get('/notifications/inventory',        [NotificationController::class, 'inventoryIndex']);
+Route::get('/notifications/unread-inventory', [NotificationController::class, 'unreadInventory']);
+Route::post('/notifications/read-all-inventory', [NotificationController::class, 'markAllInventoryRead']);
+Route::get('/notifications/by-type',          [NotificationController::class, 'byType']);
+Route::get('/notifications/unread-by-type',   [NotificationController::class, 'unreadByType']);
+Route::post('/notifications/read-all-by-type',[NotificationController::class, 'markAllByTypeRead']);

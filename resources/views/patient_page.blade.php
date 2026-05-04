@@ -18,43 +18,45 @@
     {{-- Topbar --}}
     <div class="topbar">
         <h2>Home</h2>
-        <div class="date-box">
-            <p>Today's Date</p>
-            <strong>{{ now()->toDateString() }}</strong>
+        <div style="display:flex;align-items:center;gap:14px;">
+            <div class="date-box">
+                <p>Today's Date</p>
+                <strong>{{ now()->toDateString() }}</strong>
+            </div>
+            @include('partials.notif_bell_patient')
         </div>
     </div>
 
     @if(Session::has('success'))
-<div id="successToast" style="
-    position: fixed;
-    top: 20px;
-    right: 20px;
-    z-index: 9999;
-    background: #16a34a;
-    color: white;
-    padding: 14px 20px;
-    border-radius: 10px;
-    box-shadow: 0 4px 16px rgba(0,0,0,0.15);
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    font-family: Arial, sans-serif;
-    font-size: 0.95rem;
-    max-width: 360px;
-">
-    <span>✅</span>
-    <span>{{ Session::get('success') }}</span>
-    <button onclick="document.getElementById('successToast').remove()"
-            style="margin-left:12px;background:none;border:none;color:white;font-size:1.1rem;cursor:pointer;line-height:1;">✕</button>
-</div>
-
-<script>
-    setTimeout(() => {
-        const t = document.getElementById('successToast');
-        if (t) t.remove();
-    }, 4000);
-</script>
-@endif
+    <div id="successToast" style="
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        z-index: 9999;
+        background: #16a34a;
+        color: white;
+        padding: 14px 20px;
+        border-radius: 10px;
+        box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-family: Arial, sans-serif;
+        font-size: 0.95rem;
+        max-width: 360px;
+    ">
+        <span>✅</span>
+        <span>{{ Session::get('success') }}</span>
+        <button onclick="document.getElementById('successToast').remove()"
+                style="margin-left:12px;background:none;border:none;color:white;font-size:1.1rem;cursor:pointer;line-height:1;">✕</button>
+    </div>
+    <script>
+        setTimeout(() => {
+            const t = document.getElementById('successToast');
+            if (t) t.remove();
+        }, 4000);
+    </script>
+    @endif
 
     {{-- Welcome Banner --}}
     <div class="welcome-banner">

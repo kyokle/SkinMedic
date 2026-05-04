@@ -7,39 +7,33 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Session;
 use Illuminate\Support\Facades\Mail;
+use App\Helpers\NotificationHelper;
 
 class BookAppointmentController extends Controller
 {
-    // ── Show booking form ──────────────────────────────────────────
     public function show(Request $request)
-{
-    // Manual auth check using session
-    if (!Session::has('user_id')) {
-        return redirect('/')->with('error', 'Please login first.');
+    {
+        if (!Session::has('user_id')) {
+            return redirect('/')->with('error', 'Please login first.');
+        }
+
+        $serviceId = $request->query('service_id');
+        $service   = DB::table('services')->where('service_id', $serviceId)->first();
+        $user      = DB::table('users')->where('user_id', Session::get('user_id'))->first();
+
+        $doctors = DB::table('doctor')
+                    ->join('users', 'doctor.user_id', '=', 'users.user_id')
+                    ->select('doctor.doctor_id', 'users.firstName', 'users.lastName')
+                    ->get();
+
+        $isRegular     = (bool) $user->is_regular;
+        $preferredTime = $user->preferred_time ? substr($user->preferred_time, 0, 5) : null;
+
+        return view('book_appointment', compact(
+            'service', 'serviceId', 'user', 'doctors', 'isRegular', 'preferredTime'
+        ));
     }
 
-    $serviceId = $request->query('service_id');
-    $service   = DB::table('services')->where('service_id', $serviceId)->first();
-    
-    // Replace Auth::user() with session-based DB query
-    $user = DB::table('users')->where('user_id', Session::get('user_id'))->first();
-
-    $doctors = DB::table('doctor')
-                ->join('users', 'doctor.user_id', '=', 'users.user_id')
-                ->select('doctor.doctor_id', 'users.firstName', 'users.lastName')
-                ->get();
-
-    $isRegular     = (bool) $user->is_regular;
-    $preferredTime = $user->preferred_time 
-    ? substr($user->preferred_time, 0, 5) 
-    : null;
-
-    return view('book_appointment', compact(
-        'service', 'serviceId', 'user', 'doctors', 'isRegular', 'preferredTime'
-    ));
-}
-
-    // ── Store booking ──────────────────────────────────────────────
     public function store(Request $request)
     {
         $request->validate([
@@ -51,7 +45,6 @@ class BookAppointmentController extends Controller
 
         $user = DB::table('users')->where('user_id', Session::get('user_id'))->first();
 
-        // Prevent double booking same slot
         $conflict = DB::table('appointments')
             ->where('doctor_id',        $request->doctor_id)
             ->where('appointment_date', $request->appointment_date)
@@ -75,10 +68,31 @@ class BookAppointmentController extends Controller
             'created_at'       => now(),
         ]);
 
-        // ── Email confirmation ─────────────────────────────────────
+        // ── Get the appointment_id just inserted ──────────────
+        $appointmentId = DB::table('appointments')
+            ->where('user_id', $user->user_id)
+            ->orderByDesc('created_at')
+            ->value('appointment_id');
+
+        $service    = DB::table('services')->where('service_id', $request->service_id)->first();
+        $title      = 'New Appointment Booked';
+        $msg        = $user->firstName . ' ' . $user->lastName . ' booked ' . ($service->name ?? 'a service') . ' on ' . $request->appointment_date . ' at ' . $request->appointment_time . '.';
+        $patientMsg = 'Your appointment for ' . ($service->name ?? 'a service') . ' on ' . $request->appointment_date . ' at ' . $request->appointment_time . ' has been booked successfully.';
+
+        NotificationHelper::send($user->user_id, 'Appointment Booked', $patientMsg, 'upcoming', $appointmentId);
+
+        $doctorRecord = DB::table('doctor')->where('doctor_id', $request->doctor_id)->first();
+        if ($doctorRecord) {
+            NotificationHelper::send($doctorRecord->user_id, $title, $msg, 'booking', $appointmentId);
+        }
+
+        $adminStaff = DB::table('users')->whereIn('role', ['admin', 'staff'])->get();
+        foreach ($adminStaff as $u) {
+            NotificationHelper::send($u->user_id, $title, $msg, 'booking', $appointmentId);
+        }
+
         try {
-            $service = DB::table('services')->where('service_id', $request->service_id)->first();
-            $doctor  = DB::table('doctor')
+            $doctor = DB::table('doctor')
                           ->join('users', 'doctor.user_id', '=', 'users.user_id')
                           ->where('doctor.doctor_id', $request->doctor_id)
                           ->select('users.firstName', 'users.lastName')
@@ -86,29 +100,28 @@ class BookAppointmentController extends Controller
 
             Mail::send([], [], function ($message) use ($user, $request, $service, $doctor) {
                 $message->to($user->email)
-                    ->subject('Appointment Confirmed – SkinMedic')
-                    ->html("
+                    ->subject('Appointment Confirmed - SkinMedic')
+                    ->html('
                         <h2>Appointment Confirmed!</h2>
-                        <p>Hi {$user->firstName},</p>
+                        <p>Hi ' . $user->firstName . ',</p>
                         <p>Your appointment has been booked successfully.</p>
                         <ul>
-                            <li><strong>Service:</strong> {$service->name}</li>
-                            <li><strong>Doctor:</strong> Dr. {$doctor->firstName} {$doctor->lastName}</li>
-                            <li><strong>Date:</strong> {$request->appointment_date}</li>
-                            <li><strong>Time:</strong> {$request->appointment_time}</li>
+                            <li><strong>Service:</strong> ' . $service->name . '</li>
+                            <li><strong>Doctor:</strong> Dr. ' . $doctor->firstName . ' ' . $doctor->lastName . '</li>
+                            <li><strong>Date:</strong> ' . $request->appointment_date . '</li>
+                            <li><strong>Time:</strong> ' . $request->appointment_time . '</li>
                         </ul>
                         <p>Please arrive 10 minutes early. See you soon!</p>
-                        <p>— SkinMedic Clinic</p>
-                    ");
+                        <p>- SkinMedic Clinic</p>
+                    ');
             });
         } catch (\Exception $e) {
-            // Email failed silently — booking still saved
+            // Email failed silently
         }
 
         return redirect()->route('patient.home')->with('success', 'Your appointment has been booked! A confirmation email has been sent.');
     }
 
-    // ── Get available times (AJAX) ─────────────────────────────────
     public function getAvailableTimes(Request $request)
     {
         $date       = $request->query('date');

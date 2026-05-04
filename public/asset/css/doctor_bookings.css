@@ -113,6 +113,126 @@ tr:last-child td { border-bottom: none; }
     color: #fff;
 }
 
+/* Modal */
+.bk-modal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 999;
+    justify-content: center;
+    align-items: center;
+}
+.bk-modal-content {
+    background: #fff;
+    border-radius: 16px;
+    padding: 28px 32px;
+    width: 460px;
+    max-width: 95vw;
+    max-height: 90vh;
+    overflow-y: auto;
+    position: relative;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+}
+.bk-close {
+    position: absolute;
+    top: 14px; right: 18px;
+    background: none; border: none;
+    font-size: 22px; color: #999;
+    cursor: pointer;
+}
+.bk-close:hover { color: #333; }
+.bk-modal-title {
+    font-size: 1rem;
+    font-weight: 700;
+    color: #1a1f16;
+    margin: 0 0 16px;
+}
+.bk-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-bottom: 1px solid #f3f3f3;
+    font-size: 0.86rem;
+}
+.bk-row span:first-child { color: #888; font-weight: 500; }
+.bk-row span:last-child  { color: #333; font-weight: 600; }
+
+.bk-divider {
+    border: none;
+    border-top: 1px solid #eee;
+    margin: 18px 0 14px;
+}
+.bk-reschedule-label {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #444;
+    margin: 0 0 12px;
+}
+.bk-form-row {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    margin-bottom: 13px;
+}
+.bk-form-row label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #666;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+}
+.bk-form-row input {
+    padding: 9px 12px;
+    border: 1.5px solid #ddd;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    outline: none;
+    transition: border-color .2s;
+}
+.bk-form-row input:focus { border-color: #80a833; }
+
+.bk-reschedule-btn {
+    width: 100%;
+    background: #80a833;
+    color: #fff;
+    border: none;
+    padding: 11px;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    margin-top: 4px;
+    transition: background .2s;
+}
+.bk-reschedule-btn:hover { background: #6b9228; }
+.bk-no-action {
+    font-size: 0.8rem;
+    color: #aaa;
+    text-align: center;
+    margin-top: 16px;
+}
+
+.bk-cancel-btn {
+    width: 100%;
+    padding: 10px;
+    background: #fee2e2;
+    color: #991b1b;
+    border: 1px solid #fca5a5;
+    border-radius: 8px;
+    font-size: 14px;
+    cursor: pointer;
+    font-family: inherit;
+}
+.bk-cancel-btn:hover {
+    background: #fca5a5;
+}
+
+.bk-modal-content {
+    position: relative; /* add this */
+    /* rest of your existing styles stay the same */
+}
+
 .badge.pending   { background: #f59e0b; }
 .badge.approved  { background: #80a833; }
 .badge.completed { background: #3b82f6; }
