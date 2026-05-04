@@ -109,6 +109,10 @@ Route::get('/doctor',          [DoctorPageController::class,    'index'])->name(
 
 // ── Doctor Bookings ──────────────────────────────────────
 Route::get('/doctor/bookings', [DoctorBookingsController::class, 'index'])->name('doctor.bookings');
+Route::post('/doctor/bookings/reschedule', [DoctorBookingsController::class, 'reschedule'])
+     ->name('doctor.bookings.reschedule');
+Route::post('/doctor/bookings/cancel', [DoctorBookingsController::class, 'cancel'])
+     ->name('doctor.bookings.cancel');
 
 // ── Doctor Profile ──────────────────────────────────────
 Route::get('/doctor/profile',  [DoctorProfileController::class,  'show'])->name('doctor.profile');
