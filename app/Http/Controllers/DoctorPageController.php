@@ -11,7 +11,7 @@ class DoctorPageController extends Controller
     public function index()
     {
         $userId     = session('user_id');
-        $doctorRecord = DB::table('doctor')->where('user_id', $doctorId)->first();
+        $doctorRecord = DB::table('doctor')->where('user_id', $userId)->first();
         $doctorId     = $doctorRecord ? $doctorRecord->doctor_id : 0;
         $today        = date('Y-m-d');
         $upcomingStart = date('Y-m-d', strtotime('+1 day'));
