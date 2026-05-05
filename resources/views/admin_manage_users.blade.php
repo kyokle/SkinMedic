@@ -18,7 +18,7 @@
   @endif
 
   <div class="main">
-    <div class="page-title">Manage Users</div>
+    <h2>Manage Users</h2>
     <div class="page-sub">View, edit, and manage doctors, staff, and patients</div>
 
     {{-- Tab Bar --}}
