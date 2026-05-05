@@ -40,85 +40,89 @@
         <input class="search-input" type="text" id="searchInput" placeholder="Search by name or email…" oninput="filterTable()">
       </div>
 
-      <table id="usersTable">
-        <thead>
-          <tr>
-            <th>User</th>
-            <th>Email</th>
-            <th>Phone</th>
-            <th>Gender</th>
-            @if($tab === 'patient')
-              <th>Visits</th>
-              <th>Last Visit</th>
-              <th>Regular</th>
-            @endif
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          @foreach ($users as $u)
-            @php
-              $img = !empty($u->profile_image)
-                ? asset('uploads/profiles/' . $u->profile_image)
-                : 'https://ui-avatars.com/api/?name=' . urlencode($u->firstName . ' ' . $u->lastName) . '&background=80a833&color=fff&size=64';
-            @endphp
+      {{-- Wrap table in scroll div for mobile --}}
+      <div class="table-scroll">
+        <table id="usersTable">
+          <thead>
             <tr>
-              <td>
-                <div class="avatar-cell">
-                  <img src="{{ $img }}" class="mini-avatar" alt="">
-                  <div>
-                    <div style="font-weight:500">{{ $u->firstName }} {{ $u->lastName }}</div>
-                    <div class="info-tag">#{{ $u->user_id }}</div>
-                  </div>
-                </div>
-              </td>
-              <td>{{ $u->email }}</td>
-              <td>{{ $u->phone_no ?? '—' }}</td>
-              <td>{{ $u->gender ?? '—' }}</td>
-
+              <th>User</th>
+              <th>Email</th>
+              <th>Phone</th>
+              <th>Gender</th>
               @if($tab === 'patient')
-                <td>{{ $u->total_visits }}</td>
-                <td>{{ $u->last_visit ?? '—' }}</td>
-                <td>
-                  @if($u->is_regular)
-                    <span class="regular-star">⭐</span>
-                    <span class="badge badge-regular">Regular</span>
-                    @if($u->preferred_time)
-                      <div class="info-tag">Pref: {{ $u->preferred_time }}</div>
-                    @endif
-                  @else
-                    <span style="color:var(--muted);font-size:12px;">—</span>
-                  @endif
-                </td>
+                <th>Visits</th>
+                <th>Last Visit</th>
+                <th>Regular</th>
               @endif
-
-              <td style="white-space:nowrap">
-                <button class="btn btn-edit" onclick='openEdit({{ json_encode($u) }})'>✏ Edit</button>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            @foreach ($users as $u)
+              @php
+                $img = !empty($u->profile_image)
+                  ? asset('uploads/profiles/' . $u->profile_image)
+                  : 'https://ui-avatars.com/api/?name=' . urlencode($u->firstName . ' ' . $u->lastName) . '&background=80a833&color=fff&size=64';
+              @endphp
+              <tr>
+                <td>
+                  <div class="avatar-cell">
+                    <img src="{{ $img }}" class="mini-avatar" alt="">
+                    <div>
+                      <div style="font-weight:500">{{ $u->firstName }} {{ $u->lastName }}</div>
+                      <div class="info-tag">#{{ $u->user_id }}</div>
+                    </div>
+                  </div>
+                </td>
+                <td>{{ $u->email }}</td>
+                <td>{{ $u->phone_no ?? '—' }}</td>
+                <td>{{ $u->gender ?? '—' }}</td>
 
                 @if($tab === 'patient')
-                  <button class="btn btn-pref" onclick="openPref({{ $u->user_id }}, '{{ $u->preferred_time ?? '' }}')">⭐ Preferred Time</button>
-                  @if($u->is_regular)
-                    <form method="POST" action="{{ url('admin/manage-users/remove-regular') }}" style="display:inline">
-                      @csrf
-                      <input type="hidden" name="user_id" value="{{ $u->user_id }}">
-                      <button type="submit" class="btn" style="background:#f3e8ff;color:#6b21a8;font-size:11px"
-                              onclick="return confirm('Remove regular status?')">Remove Regular</button>
-                    </form>
-                  @endif
+                  <td>{{ $u->total_visits }}</td>
+                  <td>{{ $u->last_visit ?? '—' }}</td>
+                  <td>
+                    @if($u->is_regular)
+                      <span class="regular-star">⭐</span>
+                      <span class="badge badge-regular">Regular</span>
+                      @if($u->preferred_time)
+                        <div class="info-tag">Pref: {{ $u->preferred_time }}</div>
+                      @endif
+                    @else
+                      <span style="color:var(--muted);font-size:12px;">—</span>
+                    @endif
+                  </td>
                 @endif
 
-                <form method="POST" action="{{ url('admin/manage-users/delete') }}" style="display:inline">
-                  @csrf
-                  <input type="hidden" name="user_id" value="{{ $u->user_id }}">
-                  <input type="hidden" name="tab"     value="{{ $tab }}">
-                  <button type="submit" class="btn btn-del"
-                          onclick="return confirm('Delete this user permanently?')">🗑</button>
-                </form>
-              </td>
-            </tr>
-          @endforeach
-        </tbody>
-      </table>
+                <td style="white-space:nowrap">
+                  <button class="btn btn-edit" onclick='openEdit({{ json_encode($u) }})'>✏ Edit</button>
+
+                  @if($tab === 'patient')
+                    <button class="btn btn-pref" onclick="openPref({{ $u->user_id }}, '{{ $u->preferred_time ?? '' }}')">⭐ Preferred Time</button>
+                    @if($u->is_regular)
+                      <form method="POST" action="{{ url('admin/manage-users/remove-regular') }}" style="display:inline">
+                        @csrf
+                        <input type="hidden" name="user_id" value="{{ $u->user_id }}">
+                        <button type="submit" class="btn" style="background:#f3e8ff;color:#6b21a8;font-size:11px"
+                                onclick="return confirm('Remove regular status?')">Remove Regular</button>
+                      </form>
+                    @endif
+                  @endif
+
+                  <form method="POST" action="{{ url('admin/manage-users/delete') }}" style="display:inline">
+                    @csrf
+                    <input type="hidden" name="user_id" value="{{ $u->user_id }}">
+                    <input type="hidden" name="tab"     value="{{ $tab }}">
+                    <button type="submit" class="btn btn-del"
+                            onclick="return confirm('Delete this user permanently?')">🗑</button>
+                  </form>
+                </td>
+              </tr>
+            @endforeach
+          </tbody>
+        </table>
+      </div>{{-- end table-scroll --}}
+
     </div>
   </div>{{-- end .main --}}
 

@@ -7,7 +7,7 @@
 body { background: var(--bg); font-family: 'DM Sans', sans-serif; }
 
 .main       { margin-left: 260px; padding: 32px 36px; }
-.page-title { font-family: 'Fraunces', serif; font-size: 28px; margin-bottom: 6px; }
+.page-title { font-family: 'DM Sans', sans-serif; font-size: 28px; margin-bottom: 6px; }
 .page-sub   { font-size: 13px; color: var(--muted); margin-bottom: 28px; }
 
 /* ── Tab pills ── */
@@ -31,7 +31,7 @@ body { background: var(--bg); font-family: 'DM Sans', sans-serif; }
 
 /* ── Card ── */
 .card      { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 24px; }
-.card-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; }
+.card-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; flex-wrap: wrap; gap: 10px; }
 .card-head h3 { font-size: 15px; font-weight: 600; }
 
 /* ── Search ── */
@@ -42,12 +42,19 @@ body { background: var(--bg); font-family: 'DM Sans', sans-serif; }
 }
 .search-input:focus { border-color: var(--accent); }
 
+/* ── Table wrapper ── */
+.table-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
 /* ── Table ── */
-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 600px; }
 th {
   text-align: left; padding: 9px 12px;
   font-size: 11px; font-weight: 600; text-transform: uppercase;
   letter-spacing: .8px; color: var(--muted); border-bottom: 1px solid var(--border);
+  white-space: nowrap;
 }
 td              { padding: 12px 12px; border-bottom: 1px solid #f0ede8; }
 tr:last-child td{ border-bottom: none; }
@@ -100,3 +107,26 @@ tr:hover td     { background: #fafaf8; }
 .modal-foot   { padding: 16px 24px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 10px; }
 .btn-primary  { background: var(--accent); color: #fff; padding: 10px 22px; border-radius: 8px; font-size: 13px; border: none; cursor: pointer; }
 .btn-cancel   { background: var(--border); color: #333; padding: 10px 22px; border-radius: 8px; font-size: 13px; border: none; cursor: pointer; }
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+  .main         { margin-left: 0; padding: 16px 14px; }
+  .page-title   { font-size: 20px; }
+  .card         { padding: 16px; }
+  .search-input { width: 100%; }
+  .card-head    { flex-direction: column; align-items: flex-start; }
+
+  .tab-bar {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .tab-bar::-webkit-scrollbar { display: none; }
+  .tab-pill { flex-shrink: 0; padding: 8px 14px; font-size: 12px; }
+}
+
+@media (max-width: 480px) {
+  .page-title { font-size: 18px; }
+  .btn        { padding: 5px 8px; font-size: 11px; }
+}
