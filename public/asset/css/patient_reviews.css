@@ -204,4 +204,107 @@ body {
 .rv-item-comment { font-size: 0.84rem; color: #4a5240; line-height: 1.55; margin: 0; }
 .rv-no-reviews  { font-size: 0.84rem; color: #aaa; text-align: center; padding: 24px 0; }
 
+/* NEW ── Edit button inside each review card ── */
+.rv-edit-btn {
+    background: none;               /* transparent — doesn't compete with card content */
+    border: 1px solid #d0cec8;      /* subtle border so it reads as a clickable element */
+    border-radius: 6px;
+    padding: 3px 10px;
+    font-size: 0.72rem;
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 600;
+    color: #8a9080;                 /* muted; not the primary action on the page */
+    cursor: pointer;
+    transition: background .15s, color .15s, border-color .15s;
+    margin-left: 8px;               /* breathing room between the date text and the button */
+}
+.rv-edit-btn:hover {
+    background: #f0f4e8;            /* light green tint on hover — matches the brand colour */
+    border-color: #80a833;
+    color: #80a833;
+}
+
+/* NEW ── Overlay backdrop that dims the page when the edit modal is open ── */
+.rv-modal-overlay {
+    position: fixed;
+    inset: 0;                        /* stretches to all four edges of the viewport */
+    background: rgba(0, 0, 0, 0.45); /* semi-transparent black so the modal stands out */
+    z-index: 900;                    /* below the modal panel (z-index 901) */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* NEW ── The edit modal dialog panel ── */
+.rv-modal {
+    background: #fff;
+    border-radius: 14px;
+    padding: 28px 30px;
+    width: 100%;
+    max-width: 440px;                /* comfortable reading width without dominating the screen */
+    box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+    position: relative;
+    z-index: 901;                    /* stacks on top of the overlay */
+}
+
+/* NEW ── "Edit your review" heading inside the modal ── */
+.rv-modal-title {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: #1a1f16;
+    margin: 0 0 18px;
+}
+
+/* NEW ── × close button positioned in the top-right corner of the modal ── */
+.rv-modal-close {
+    position: absolute;
+    top: 14px;
+    right: 16px;
+    background: none;
+    border: none;
+    font-size: 1.2rem;
+    color: #aaa;
+    cursor: pointer;
+    line-height: 1;
+}
+.rv-modal-close:hover { color: #4a5240; } /* darkens slightly so users know it's interactive */
+
+/* NEW ── Save button inside the modal — mirrors the primary submit button style ── */
+.rv-save-btn {
+    background: #80a833;
+    color: #fff;
+    border: none;
+    padding: 11px 28px;
+    border-radius: 24px;
+    font-size: 0.88rem;
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background .2s;
+    width: 100%;
+    margin-top: 4px;
+}
+.rv-save-btn:hover    { background: #6b9228; }
+.rv-save-btn:disabled { opacity: .65; cursor: not-allowed; }
+
+/* NEW ── Success / error banners inside the modal — same visual language as page-level alerts ── */
+.rv-modal-success {
+    background: #eef4e0;
+    border: 1px solid #b5d45a;
+    color: #3d6010;
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 0.84rem;
+    margin-bottom: 14px;
+}
+.rv-modal-error {
+    background: #fff0ee;
+    border: 1px solid #f5c4b3;
+    color: #993c1d;
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 0.84rem;
+    margin-bottom: 14px;
+}
+
 .hidden { display: none !important; }

@@ -98,6 +98,8 @@ Route::post('/patient/profile/update-medical',  [PatientProfileController::class
 // ── Patient Reviews ──────────────────────────────────
 Route::get('/patient/reviews', [PatientReviewsController::class, 'index'])->name('patient.reviews');
 Route::post('/patient/reviews', [PatientReviewsController::class, 'store'])->name('patient.reviews.store');
+Route::put('/patient/reviews/{id}', [PatientReviewsController::class, 'update'])->name('patient.reviews.update');
+
 
 // ── Patient AR Skin Analysis ──
 Route::get('/patient/skin-analysis',         [PatientAR_Skin_AnalysisController::class, 'index'])->name('patient.skin-analysis');

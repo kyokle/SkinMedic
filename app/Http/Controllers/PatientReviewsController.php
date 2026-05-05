@@ -80,4 +80,36 @@ class PatientReviewsController extends Controller
 
         return response()->json(['success' => true]);
     }
+
+    // NEW: Handles AJAX PUT requests sent from the edit modal on the patient reviews page
+    public function update(Request $request, $id) // $id = review_id from the route segment /patient/reviews/{id}
+    {
+        $request->validate([
+            'rating'  => 'required|integer|min:1|max:5',  // same rules as store() — keeps data consistent
+            'comment' => 'required|string|min:10|max:500', // rejects empty or too-short edits
+        ]);
+
+        $userId = session('user_id'); // always pull from session — never trust user-supplied ownership
+
+        // Fetch only if the review belongs to this patient; prevents editing another patient's review
+        $review = DB::table('reviews')
+            ->where('review_id', $id)   // target the specific review being edited
+            ->where('user_id', $userId) // ownership guard — patient may only edit their own reviews
+            ->first();
+
+        if (!$review) { // null = not found or belongs to someone else
+            return response()->json(['success' => false, 'error' => 'Review not found.'], 404);
+        }
+
+        // Only overwrite the two editable columns; appointment_id / service_id / user_id remain unchanged
+        DB::table('reviews')
+            ->where('review_id', $id)
+            ->update([
+                'rating'     => $request->rating,  // new star value selected in the modal
+                'comment'    => $request->comment, // new comment text entered in the modal
+                'updated_at' => now(),              // records when the edit happened
+            ]);
+
+        return response()->json(['success' => true]); // blade JS reloads the page on success
+    }
 }
