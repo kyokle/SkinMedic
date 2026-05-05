@@ -20,7 +20,7 @@
 
 <div class="main">
     <div class="topbar">
-        <div class="page-title">Inventory System</div>
+        <h2>Inventory System</h2>
         <div style="display:flex;align-items:center;gap:14px;">
             <div class="date-box">
                 <p>Today's Date</p>
