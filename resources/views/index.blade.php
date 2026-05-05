@@ -32,7 +32,7 @@
       <a href="#treatments">Treatment and Services</a>
       <a href="#shop">Products</a>
       <a href="#reviews">Reviews</a>
-      <a href="#locations">Locations</a>
+      <a href="#locations">Location</a>
     </nav>
   </aside>
 
