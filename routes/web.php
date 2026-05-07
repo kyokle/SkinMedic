@@ -5,6 +5,7 @@ use App\Http\Controllers\AuthController;
 use App\Mail\TestMail;
 use Illuminate\Support\Facades\Mail;
 use App\Http\Controllers\AddProductController;
+use App\Http\Controllers\ProductController;
 use App\Http\Controllers\AddServiceController;
 use App\Http\Controllers\SkinAnalysisController;
 use App\Http\Controllers\BookAppointmentController;
