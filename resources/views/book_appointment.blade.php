@@ -14,20 +14,14 @@
 
   <h2>Book Your Appointment</h2>
 
-  {{-- Flash Messages --}}
   @if(session('success'))
-  <div class="alert alert-success">
-    ✅ {{ session('success') }}
-  </div>
+  <div class="alert alert-success">✅ {{ session('success') }}</div>
   @endif
 
   @if($errors->any())
-  <div class="alert alert-error">
-    ⚠️ {{ $errors->first() }}
-  </div>
+  <div class="alert alert-error">⚠️ {{ $errors->first() }}</div>
   @endif
 
-  {{-- Service Summary Card --}}
   @if($service)
   <div class="service-card">
     <div class="service-card-icon">💆</div>
@@ -40,14 +34,14 @@
   @endif
 
   @if($isRegular && $preferredTime)
-  <div class="regular-badge">⭐ Regular Customer — Preferred time reserved</div>
+  <div class="regular-badge">⭐ Regular Customer — Preferred time: {{ \Carbon\Carbon::createFromFormat('H:i', $preferredTime)->format('g:i A') }}</div>
   @endif
 
   <form method="POST" action="{{ url('book-appointment') }}" id="bookingForm" novalidate>
     @csrf
-    <input type="hidden" name="service_id" value="{{ $serviceId }}">
+    <input type="hidden" name="service_id"       value="{{ $serviceId }}">
+    <input type="hidden" name="appointment_time" id="appointment_time_hidden">
 
-    {{-- Read-only patient info --}}
     <div class="form-row">
       <div class="form-group">
         <label>Full Name</label>
@@ -59,69 +53,60 @@
       </div>
     </div>
 
-    {{-- Doctor --}}
     <div class="form-group">
       <label>Select Doctor <span class="req">*</span></label>
-      <select name="doctor_id" id="doctor_id" required
-              class="{{ $errors->has('doctor_id') ? 'is-invalid' : '' }}">
+      <select name="doctor_id" id="doctor_id" required>
         <option value="">— Choose a doctor —</option>
         @foreach($doctors as $doc)
-          <option value="{{ $doc->doctor_id }}"
-            {{ old('doctor_id') == $doc->doctor_id ? 'selected' : '' }}>
+          <option value="{{ $doc->doctor_id }}" {{ old('doctor_id') == $doc->doctor_id ? 'selected' : '' }}>
             Dr. {{ $doc->firstName }} {{ $doc->lastName }}
           </option>
         @endforeach
       </select>
-      @error('doctor_id')
-        <span class="field-error">⚠ {{ $message }}</span>
-      @enderror
     </div>
 
-    {{-- Date + Time Preference --}}
     <div class="form-row">
       <div class="form-group">
         <label>Appointment Date <span class="req">*</span></label>
         <input type="date" name="appointment_date" id="appointment_date"
                min="{{ date('Y-m-d') }}"
-               value="{{ old('appointment_date') }}"
-               required
-               class="{{ $errors->has('appointment_date') ? 'is-invalid' : '' }}">
-        @error('appointment_date')
-          <span class="field-error">⚠ {{ $message }}</span>
-        @enderror
+               value="{{ old('appointment_date') }}" required>
       </div>
 
+      @if(!$isRegular || !$preferredTime)
       <div class="form-group">
         <label>Preferred Time of Day</label>
-        @if($isRegular && $preferredTime)
-          <div class="locked-time">
-            🔒 {{ \Carbon\Carbon::createFromFormat('H:i', $preferredTime)->format('g:i A') }}
-          </div>
-          <input type="hidden" name="appointment_time" value="{{ $preferredTime }}">
-        @else
-          <select id="time_preference">
-            <option value="">Any Time</option>
-            <option value="AM" {{ old('time_preference') == 'AM' ? 'selected' : '' }}>AM (8am – 12pm)</option>
-            <option value="PM" {{ old('time_preference') == 'PM' ? 'selected' : '' }}>PM (12pm – 7pm)</option>
-          </select>
-        @endif
+        <select id="time_preference">
+          <option value="">Any Time</option>
+          <option value="AM">AM (8am – 12pm)</option>
+          <option value="PM">PM (12pm – 7pm)</option>
+        </select>
       </div>
+      @endif
     </div>
 
-    {{-- Available Time Slot --}}
-    @if(!$isRegular || !$preferredTime)
+    {{-- Time slot section --}}
     <div class="form-group">
       <label>Available Time <span class="req">*</span></label>
-      <p class="time-loading" id="timeLoading">⏳ Fetching available slots…</p>
-      <select name="appointment_time" id="appointment_time" required disabled
-              class="{{ $errors->has('appointment_time') ? 'is-invalid' : '' }}">
-        <option value="">Select date and doctor first</option>
-      </select>
-      @error('appointment_time')
-        <span class="field-error">⚠ {{ $message }}</span>
-      @enderror
+      <p class="time-loading" id="timeLoading" style="display:none;">⏳ Fetching available slots…</p>
+      <div id="slotGrid" class="slot-grid"></div>
+      <p id="noSlotsMsg" style="display:none;color:#999;font-size:13px;">No slots available for this date.</p>
     </div>
-    @endif
+
+    {{-- Conflict box — shown when regular customer's preferred time is taken --}}
+    <div class="conflict-box" id="conflictBox">
+      <h4>⏰ Your preferred time is taken</h4>
+      <p id="conflictMsg">The <strong id="conflictTime"></strong> slot is already booked.
+         You can join the waitlist and be notified if it opens, or pick another time below.</p>
+      <div class="conflict-actions">
+        <button type="button" class="btn-waitlist" onclick="joinWaitlist()">
+          🔔 Join Waitlist (<span id="waitlistPos">?</span> in queue)
+        </button>
+        <button type="button" class="btn-pick-other" onclick="pickOtherTime()">
+          📅 Pick Another Time
+        </button>
+      </div>
+    </div>
 
     <button type="submit" id="submitBtn">Confirm Booking</button>
   </form>
@@ -129,104 +114,227 @@
   <a href="{{ url('patient/services') }}" class="back-btn">← Back to Services</a>
 </div>
 
-@if(!$isRegular || !$preferredTime)
+{{-- Waitlist success toast --}}
+<div class="waitlist-toast" id="waitlistToast">
+  ✅ <span id="waitlistToastMsg"></span>
+</div>
+
 <script>
-const serviceId  = {{ (int)$serviceId }};
+const serviceId    = {{ (int)$serviceId }};
+const isRegular    = {{ $isRegular ? 'true' : 'false' }};
+const preferredTime = {{ $preferredTime ? '"' . $preferredTime . '"' : 'null' }};
+
 const doctorEl   = document.getElementById('doctor_id');
 const dateEl     = document.getElementById('appointment_date');
 const prefEl     = document.getElementById('time_preference');
-const timeSelect = document.getElementById('appointment_time');
+const slotGrid   = document.getElementById('slotGrid');
 const timeLoad   = document.getElementById('timeLoading');
+const noSlotsMsg = document.getElementById('noSlotsMsg');
+const hiddenTime = document.getElementById('appointment_time_hidden');
 const submitBtn  = document.getElementById('submitBtn');
 const form       = document.getElementById('bookingForm');
+const conflictBox = document.getElementById('conflictBox');
 
+let allSlots         = [];   // full slot data from server
+let pickedOtherTime  = false; // true once patient clicks "Pick Another Time"
+let waitlistSlot     = null;  // the slot data for the conflict
+
+// ── Load slots ───────────────────────────────────────────────
 function loadTimes() {
-  const date       = dateEl?.value   || '';
-  const doctorId   = doctorEl?.value || '';
-  const preference = prefEl?.value   || '';
+  const date     = dateEl?.value   || '';
+  const doctorId = doctorEl?.value || '';
+  const pref     = prefEl?.value   || '';
 
-  if (!date || !doctorId) {
-    timeSelect.innerHTML = '<option value="">Select date and doctor first</option>';
-    timeSelect.disabled  = true;
-    return;
-  }
+  slotGrid.innerHTML   = '';
+  noSlotsMsg.style.display = 'none';
+  conflictBox.style.display = 'none';
+  hiddenTime.value     = '';
+  pickedOtherTime      = false;
+
+  if (!date || !doctorId) return;
 
   timeLoad.style.display = 'block';
-  timeSelect.disabled    = true;
-  timeSelect.innerHTML   = '<option value="">Loading…</option>';
 
-  fetch(`/get-available-times?date=${date}&service_id=${serviceId}&doctor_id=${doctorId}&preference=${preference}`)
+  fetch(`/get-available-times?date=${date}&service_id=${serviceId}&doctor_id=${doctorId}&preference=${pref}`)
     .then(r => r.json())
-    .then(times => {
+    .then(slots => {
       timeLoad.style.display = 'none';
-      timeSelect.disabled    = false;
+      allSlots = slots;
 
-      if (!times.length) {
-        timeSelect.innerHTML = '<option value="">No slots available</option>';
-        timeSelect.disabled  = true;
+      if (!slots.length) {
+        noSlotsMsg.style.display = 'block';
         return;
       }
 
-      const oldVal = '{{ old("appointment_time") }}';
-      timeSelect.innerHTML = '<option value="">— Pick a time —</option>' +
-        times.map(t => {
-          const [h, m] = t.split(':');
-          const hour   = parseInt(h);
-          const label  = ((hour % 12) || 12) + ':' + m + (hour >= 12 ? ' PM' : ' AM');
-          return `<option value="${t}"${t === oldVal ? ' selected' : ''}>${label}</option>`;
-        }).join('');
+      // For regular customers: auto-select preferred, show conflict if taken
+      if (isRegular && preferredTime && !pickedOtherTime) {
+        const prefSlot = slots.find(s => s.time === preferredTime);
+
+        if (prefSlot && prefSlot.taken) {
+          // Show conflict box, render ALL slots but preferred highlighted as taken
+          waitlistSlot = prefSlot;
+          showConflict(prefSlot);
+          renderSlots(slots, null, true); // show all, nothing pre-selected
+          return;
+        } else if (prefSlot && !prefSlot.taken) {
+          // Preferred slot is free — auto-select it
+          hiddenTime.value = preferredTime;
+          renderSlots(slots, preferredTime, false);
+          return;
+        }
+      }
+
+      // Non-regular or pickedOtherTime — show all available slots normally
+      renderSlots(slots, null, false);
     })
     .catch(() => {
       timeLoad.style.display = 'none';
-      timeSelect.innerHTML   = '<option value="">Error loading. Try again.</option>';
+      slotGrid.innerHTML = '<p style="color:#ef4444;font-size:13px;">Error loading slots. Please try again.</p>';
     });
 }
 
-doctorEl?.addEventListener('change', loadTimes);
-dateEl?.addEventListener('change', loadTimes);
-prefEl?.addEventListener('change', loadTimes);
+// ── Render slot grid ─────────────────────────────────────────
+function renderSlots(slots, preselect, showTaken) {
+  slotGrid.innerHTML = '';
 
-// ── Client-side validation ──
+  slots.forEach(slot => {
+    // If regular and conflict, only hide taken slots that aren't their preferred
+    if (!showTaken && slot.taken && slot.time !== preferredTime) return;
+    if (!showTaken && slot.taken) return;
+
+    const btn   = document.createElement('button');
+    btn.type    = 'button';
+    const label = formatTime(slot.time);
+
+    const isPreferred = isRegular && preferredTime === slot.time;
+
+    if (slot.taken) {
+      btn.className   = 'slot-btn taken';
+      btn.disabled    = true;
+      btn.innerHTML   = label +
+        (slot.waitlist_count > 0
+          ? `<span class="waitlist-count">${slot.waitlist_count} waiting</span>`
+          : '<span class="waitlist-count">Fully booked</span>');
+    } else {
+      btn.className = 'slot-btn' + (isPreferred ? ' preferred-locked' : '');
+      btn.innerHTML = label +
+        (isPreferred ? '<span class="slot-star">⭐</span>' : '');
+
+      if (preselect === slot.time) {
+        btn.classList.add('selected');
+      }
+
+      btn.addEventListener('click', () => selectSlot(slot.time, btn));
+    }
+
+    slotGrid.appendChild(btn);
+  });
+}
+
+// ── Select a slot ─────────────────────────────────────────────
+function selectSlot(time, btn) {
+  document.querySelectorAll('.slot-btn').forEach(b => b.classList.remove('selected'));
+  btn.classList.add('selected');
+  hiddenTime.value = time;
+}
+
+// ── Show conflict UI ──────────────────────────────────────────
+function showConflict(slot) {
+  const timeLabel = formatTime(slot.time);
+  const pos       = (slot.waitlist_count || 0) + 1;
+
+  document.getElementById('conflictTime').textContent = timeLabel;
+  document.getElementById('waitlistPos').textContent  = pos;
+  conflictBox.style.display = 'block';
+}
+
+// ── Patient clicks "Pick Another Time" ───────────────────────
+function pickOtherTime() {
+  pickedOtherTime = true;
+  conflictBox.style.display = 'none';
+  hiddenTime.value = '';
+
+  // Re-render showing only available slots (no preferred lock)
+  const available = allSlots.filter(s => !s.taken);
+  if (!available.length) {
+    noSlotsMsg.style.display = 'block';
+    slotGrid.innerHTML = '';
+    return;
+  }
+  renderSlots(allSlots, null, false);
+}
+
+// ── Join waitlist ─────────────────────────────────────────────
+async function joinWaitlist() {
+  const date = dateEl.value;
+  if (!date || !waitlistSlot) return;
+
+  const res = await fetch('{{ route("waitlist.join") }}', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+    },
+    body: JSON.stringify({
+      service_id:     serviceId,
+      preferred_date: date,
+      preferred_time: waitlistSlot.time,
+    }),
+  });
+
+  const data = await res.json();
+
+  conflictBox.style.display = 'none';
+
+  const toast = document.getElementById('waitlistToast');
+  document.getElementById('waitlistToastMsg').textContent = data.success
+    ? data.message
+    : (data.error || 'Could not join waitlist.');
+  toast.style.background = data.success ? '#80a833' : '#ef4444';
+  toast.style.display    = 'block';
+  setTimeout(() => toast.style.display = 'none', 5000);
+}
+
+// ── Format time ───────────────────────────────────────────────
+function formatTime(t) {
+  if (!t) return '';
+  const [h, m] = t.split(':');
+  const hr = parseInt(h);
+  return ((hr % 12) || 12) + ':' + m + ' ' + (hr < 12 ? 'AM' : 'PM');
+}
+
+// ── Event listeners ───────────────────────────────────────────
+doctorEl?.addEventListener('change', loadTimes);
+dateEl?.addEventListener('change',   loadTimes);
+prefEl?.addEventListener('change',   loadTimes);
+
+// ── Form submit guard ─────────────────────────────────────────
 form.addEventListener('submit', function(e) {
   let valid = true;
 
-  [doctorEl, dateEl, timeSelect].forEach(el => {
-    if (!el) return;
-    if (!el.value) {
-      el.classList.add('is-invalid');
-      valid = false;
-    } else {
-      el.classList.remove('is-invalid');
-      el.classList.add('is-valid');
-    }
-  });
+  if (!doctorEl.value) { doctorEl.classList.add('is-invalid'); valid = false; }
+  else doctorEl.classList.remove('is-invalid');
+
+  if (!dateEl.value) { dateEl.classList.add('is-invalid'); valid = false; }
+  else dateEl.classList.remove('is-invalid');
+
+  if (!hiddenTime.value) {
+    slotGrid.style.outline = '2px solid #ef4444';
+    valid = false;
+  } else {
+    slotGrid.style.outline = 'none';
+  }
 
   if (!valid) {
     e.preventDefault();
-    const first = form.querySelector('.is-invalid');
-    first?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    form.querySelector('.is-invalid')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     return;
   }
 
   submitBtn.disabled    = true;
   submitBtn.textContent = '⏳ Booking…';
 });
-
-// ── Blur validation ──
-[doctorEl, dateEl, timeSelect].forEach(el => {
-  if (!el) return;
-  el.addEventListener('blur', () => {
-    if (!el.value) {
-      el.classList.add('is-invalid');
-      el.classList.remove('is-valid');
-    } else {
-      el.classList.remove('is-invalid');
-      el.classList.add('is-valid');
-    }
-  });
-});
 </script>
-@endif
 
 </body>
 </html>

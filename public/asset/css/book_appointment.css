@@ -237,3 +237,167 @@ button[type="submit"]:disabled { background: #a3c47a; cursor: not-allowed; }
   .form-row   { grid-template-columns: 1fr; gap: 0; }
   h2          { font-size: 1.2rem; }
 }
+
+/* ── Slot Grid ── */
+.slot-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.slot-btn {
+  padding: 10px 6px;
+  border-radius: 8px;
+  border: 1.5px solid #80a833;
+  background: #fff;
+  color: #80a833;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: 0.15s;
+  text-align: center;
+  position: relative;
+  width: 100%;
+}
+
+.slot-btn:hover:not(.taken):not(.preferred-locked) {
+  background: #80a833;
+  color: #fff;
+}
+
+.slot-btn.selected {
+  background: #80a833;
+  color: #fff;
+}
+
+/* Slot fully booked by someone else */
+.slot-btn.taken {
+  background: #fee2e2;
+  border-color: #fca5a5;
+  color: #ef4444;
+  cursor: default;
+}
+
+/* Regular customer's preferred slot — taken */
+.slot-btn.preferred-taken {
+  background: #fff7ed;
+  border-color: #f59e0b;
+  color: #b45309;
+  cursor: pointer;
+}
+
+/* Regular customer's preferred slot — free and auto-selected */
+.slot-btn.preferred-locked {
+  background: #f0f7e0;
+  border-color: #80a833;
+  color: #3a6010;
+}
+
+.slot-star {
+  font-size: 10px;
+  position: absolute;
+  top: 3px;
+  right: 5px;
+}
+
+.waitlist-count {
+  font-size: 10px;
+  display: block;
+  font-weight: 400;
+  margin-top: 2px;
+  opacity: 0.85;
+}
+
+/* ── Conflict Box ── */
+.conflict-box {
+  background: #fff7ed;
+  border: 1.5px solid #f59e0b;
+  border-radius: 10px;
+  padding: 16px 18px;
+  margin: 16px 0;
+}
+
+.conflict-box h4 {
+  margin: 0 0 6px;
+  font-size: 14px;
+  color: #92400e;
+}
+
+.conflict-box p {
+  font-size: 12.5px;
+  color: #78350f;
+  margin: 0 0 12px;
+  line-height: 1.5;
+}
+
+.conflict-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.btn-waitlist {
+  flex: 1;
+  padding: 9px;
+  background: #80a833;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-waitlist:hover { background: #6b9228; }
+
+.btn-pick-other {
+  flex: 1;
+  padding: 9px;
+  background: #f5f5f5;
+  color: #333;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-pick-other:hover { background: #e9e9e9; }
+
+/* ── Waitlist Toast ── */
+.waitlist-toast {
+  display: none;
+  position: fixed;
+  bottom: 28px;
+  right: 28px;
+  z-index: 10000;
+  background: #80a833;
+  color: #fff;
+  padding: 14px 22px;
+  border-radius: 10px;
+  font-size: 13.5px;
+  font-weight: 600;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+  max-width: 320px;
+  line-height: 1.5;
+}
+
+/* ── Mobile adjustments for slot grid ── */
+@media (max-width: 540px) {
+  .slot-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+
+  .conflict-actions {
+    flex-direction: column;
+  }
+
+  .waitlist-toast {
+    bottom: 16px;
+    right: 16px;
+    left: 16px;
+    max-width: unset;
+  }
+}

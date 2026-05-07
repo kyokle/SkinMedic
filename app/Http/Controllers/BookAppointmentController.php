@@ -29,10 +29,33 @@ class BookAppointmentController extends Controller
         $isRegular     = (bool) $user->is_regular;
         $preferredTime = $user->preferred_time ? substr($user->preferred_time, 0, 5) : null;
 
-        return view('book_appointment', compact(
-            'service', 'serviceId', 'user', 'doctors', 'isRegular', 'preferredTime'
-        ));
+         // Check if preferred slot is already taken on the requested date
+         // (used to unlock the time picker for regular customers)
+        $preferredSlotTaken = false;
+        if ($isRegular && $preferredTime && $request->query('date')) {
+        $preferredSlotTaken = DB::table('appointments')
+            ->where('appointment_date', $request->query('date'))
+            ->where('appointment_time', $preferredTime)
+            ->whereIn('status', ['pending', 'approved'])
+            ->exists();
     }
+        // Also check waitlist position if slot is taken
+    $waitlistPosition = null;
+    if ($preferredSlotTaken && $request->query('date')) {
+        $waitlistPosition = DB::table('appointment_waitlist')
+            ->where('service_id',     $serviceId)
+            ->where('preferred_date', $request->query('date'))
+            ->where('preferred_time', $preferredTime)
+            ->whereIn('status', ['waiting', 'notified'])
+            ->count() + 1;
+    }
+
+    return view('book_appointment', compact(
+        'service', 'serviceId', 'user', 'doctors',
+        'isRegular', 'preferredTime',
+        'preferredSlotTaken', 'waitlistPosition'
+    ));
+}
 
     public function store(Request $request)
     {
@@ -123,33 +146,52 @@ class BookAppointmentController extends Controller
     }
 
     public function getAvailableTimes(Request $request)
-    {
-        $date       = $request->query('date');
-        $doctorId   = $request->query('doctor_id');
-        $preference = $request->query('preference');
+{
+    $date       = $request->query('date');
+    $doctorId   = $request->query('doctor_id');
+    $serviceId  = $request->query('service_id');
+    $preference = $request->query('preference');
 
-        $allSlots = [
-            '08:00', '09:00', '10:00', '11:00',
-            '12:00', '13:00', '14:00', '15:00',
-            '16:00', '17:00', '18:00', '19:00',
-        ];
+    $allSlots = [
+        '08:00', '09:00', '10:00', '11:00',
+        '12:00', '13:00', '14:00', '15:00',
+        '16:00', '17:00', '18:00', '19:00',
+    ];
 
-        if ($preference === 'AM') {
-            $allSlots = array_filter($allSlots, fn($t) => (int)explode(':', $t)[0] < 12);
-        } elseif ($preference === 'PM') {
-            $allSlots = array_filter($allSlots, fn($t) => (int)explode(':', $t)[0] >= 12);
-        }
-
-        $booked = DB::table('appointments')
-            ->where('doctor_id',        $doctorId)
-            ->where('appointment_date', $date)
-            ->whereIn('status', ['pending', 'approved'])
-            ->pluck('appointment_time')
-            ->map(fn($t) => substr($t, 0, 5))
-            ->toArray();
-
-        $available = array_values(array_filter($allSlots, fn($slot) => !in_array($slot, $booked)));
-
-        return response()->json($available);
+    if ($preference === 'AM') {
+        $allSlots = array_filter($allSlots, fn($t) => (int)explode(':', $t)[0] < 12);
+    } elseif ($preference === 'PM') {
+        $allSlots = array_filter($allSlots, fn($t) => (int)explode(':', $t)[0] >= 12);
     }
+
+    $booked = DB::table('appointments')
+        ->where('doctor_id',        $doctorId)
+        ->where('appointment_date', $date)
+        ->whereIn('status', ['pending', 'approved'])
+        ->pluck('appointment_time')
+        ->map(fn($t) => substr($t, 0, 5))
+        ->toArray();
+
+    // Build slots with waitlist counts attached
+    $slots = [];
+    foreach ($allSlots as $slot) {
+        $taken = in_array($slot, $booked);
+        $waitlistCount = 0;
+        if ($taken && $serviceId) {
+            $waitlistCount = DB::table('appointment_waitlist')
+                ->where('service_id',     $serviceId)
+                ->where('preferred_date', $date)
+                ->where('preferred_time', $slot)
+                ->whereIn('status', ['waiting', 'notified'])
+                ->count();
+        }
+        $slots[] = [
+            'time'           => $slot,
+            'taken'          => $taken,
+            'waitlist_count' => $waitlistCount,
+        ];
+    }
+
+    return response()->json($slots);
+}
 }
