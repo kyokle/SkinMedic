@@ -88,6 +88,27 @@ function checkMatch() {
   }
 }
 
+// ── Terms Popup ──────────────────────────────────────
+function openTermsPopup(e) {
+  if (e) e.preventDefault();
+  const el = document.getElementById('termsPopup');
+  el.style.display = 'flex';
+}
+
+function closeTermsPopup() {
+  document.getElementById('termsPopup').style.display = 'none';
+}
+
+function acceptTerms() {
+  document.getElementById('termsCheckbox').checked = true;
+  closeTermsPopup();
+}
+
+// Close on backdrop click
+document.getElementById('termsPopup').addEventListener('click', function(e) {
+  if (e.target === this) closeTermsPopup();
+});
+
 /* ═══════════════════════════════════════════════════
    AJAX HELPER
 ═══════════════════════════════════════════════════ */

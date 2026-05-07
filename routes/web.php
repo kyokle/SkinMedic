@@ -47,6 +47,7 @@ Route::get('/login',            [IndexController::class, 'index'])->name('login'
 Route::post('/login',           [IndexController::class, 'login']);
 Route::post('/admin-login',     [IndexController::class, 'adminLogin']);
 Route::post('/signup',          [IndexController::class, 'signup']);
+Route::get('/products', [ProductController::class, 'index'])->name('products.index');
 Route::post('/forgot-password', [IndexController::class, 'forgotPassword']);
 Route::post('/verify-otp',      [IndexController::class, 'verifyResetOtp']);
 Route::post('/reset-password',  [IndexController::class, 'resetPassword']);

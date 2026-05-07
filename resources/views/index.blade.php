@@ -271,7 +271,7 @@
                 <div class="pw-field">
                   <input type="password" name="password" id="signup_password"
                          placeholder="Create a strong password" required
-                         oninput="checkStrength(this.value)">
+                         oninput="checkStrength(this.value)">       
                   <button type="button" class="pw-toggle" onclick="togglePw('signup_password',this)">👁</button>
                 </div>
                 <div class="strength-wrap">
@@ -298,6 +298,18 @@
                 <div class="match-msg" id="matchMsg"></div>
               </div>
 
+              <div class="sg-group full" style="margin-bottom:6px;">
+                <label style="display:flex; align-items:flex-start; gap:10px; text-transform:none; letter-spacing:0; font-size:13px; color:#555; cursor:pointer;">
+                  <input type="checkbox" id="termsCheckbox" name="agree_terms" required
+                          style="width:16px; height:16px; margin-top:2px; accent-color:#80a833; flex-shrink:0;">
+                  <span>
+                    I agree to the
+                    <a href="#" onclick="openTermsPopup(event)" style="color:#80a833; font-weight:600; text-decoration:underline;">Terms and Conditions</a>
+                    and
+                    <a href="#" onclick="openTermsPopup(event)" style="color:#80a833; font-weight:600; text-decoration:underline;">Privacy Policy</a>
+                  </span>
+                </label>
+              </div>
               <button type="submit" class="sg-submit">Create Account →</button>
             </div>
           </form>
@@ -391,6 +403,9 @@
         @else
           <p style="text-align:center; color:#666;">No products available.</p>
         @endif
+      </div>
+      <div class="center-btn">
+        <a class="view-all" href="{{ route('products.index') }}">View All Products</a>
       </div>
     </section>
 
@@ -493,6 +508,44 @@
         <div id="emailOtpError" style="color:red; margin-bottom:10px;"></div>
         <button onclick="submitEmailOtp()" style="padding:12px 30px; background:#80a833; color:white; border:none; border-radius:8px; cursor:pointer; font-size:16px;">Verify</button>
     </div>
+</div>
+
+<!-- ═══════════════════ TERMS POPUP ═══════════════════ -->
+<div id="termsPopup" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:10001; align-items:center; justify-content:center;">
+  <div style="background:#fff; border-radius:16px; max-width:560px; width:92%; max-height:80vh; display:flex; flex-direction:column; box-shadow:0 20px 50px rgba(0,0,0,0.25); overflow:hidden;">
+    <div style="background:#80a833; padding:18px 24px; display:flex; justify-content:space-between; align-items:center;">
+      <h3 style="margin:0; color:#fff; font-family:'Playfair Display',serif; font-size:20px;">Terms & Conditions</h3>
+      <span onclick="closeTermsPopup()" style="color:#fff; font-size:24px; cursor:pointer; line-height:1;">&times;</span>
+    </div>
+    <div style="overflow-y:auto; padding:24px; font-size:13.5px; color:#555; line-height:1.8;">
+      <p><strong style="color:#333;">Last updated: May 2025</strong></p>
+
+      <h4 style="color:#80a833; margin-top:18px;">1. Acceptance of Terms</h4>
+      <p>By creating an account and using Skin Medic's services, you agree to be bound by these Terms and Conditions. If you do not agree, please do not register.</p>
+
+      <h4 style="color:#80a833; margin-top:18px;">2. Use of Services</h4>
+      <p>Skin Medic provides online appointment booking, AR skin analysis, and product browsing. You agree to use these services only for lawful purposes and in accordance with these Terms.</p>
+
+      <h4 style="color:#80a833; margin-top:18px;">3. Personal Information</h4>
+      <p>We collect your name, email, phone number, and address to manage your appointments and provide personalized skincare services. Your data will never be sold to third parties.</p>
+
+      <h4 style="color:#80a833; margin-top:18px;">4. Privacy Policy</h4>
+      <p>We are committed to protecting your privacy. Personal information collected is used solely to improve your experience with Skin Medic and will be stored securely.</p>
+
+      <h4 style="color:#80a833; margin-top:18px;">5. Account Responsibility</h4>
+      <p>You are responsible for maintaining the confidentiality of your account credentials. Notify us immediately of any unauthorized access at imus.skinmedic@gmail.com.</p>
+
+      <h4 style="color:#80a833; margin-top:18px;">6. Medical Disclaimer</h4>
+      <p>AR Skin Analysis and content provided by Skin Medic are for informational purposes only and do not constitute medical advice. Always consult a qualified dermatologist for medical concerns.</p>
+
+      <h4 style="color:#80a833; margin-top:18px;">7. Modifications</h4>
+      <p>Skin Medic reserves the right to update these Terms at any time. Continued use of the platform after changes constitutes acceptance of the updated Terms.</p>
+    </div>
+    <div style="padding:16px 24px; border-top:1px solid #f0f0f0; display:flex; justify-content:flex-end; gap:10px;">
+      <button onclick="closeTermsPopup()" style="padding:10px 20px; border:1.5px solid #ddd; border-radius:8px; background:#fff; color:#555; cursor:pointer; font-size:13px;">Close</button>
+      <button onclick="acceptTerms()" style="padding:10px 24px; background:#80a833; color:#fff; border:none; border-radius:8px; cursor:pointer; font-size:13px; font-weight:600;">I Accept ✓</button>
+    </div>
+  </div>
 </div>
 
   </main>
