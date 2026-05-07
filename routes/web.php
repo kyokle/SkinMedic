@@ -55,6 +55,7 @@ Route::post('/reset-password',  [IndexController::class, 'resetPassword']);
 Route::get('/logout',           [AuthController::class,  'logout'])->name('logout');
 Route::get('/book-appointment', [BookAppointmentController::class, 'show'])->name('book.appointment.show');
 Route::post('/book-appointment', [BookAppointmentController::class, 'store'])->name('book.appointment.store');
+Route::get('/services', [IndexController::class, 'services'])->name('services.index');
 Route::get('/get-available-times', [BookAppointmentController::class, 'getAvailableTimes']);
 Route::get('/test-mail', function () {
     Mail::to('jlouise1425@gmail.com')->send(new TestMail());

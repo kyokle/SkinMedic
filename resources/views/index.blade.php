@@ -375,7 +375,7 @@
       </div>
 
       <div class="center-btn">
-        <a class="view-all" href="#">View All Treatments</a>
+        <a class="view-all" href="{{ route('services.index') }}">View All Treatments</a>
       </div>
     </section>
 

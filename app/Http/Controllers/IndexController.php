@@ -299,4 +299,15 @@ public function verifyEmailOtp(Request $request)
             'message' => '✓ Password reset! You can now log in.',
         ]);
     }
+    public function services()
+    {
+        $services = DB::table('services')
+            ->select('service_id', 'name', 'description', 'price', 'image')
+            ->orderBy('service_id', 'desc')
+            ->get();
+
+        return view('services', compact('services'));
+    }
+
+
 }
