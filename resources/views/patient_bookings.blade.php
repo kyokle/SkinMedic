@@ -84,11 +84,14 @@
      style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);
             z-index:9999;align-items:center;justify-content:center;">
     <div style="background:#fff;border-radius:14px;padding:28px 24px;
-                max-width:420px;width:90%;position:relative;">
+                max-width:460px;width:90%;position:relative;max-height:90vh;overflow-y:auto;">
+
         <button onclick="closePatientModal()"
                 style="position:absolute;top:14px;right:16px;background:none;
                        border:none;font-size:20px;cursor:pointer;color:#888;">×</button>
+
         <h3 style="font-weight:700;font-size:16px;margin-bottom:16px;">Appointment Details</h3>
+
         <div style="display:flex;justify-content:space-between;padding:8px 0;
                     border-bottom:1px solid #f3f3f3;font-size:0.86rem;">
             <span style="color:#888;font-weight:500;">Service</span>
@@ -109,10 +112,90 @@
             <span style="color:#888;font-weight:500;">Time</span>
             <span id="pm_time" style="font-weight:600;"></span>
         </div>
-        <div style="display:flex;justify-content:space-between;padding:8px 0;font-size:0.86rem;">
+        <div style="display:flex;justify-content:space-between;padding:8px 0;
+                    border-bottom:1px solid #f3f3f3;font-size:0.86rem;">
             <span style="color:#888;font-weight:500;">Status</span>
             <span id="pm_status" style="font-weight:600;"></span>
         </div>
+
+        {{-- Cancel Button --}}
+        <div id="pm_cancelSection" style="display:none;margin-top:14px;">
+            <button type="button"
+                    onclick="openPatientCancelConfirm()"
+                    style="width:100%;padding:10px;background:#fee2e2;color:#991b1b;
+                           border:1px solid #fca5a5;border-radius:8px;font-size:14px;
+                           cursor:pointer;font-family:inherit;">
+                ❌ Cancel Appointment
+            </button>
+        </div>
+
+        {{-- Reschedule Form --}}
+        <div id="pm_rescheduleSection" style="display:none;">
+            <hr style="border:none;border-top:1px solid #eee;margin:18px 0 14px;">
+            <p style="font-size:0.85rem;font-weight:600;color:#444;margin:0 0 12px;">
+                📅 Propose New Schedule
+            </p>
+            <form method="POST" action="{{ route('patient.bookings.reschedule') }}">
+                @csrf
+                <input type="hidden" name="appointment_id" id="pm_appt_id">
+                <div style="display:flex;flex-direction:column;gap:5px;margin-bottom:13px;">
+                    <label style="font-size:0.75rem;font-weight:600;color:#666;
+                                  text-transform:uppercase;letter-spacing:.5px;">New Date</label>
+                    <input type="date" name="new_date" id="pm_new_date"
+                           min="{{ now()->addDay()->toDateString() }}" required
+                           style="padding:9px 12px;border:1.5px solid #ddd;border-radius:8px;
+                                  font-size:0.9rem;outline:none;">
+                </div>
+                <div style="display:flex;flex-direction:column;gap:5px;margin-bottom:13px;">
+                    <label style="font-size:0.75rem;font-weight:600;color:#666;
+                                  text-transform:uppercase;letter-spacing:.5px;">New Time</label>
+                    <input type="time" name="new_time" id="pm_new_time" required
+                           style="padding:9px 12px;border:1.5px solid #ddd;border-radius:8px;
+                                  font-size:0.9rem;outline:none;">
+                </div>
+                <button type="submit"
+                        style="width:100%;background:#80a833;color:#fff;border:none;
+                               padding:11px;border-radius:8px;font-size:0.9rem;font-weight:600;
+                               cursor:pointer;">
+                    📤 Send Reschedule Request
+                </button>
+            </form>
+        </div>
+
+        <p id="pm_noActionMsg"
+           style="font-size:0.8rem;color:#aaa;text-align:center;margin-top:16px;"></p>
+
+        {{-- Cancel Confirmation Overlay --}}
+        <div id="pm_cancelConfirm"
+             style="display:none;position:absolute;inset:0;background:rgba(0,0,0,0.45);
+                    border-radius:14px;z-index:10;align-items:center;justify-content:center;">
+            <div style="background:#fff;border-radius:12px;padding:28px 24px;
+                        max-width:280px;text-align:center;box-shadow:0 8px 32px rgba(0,0,0,0.18);">
+                <div style="font-size:2rem;margin-bottom:10px;">⚠️</div>
+                <p style="font-weight:700;font-size:15px;margin-bottom:6px;">Cancel Appointment?</p>
+                <p style="font-size:13px;color:#666;margin-bottom:20px;">
+                    This action cannot be undone. The doctor and clinic will be notified.
+                </p>
+                <div style="display:flex;gap:10px;justify-content:center;">
+                    <button onclick="closePatientCancelConfirm()"
+                            style="padding:8px 20px;border-radius:8px;border:1px solid #ddd;
+                                   background:#f5f5f5;cursor:pointer;font-family:inherit;font-size:13px;">
+                        Go Back
+                    </button>
+                    <form method="POST" action="{{ route('patient.bookings.cancel') }}" style="margin:0;">
+                        @csrf
+                        <input type="hidden" name="appointment_id" id="pm_cancel_appt_id">
+                        <button type="submit"
+                                style="padding:8px 20px;border-radius:8px;border:none;
+                                       background:#dc2626;color:#fff;cursor:pointer;
+                                       font-family:inherit;font-size:13px;font-weight:600;">
+                            Yes, Cancel
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
     </div>
 </div>
 
@@ -130,15 +213,35 @@ function filterTable(status, btn) {
 
 function openPatientModal(id, service, doctor, date, time, status) {
     document.getElementById('patientModal').style.display = 'flex';
-    document.getElementById('pm_service').innerText = service;
-    document.getElementById('pm_doctor').innerText  = doctor ? 'Dr. ' + doctor : 'Not Assigned';
-    document.getElementById('pm_date').innerText    = date;
-    document.getElementById('pm_time').innerText    = formatTime(time);
-    document.getElementById('pm_status').innerText  = status;
+    document.getElementById('pm_service').innerText  = service;
+    document.getElementById('pm_doctor').innerText   = doctor ? 'Dr. ' + doctor : 'Not Assigned';
+    document.getElementById('pm_date').innerText     = date;
+    document.getElementById('pm_time').innerText     = formatTime(time);
+    document.getElementById('pm_status').innerText   = status;
+    document.getElementById('pm_appt_id').value      = id;
+    document.getElementById('pm_cancel_appt_id').value = id;
+    document.getElementById('pm_new_date').value     = date;
+    document.getElementById('pm_new_time').value     = time;
+    document.getElementById('pm_cancelConfirm').style.display = 'none';
+
+    const canAct = (status === 'pending' || status === 'approved');
+    document.getElementById('pm_rescheduleSection').style.display = canAct ? 'block' : 'none';
+    document.getElementById('pm_cancelSection').style.display     = canAct ? 'block' : 'none';
+    document.getElementById('pm_noActionMsg').textContent         = canAct
+        ? '' : 'Actions are only available for pending or approved appointments.';
 }
 
 function closePatientModal() {
-    document.getElementById('patientModal').style.display = 'none';
+    document.getElementById('pm_cancelConfirm').style.display = 'none';
+    document.getElementById('patientModal').style.display     = 'none';
+}
+
+function openPatientCancelConfirm() {
+    document.getElementById('pm_cancelConfirm').style.display = 'flex';
+}
+
+function closePatientCancelConfirm() {
+    document.getElementById('pm_cancelConfirm').style.display = 'none';
 }
 
 function formatTime(t) {
@@ -159,7 +262,6 @@ window.addEventListener('DOMContentLoaded', function () {
         if (btn) filterTable(filter, btn);
     }
 
-    // Auto-open modal from notification click
     const params = new URLSearchParams(window.location.search);
     const openId = params.get('open');
     if (openId) {

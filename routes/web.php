@@ -91,6 +91,8 @@ Route::get('/patient/services',                 [PatientServicesController::clas
 
 // ── Patient Bookings ──────────────────────────────────
 Route::get('/patient/bookings',                 [PatientBookingsController::class, 'index'])->name('patient.bookings');
+Route::post('/patient/bookings/reschedule', [PatientBookingsController::class, 'reschedule'])->name('patient.bookings.reschedule');
+Route::post('/patient/bookings/cancel',     [PatientBookingsController::class, 'cancel'])->name('patient.bookings.cancel');
 
 // ── Patient Profile ──────────────────────────────────
 Route::get('/patient/profile',                  [PatientProfileController::class,  'index'])->name('patient.profile');

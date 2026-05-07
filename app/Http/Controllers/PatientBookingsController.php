@@ -5,10 +5,12 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Session;
+use App\Helpers\NotificationHelper;
 
 class PatientBookingsController extends Controller
 {
     use SidebarDataController;
+
     public function index(Request $request)
     {
         $userId       = (int) Session::get('user_id');
@@ -39,5 +41,102 @@ class PatientBookingsController extends Controller
             $this->sidebarData(),
             compact('appointments', 'activeFilter')
         ));
+    }
+
+    public function reschedule(Request $request)
+    {
+        $request->validate([
+            'appointment_id' => 'required|integer',
+            'new_date'       => 'required|date|after:today',
+            'new_time'       => 'required',
+        ]);
+
+        $apptId  = (int) $request->appointment_id;
+        $userId  = (int) Session::get('user_id');
+
+        // Make sure the appointment belongs to this patient
+        $appt = DB::table('appointments')
+            ->where('appointment_id', $apptId)
+            ->where('user_id', $userId)
+            ->first();
+
+        if (!$appt || !in_array($appt->status, ['pending', 'approved'])) {
+            return back()->with('error', 'This appointment cannot be rescheduled.');
+        }
+
+        DB::table('appointments')
+            ->where('appointment_id', $apptId)
+            ->update([
+                'appointment_date' => $request->new_date,
+                'appointment_time' => $request->new_time,
+                'status'           => 'pending',
+                'is_rescheduled'   => true,
+            ]);
+
+        $title    = 'Appointment Rescheduled by Patient';
+        $msg      = 'Your appointment has been rescheduled to ' . $request->new_date . ' at ' . $request->new_time . '.';
+        $staffMsg = 'A patient has rescheduled their appointment to ' . $request->new_date . ' at ' . $request->new_time . '.';
+
+        // Notify the patient themselves
+        NotificationHelper::send($userId, $title, $msg, 'rescheduled', $apptId);
+
+        // Notify the doctor
+        $doctor = DB::table('doctor')->where('doctor_id', $appt->doctor_id)->first();
+        if ($doctor && $doctor->user_id) {
+            NotificationHelper::send($doctor->user_id, $title, $staffMsg, 'rescheduled', $apptId);
+        }
+
+        // Notify admin/staff
+        $adminStaff = DB::table('users')->whereIn('role', ['admin', 'staff'])->get();
+        foreach ($adminStaff as $u) {
+            NotificationHelper::send($u->user_id, $title, $staffMsg, 'booking', $apptId);
+        }
+
+        return back()->with('success', 'Appointment rescheduled successfully.');
+    }
+
+    public function cancel(Request $request)
+    {
+        $request->validate([
+            'appointment_id' => 'required|integer',
+        ]);
+
+        $apptId = (int) $request->appointment_id;
+        $userId = (int) Session::get('user_id');
+
+        // Make sure the appointment belongs to this patient
+        $appt = DB::table('appointments')
+            ->where('appointment_id', $apptId)
+            ->where('user_id', $userId)
+            ->first();
+
+        if (!$appt || $appt->status === 'cancelled') {
+            return back()->with('error', 'This appointment cannot be cancelled.');
+        }
+
+        DB::table('appointments')
+            ->where('appointment_id', $apptId)
+            ->update(['status' => 'cancelled']);
+
+        $title    = 'Appointment Cancelled by Patient';
+        $msg      = 'Your appointment on ' . $appt->appointment_date . ' at ' . $appt->appointment_time . ' has been cancelled.';
+        $staffMsg = 'A patient has cancelled their appointment on ' . $appt->appointment_date . ' at ' . $appt->appointment_time . '.';
+
+        // Notify the patient
+        NotificationHelper::send($userId, $title, $msg, 'cancelled', $apptId);
+
+        // Notify the doctor
+        $doctor = DB::table('doctor')->where('doctor_id', $appt->doctor_id)->first();
+        if ($doctor && $doctor->user_id) {
+            NotificationHelper::send($doctor->user_id, $title, $staffMsg, 'booking', $apptId);
+        }
+
+        // Notify admin/staff
+        $adminStaff = DB::table('users')->whereIn('role', ['admin', 'staff'])->get();
+        foreach ($adminStaff as $u) {
+            NotificationHelper::send($u->user_id, $title, $staffMsg, 'booking', $apptId);
+        }
+
+        return back()->with('success', 'Appointment cancelled successfully.');
     }
 }
