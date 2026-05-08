@@ -101,11 +101,6 @@ Route::get('/patient/bookings',                 [PatientBookingsController::clas
 Route::post('/patient/bookings/reschedule', [PatientBookingsController::class, 'reschedule'])->name('patient.bookings.reschedule');
 Route::post('/patient/bookings/cancel',     [PatientBookingsController::class, 'cancel'])->name('patient.bookings.cancel');
 
-// Waitlist routes (patient)
-Route::post('/waitlist/join',         [WaitlistController::class, 'join'])->name('waitlist.join');
-Route::get('/waitlist/claim/{token}', [WaitlistController::class, 'claim'])->name('waitlist.claim');
-Route::get('/waitlist/mine',          [WaitlistController::class, 'myWaitlist'])->name('waitlist.mine');
-Route::post('/waitlist/leave',        [WaitlistController::class, 'leave'])->name('waitlist.leave');
 
 // ── Patient Profile ──────────────────────────────────
 Route::get('/patient/profile',                  [PatientProfileController::class,  'index'])->name('patient.profile');
