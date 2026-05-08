@@ -19,6 +19,7 @@ use App\Http\Controllers\PatientBookingsController;
 use App\Http\Controllers\PatientProfileController;
 use App\Http\Controllers\PatientReviewsController;
 use App\Http\Controllers\PatientAR_Skin_AnalysisController;
+use App\Http\Controllers\PatientProductsController;
 
 use App\Http\Controllers\DoctorPageController;
 use App\Http\Controllers\DoctorBookingsController;
