@@ -129,6 +129,18 @@ Route::post('/doctor/bookings/reschedule', [DoctorBookingsController::class, 're
 Route::post('/doctor/bookings/cancel', [DoctorBookingsController::class, 'cancel'])
      ->name('doctor.bookings.cancel');
 
+// ── Doctor Services ──────────────────────────────────
+Route::get('/doctor/services',                    [DoctorServicesController::class,     'index'])->name('doctor.services');
+Route::post('/doctor/services/add',                [DoctorServicesController::class, 'add'])->name('doctor.services.add');
+Route::post('/doctor/services/update',                [DoctorServicesController::class, 'update'])->name('doctor.services.update');
+Route::post('/doctor/services/delete',                [DoctorServicesController::class, 'delete'])->name('doctor.services.delete');
+
+// ── Doctor Products ──────────────────────────────────
+Route::get('/doctor/products',                    [DoctorProductsController::class,     'index'])->name('doctor.products');
+Route::post('/doctor/products/add',               [DoctorProductsController::class,     'add'])->name('doctor.products.add');
+Route::post('/doctor/products/update',            [DoctorProductsController::class,     'update'])->name('doctor.products.update');
+Route::post('/doctor/products/delete',            [DoctorProductsController::class,     'delete'])->name('doctor.products.delete');
+
 // ── Doctor Profile ──────────────────────────────────────
 Route::get('/doctor/profile',  [DoctorProfileController::class,  'show'])->name('doctor.profile');
 Route::post('/doctor/profile/upload-pic',      [DoctorProfileController::class, 'uploadPic'])->name('doctor.profile.upload-pic');

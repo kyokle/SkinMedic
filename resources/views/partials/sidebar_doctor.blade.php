@@ -48,9 +48,20 @@
         </a>
 
         <span class="sb-label">Clinic</span>
+        <a href="{{ route('doctor.services') }}"
+           class="{{ request()->routeIs('doctor.services') ? 'active' : '' }}">
+            <span class="ni">💆</span> Services
+        </a>
+
         <a href="{{ route('doctor.bookings') }}"
            class="{{ request()->routeIs('doctor.bookings') ? 'active' : '' }}">
             <span class="ni">🧾</span> My Bookings
+        </a>
+
+         <span class="sb-label">Inventory</span>
+        <a href="{{ route('doctor.products') }}"
+           class="{{ request()->routeIs('doctor.products') ? 'active' : '' }}">
+            <span class="ni">🧴</span> Products
         </a>
 
         <span class="sb-label">Account</span>

@@ -13,8 +13,10 @@
 
 @if (session('role') === 'staff')
     @include('partials.sidebar_staff')
-@else
+@elseif
     @include('partials.sidebar_admin')
+@else
+    @include('partials.sidebar_doctor')
 @endif
 
 <main class="content">

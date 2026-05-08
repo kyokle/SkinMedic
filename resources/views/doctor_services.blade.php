@@ -1,34 +1,34 @@
-{{-- resources/views/admin/admin_services.blade.php --}}
+{{-- resources/views/doctor/doctor_services.blade.php --}}
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="csrf-token" content="{{ csrf_token() }}">
-  <title>Admin Service Management - SkinMedic</title>
-  <link rel="stylesheet" href="{{ asset('/asset/css/admin_services.css') }}">
+  <title>Doctor Service Management - SkinMedic</title>
+  <link rel="stylesheet" href="{{ asset('/asset/css/doctor_services.css') }}">
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Fraunces:wght@700&display=swap" rel="stylesheet">
 </head>
 <body style="background:#f8f8f8;">
 
-  @if(session('role') === 'admin')
-    @include('partials.sidebar_admin')
+  @if(session('role') === 'doctor')
+    @include('partials.sidebar_doctor')
   @elseif
     @include('partials.sidebar_staff')
   @else
-    @include('partials.sidebar_doctor')
+    @include('partials.sidebar_admin')
   @endif
 
   <main class="content">
     <header class="header">
-    <h2>Admin Service Management</h2>
+    <h2>Doctor Service Management</h2>
     <div style="display:flex;align-items:center;gap:14px;">
         <div class="date-box">
             <p>Today's Date</p>
             <strong>{{ now()->format('Y-m-d') }}</strong><br>
             <button class="add-service-btn" onclick="openModal()">+ Add New Service</button>
         </div>
-        @include('partials.notif_bell_admin')
+        @include('partials.notif_bell_doctor')
     </div>
 </header>
 
@@ -52,7 +52,7 @@
               '{{ $row->status }}'
             )">✏ Edit</button>
 
-            <form method="POST" action="{{ url('admin/services/delete') }}" style="display:inline;"
+            <form method="POST" action="{{ url('doctor/services/delete') }}" style="display:inline;"
                   onsubmit="return confirm('Delete this service?');">
               @csrf
               <input type="hidden" name="service_id" value="{{ $row->service_id }}">
@@ -74,7 +74,7 @@
         <span class="close-btn" onclick="closeModal()">&times;</span>
       </div>
       <div class="modal-body">
-        <form method="POST" action="{{ url('admin/services/add') }}" enctype="multipart/form-data">
+        <form method="POST" action="{{ url('doctor/services/add') }}" enctype="multipart/form-data">
           @csrf
           <label>Service Name</label>
           <input type="text" name="name" required>
@@ -111,7 +111,7 @@
         <span class="close-btn" onclick="closeEditModal()">&times;</span>
       </div>
       <div class="modal-body">
-        <form method="POST" action="{{ url('admin/services/update') }}" enctype="multipart/form-data">
+        <form method="POST" action="{{ url('doctor/services/update') }}" enctype="multipart/form-data">
           @csrf
           <input type="hidden" name="service_id" id="edit_id">
           <label>Service Name</label>

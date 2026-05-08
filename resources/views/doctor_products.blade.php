@@ -1,4 +1,4 @@
-{{-- resources/views/admin/admin_products.blade.php --}}
+{{-- resources/views/doctor/doctor_products.blade.php --}}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -7,16 +7,16 @@
   <meta name="csrf-token" content="{{ csrf_token() }}">
   <title>Product Management - SkinMedic</title>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Fraunces:wght@700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="{{ asset('asset/css/staff_products.css') }}">
+  <link rel="stylesheet" href="{{ asset('asset/css/doctor_products.css') }}">
 </head>
 <body style="background:#f8f8f8;">
 
-  @if(session('role') === 'staff')
-    @include('partials.sidebar_staff')
-  @elseif
-    @include('partials.sidebar_admin')
-  @else
+  @if(session('role') === 'doctor')
     @include('partials.sidebar_doctor')
+  @elseif
+    @include('partials.sidebar_staff')
+  @else
+    @include('partials.sidebar_admin')
   @endif
 
   <main class="content">
@@ -28,7 +28,7 @@
             <strong>{{ now()->format('Y-m-d') }}</strong><br>
             <button class="add-product-btn" onclick="openModal()">+ Add Product</button>
         </div>
-        @include('partials.notif_bell_staff')
+        @include('partials.notif_bell_doctor')
     </div>
 </header>
 
@@ -58,7 +58,7 @@
               '{{ $row->status }}'
             )">✏ Edit</button>
 
-            <form method="POST" action="{{ url('admin/products/delete') }}" style="display:inline;"
+            <form method="POST" action="{{ url('doctor/products/delete') }}" style="display:inline;"
                   onsubmit="return confirm('Delete this product?');">
               @csrf
               <input type="hidden" name="product_id" value="{{ $row->product_id }}">
@@ -80,7 +80,7 @@
         <span class="close-btn" onclick="closeModal()">&times;</span>
       </div>
       <div class="modal-body">
-        <form method="POST" action="{{ url('admin/products/add') }}" enctype="multipart/form-data">
+        <form method="POST" action="{{ url('doctor/products/add') }}" enctype="multipart/form-data">
           @csrf
           <label>Product Name</label>
           <input type="text" name="product_name" required>
@@ -127,7 +127,7 @@
         <span class="close-btn" onclick="closeEditModal()">&times;</span>
       </div>
       <div class="modal-body">
-        <form method="POST" action="{{ url('admin/products/update') }}" enctype="multipart/form-data">
+        <form method="POST" action="{{ url('doctor/products/update') }}" enctype="multipart/form-data">
           @csrf
           <input type="hidden" name="product_id" id="edit_id">
           <label>Product Name</label>
