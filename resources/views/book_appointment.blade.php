@@ -126,7 +126,7 @@
 <script>
 const serviceId     = {{ (int)$serviceId }};
 const isRegular     = {{ $isRegular ? 'true' : 'false' }};
-const preferredTime = {{ $preferredTime ? '"' . $preferredTime . '"' : 'null' }};
+const preferredTime = @json($preferredTime);
 
 const doctorEl    = document.getElementById('doctor_id');
 const dateEl      = document.getElementById('appointment_date');
