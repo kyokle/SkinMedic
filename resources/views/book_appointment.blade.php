@@ -122,40 +122,43 @@
 </div>
 
 <script>
-const serviceId    = {{ (int)$serviceId }};
-const isRegular    = {{ $isRegular ? 'true' : 'false' }};
+const serviceId     = {{ (int)$serviceId }};
+const isRegular     = {{ $isRegular ? 'true' : 'false' }};
 const preferredTime = {{ $preferredTime ? '"' . $preferredTime . '"' : 'null' }};
 
-const doctorEl   = document.getElementById('doctor_id');
-const dateEl     = document.getElementById('appointment_date');
-const prefEl     = document.getElementById('time_preference');
-const slotGrid   = document.getElementById('slotGrid');
-const timeLoad   = document.getElementById('timeLoading');
-const noSlotsMsg = document.getElementById('noSlotsMsg');
-const hiddenTime = document.getElementById('appointment_time_hidden');
-const submitBtn  = document.getElementById('submitBtn');
-const form       = document.getElementById('bookingForm');
+const doctorEl    = document.getElementById('doctor_id');
+const dateEl      = document.getElementById('appointment_date');
+const prefEl      = document.getElementById('time_preference');
+const slotGrid    = document.getElementById('slotGrid');
+const timeLoad    = document.getElementById('timeLoading');
+const noSlotsMsg  = document.getElementById('noSlotsMsg');
+const hiddenTime  = document.getElementById('appointment_time_hidden');
+const submitBtn   = document.getElementById('submitBtn');
+const form        = document.getElementById('bookingForm');
 const conflictBox = document.getElementById('conflictBox');
 
-let allSlots         = [];   // full slot data from server
-let pickedOtherTime  = false; // true once patient clicks "Pick Another Time"
-let waitlistSlot     = null;  // the slot data for the conflict
+let allSlots        = [];
+let pickedOtherTime = false;
+let waitlistSlot    = null;
 
-// ── Load slots ───────────────────────────────────────────────
 function loadTimes() {
   const date     = dateEl?.value   || '';
   const doctorId = doctorEl?.value || '';
   const pref     = prefEl?.value   || '';
 
-  slotGrid.innerHTML   = '';
-  noSlotsMsg.style.display = 'none';
+  slotGrid.innerHTML        = '';
+  noSlotsMsg.style.display  = 'none';
   conflictBox.style.display = 'none';
-  hiddenTime.value     = '';
-  pickedOtherTime      = false;
+  hiddenTime.value          = '';
+  pickedOtherTime           = false;
 
-  if (!date || !doctorId) return;
+  if (!date || !doctorId) {
+    slotGrid.innerHTML = '<p style="color:#999;font-size:13px;">Please select a doctor and date first.</p>';
+    return;
+  }
 
   timeLoad.style.display = 'block';
+  slotGrid.innerHTML     = '';
 
   fetch(`/get-available-times?date=${date}&service_id=${serviceId}&doctor_id=${doctorId}&preference=${pref}`)
     .then(r => r.json())
@@ -163,114 +166,109 @@ function loadTimes() {
       timeLoad.style.display = 'none';
       allSlots = slots;
 
-      if (!slots.length) {
+      if (!slots || !slots.length) {
         noSlotsMsg.style.display = 'block';
         return;
       }
 
-      // For regular customers: auto-select preferred, show conflict if taken
+      // Check if response is old format (plain strings) vs new format (objects)
+      if (typeof slots[0] === 'string') {
+        // Old format fallback — render as plain available slots
+        slots.forEach(time => {
+          const btn = document.createElement('button');
+          btn.type  = 'button';
+          btn.className = 'slot-btn';
+          btn.textContent = formatTime(time);
+          btn.addEventListener('click', () => selectSlot(time, btn));
+          slotGrid.appendChild(btn);
+        });
+        return;
+      }
+
+      // New format — objects with time/taken/waitlist_count
       if (isRegular && preferredTime && !pickedOtherTime) {
         const prefSlot = slots.find(s => s.time === preferredTime);
-
         if (prefSlot && prefSlot.taken) {
-          // Show conflict box, render ALL slots but preferred highlighted as taken
           waitlistSlot = prefSlot;
           showConflict(prefSlot);
-          renderSlots(slots, null, true); // show all, nothing pre-selected
+          renderSlots(slots, null, true);
           return;
         } else if (prefSlot && !prefSlot.taken) {
-          // Preferred slot is free — auto-select it
           hiddenTime.value = preferredTime;
           renderSlots(slots, preferredTime, false);
           return;
         }
       }
 
-      // Non-regular or pickedOtherTime — show all available slots normally
       renderSlots(slots, null, false);
     })
-    .catch(() => {
+    .catch(err => {
       timeLoad.style.display = 'none';
       slotGrid.innerHTML = '<p style="color:#ef4444;font-size:13px;">Error loading slots. Please try again.</p>';
+      console.error('getAvailableTimes error:', err);
     });
 }
 
-// ── Render slot grid ─────────────────────────────────────────
 function renderSlots(slots, preselect, showTaken) {
   slotGrid.innerHTML = '';
 
   slots.forEach(slot => {
-    // Skip taken slots unless showTaken mode (conflict view)
     if (!showTaken && slot.taken) return;
 
-    const btn   = document.createElement('button');
-    btn.type    = 'button';
-    const label = formatTime(slot.time);
-
+    const btn         = document.createElement('button');
+    btn.type          = 'button';
+    const label       = formatTime(slot.time);
     const isPreferred = isRegular && preferredTime === slot.time;
 
     if (slot.taken) {
-      btn.className   = 'slot-btn taken';
-      btn.disabled    = true;
-      btn.innerHTML   = label +
+      btn.className = 'slot-btn taken';
+      btn.disabled  = true;
+      btn.innerHTML = label +
         (slot.waitlist_count > 0
           ? `<span class="waitlist-count">${slot.waitlist_count} waiting</span>`
           : '<span class="waitlist-count">Fully booked</span>');
     } else {
-      btn.className = 'slot-btn' + (isPreferred ? ' preferred-locked' : '');
-      btn.innerHTML = label +
-        (isPreferred ? '<span class="slot-star">⭐</span>' : '');
-
-      if (preselect === slot.time) {
-        btn.classList.add('selected');
-      }
-
+      btn.className = 'slot-btn' + (isPreferred && !pickedOtherTime ? ' preferred-locked' : '');
+      btn.innerHTML = label + (isPreferred && !pickedOtherTime ? '<span class="slot-star">⭐</span>' : '');
+      if (preselect === slot.time) btn.classList.add('selected');
       btn.addEventListener('click', () => selectSlot(slot.time, btn));
     }
 
-   slotGrid.appendChild(btn);
+    slotGrid.appendChild(btn);
   });
 
-  // Show "no slots" message if nothing was rendered
   if (!slotGrid.children.length) {
     noSlotsMsg.style.display = 'block';
   }
 }
 
-// ── Select a slot ─────────────────────────────────────────────
 function selectSlot(time, btn) {
   document.querySelectorAll('.slot-btn').forEach(b => b.classList.remove('selected'));
   btn.classList.add('selected');
   hiddenTime.value = time;
 }
 
-// ── Show conflict UI ──────────────────────────────────────────
 function showConflict(slot) {
   const timeLabel = formatTime(slot.time);
   const pos       = (slot.waitlist_count || 0) + 1;
-
   document.getElementById('conflictTime').textContent = timeLabel;
   document.getElementById('waitlistPos').textContent  = pos;
   conflictBox.style.display = 'block';
 }
 
-// ── Patient clicks "Pick Another Time" ───────────────────────
 function pickOtherTime() {
-  pickedOtherTime = true;
+  pickedOtherTime           = true;
   conflictBox.style.display = 'none';
-  hiddenTime.value = '';
-
-  // Re-render showing only available slots (no preferred lock)
+  hiddenTime.value          = '';
   const available = allSlots.filter(s => !s.taken);
   if (!available.length) {
     noSlotsMsg.style.display = 'block';
-    slotGrid.innerHTML = '';
+    slotGrid.innerHTML       = '';
     return;
   }
   renderSlots(allSlots, null, false);
 }
 
-// ── Join waitlist ─────────────────────────────────────────────
 async function joinWaitlist() {
   const date = dateEl.value;
   if (!date || !waitlistSlot) return;
@@ -289,39 +287,42 @@ async function joinWaitlist() {
   });
 
   const data = await res.json();
-
   conflictBox.style.display = 'none';
 
   const toast = document.getElementById('waitlistToast');
   document.getElementById('waitlistToastMsg').textContent = data.success
-    ? data.message
-    : (data.error || 'Could not join waitlist.');
+    ? data.message : (data.error || 'Could not join waitlist.');
   toast.style.background = data.success ? '#80a833' : '#ef4444';
   toast.style.display    = 'block';
   setTimeout(() => toast.style.display = 'none', 5000);
 }
 
-// ── Format time ───────────────────────────────────────────────
 function formatTime(t) {
   if (!t) return '';
   const [h, m] = t.split(':');
-  const hr = parseInt(h);
+  const hr     = parseInt(h);
   return ((hr % 12) || 12) + ':' + m + ' ' + (hr < 12 ? 'AM' : 'PM');
 }
 
-// ── Event listeners ───────────────────────────────────────────
+// ── Event listeners ──
 doctorEl?.addEventListener('change', loadTimes);
 dateEl?.addEventListener('change',   loadTimes);
 prefEl?.addEventListener('change',   loadTimes);
 
-// ── Auto-load if values already filled (after validation error redirect) ──
-window.addEventListener('DOMContentLoaded', function () {
-    if (doctorEl?.value && dateEl?.value) {
-        loadTimes();
-    }
-});
+// ── Trigger on page load if values already set ──
+// Use setTimeout to ensure old() values are fully rendered in DOM
+setTimeout(function () {
+  if (doctorEl?.value && dateEl?.value) {
+    loadTimes();
+  }
+}, 100);
 
-// ── Form submit guard ─────────────────────────────────────────
+// ── Also trigger immediately in case setTimeout isn't needed ──
+if (doctorEl?.value && dateEl?.value) {
+  loadTimes();
+}
+
+// ── Form submit guard ──
 form.addEventListener('submit', function(e) {
   let valid = true;
 
@@ -340,7 +341,8 @@ form.addEventListener('submit', function(e) {
 
   if (!valid) {
     e.preventDefault();
-    form.querySelector('.is-invalid')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    (form.querySelector('.is-invalid') || slotGrid)
+      ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     return;
   }
 
