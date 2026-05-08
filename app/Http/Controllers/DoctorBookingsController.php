@@ -116,7 +116,6 @@ class DoctorBookingsController extends Controller
 
     if (!in_array($request->cancel_reason, $doctorSideReasons)) {
         \App\Http\Controllers\WaitlistController::notifyNext(
-            $appt->service_id,
             $appt->appointment_date,
             $appt->appointment_time
         );

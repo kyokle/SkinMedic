@@ -117,7 +117,8 @@ public function cancel(Request $request)
         ->where('appointment_id', $apptId)
         ->update([
             'status'        => 'cancelled',
-            'cancel_reason' => 'patient_request', // ← patient cancel is always patient_request
+            'cancel_reason' => 'patient_request',
+            'updated_at'    => now(), 
         ]);
 
     $title    = 'Appointment Cancelled by Patient';
@@ -137,11 +138,12 @@ public function cancel(Request $request)
     }
 
     // ── Always trigger waitlist — patient cancels always free the slot ──
-    \App\Http\Controllers\WaitlistController::notifyNext(
-        $appt->service_id,
-        $appt->appointment_date,
-        $appt->appointment_time
-    );
+
+    WaitlistController::notifyNext(
+            $appointment->service_id,
+            $appointment->appointment_date,
+            $appointment->appointment_time
+        );
 
     return back()->with('success', 'Appointment cancelled successfully.');
 }

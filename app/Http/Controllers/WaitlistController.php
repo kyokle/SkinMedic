@@ -113,7 +113,7 @@ class WaitlistController extends Controller
                 ->where('waitlist_id', $entry->waitlist_id)
                 ->update(['status' => 'expired', 'updated_at' => now()]);
 
-            self::notifyNext($entry->service_id, $entry->preferred_date, $entry->preferred_time);
+            self::notifyNext($entry->preferred_date, $entry->preferred_time);
 
             return redirect()->route('patient.bookings')
                 ->with('error', 'Sorry, your claim window expired. The slot has been offered to the next person.');
@@ -167,7 +167,7 @@ class WaitlistController extends Controller
     }
 
     // ── Called whenever a slot is freed ────────────────────────
-    public static function notifyNext($serviceId, $date, $time)
+    public static function notifyNext($date, $time)
     {
         $next = DB::table('appointment_waitlist')
             ->where('preferred_date', $date)
