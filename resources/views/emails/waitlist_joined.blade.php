@@ -33,7 +33,7 @@
           <strong>Date:</strong> {{ \Carbon\Carbon::parse($preferredDate)->format('F j, Y') }}
         </p>
         <p style="margin:8px 0 0;font-size:15px;color:#333;">
-          <strong>Time:</strong> {{ \Carbon\Carbon::createFromFormat('H:i', $preferredTime)->format('g:i A') }}
+          <strong>Time:</strong> {{ \Carbon\Carbon::parse($preferredTime)->format('g:i A') }}
         </p>
       </div>
 

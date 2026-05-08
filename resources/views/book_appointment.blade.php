@@ -34,7 +34,7 @@
   @endif
 
   @if($isRegular && $preferredTime)
-  <div class="regular-badge">⭐ Regular Customer — Preferred time: {{ \Carbon\Carbon::createFromFormat('H:i', $preferredTime)->format('g:i A') }}</div>
+  <div class="regular-badge">⭐ Regular Customer — Preferred time: {{ \Carbon\Carbon::parse($preferredTime)->format('g:i A') }}</div>
   @endif
 
   <form method="POST" action="{{ url('book-appointment') }}" id="bookingForm" novalidate>
