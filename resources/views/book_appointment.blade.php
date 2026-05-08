@@ -78,12 +78,11 @@
         <label>Preferred Time of Day</label>
         <select id="time_preference">
           <option value="">Any Time</option>
-          <option value="AM">AM (8am – 12pm)</option>
-          <option value="PM">PM (12pm – 7pm)</option>
+          <option value="AM">AM (8am - 12pm)</option>
+          <option value="PM">PM (12pm - 7pm)</option>
         </select>
       </div>
       @endif
-    </div>
 
     {{-- Time slot section --}}
     <div class="form-group">
