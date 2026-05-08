@@ -91,19 +91,19 @@
             <div class="modal-row"><span>Time</span><span id="m_time"></span></div>
             <div class="modal-row" style="border-bottom:none;"><span>Status</span><span id="m_status"></span></div>
 
-            <form method="POST" action="{{ route('staff.bookings.update-status') }}">
-                @csrf
-                <input type="hidden" name="appointment_id" id="appointment_id">
-                <input type="hidden" name="status" id="status_value">
-                <div id="actionButtons" style="display:none; margin-top:18px; gap:8px; justify-content:center;">
-                    <button type="submit" class="approve-btn"   onmousedown="setStatus('approved')">Approve</button>
-                    <button type="submit" class="cancelled-btn" onmousedown="setStatus('cancelled')">Cancel</button>
-                </div>
-                <div id="actionButtonsApproved" style="display:none; margin-top:18px; gap:8px; justify-content:center;">
-                    <button type="submit" class="complete-btn"  onmousedown="setStatus('completed')">Completed</button>
-                    <button type="submit" class="cancelled-btn" onmousedown="setStatus('cancelled')">Cancel</button>
-                </div>
-            </form>
+            <form method="POST" action="{{ route('staff.bookings.update-status') }}" style="margin-top:18px;" id="statusForm">
+    @csrf
+    <input type="hidden" name="appointment_id" id="appointment_id">
+    <input type="hidden" name="status" id="status_value">
+    <div id="actionButtons" style="display:none; margin-top:18px; gap:8px; justify-content:center;">
+        <button type="button" class="approve-btn"   onclick="submitStatus('approved')">Approve</button>
+        <button type="button" class="cancelled-btn" onclick="submitStatus('cancelled')">Cancel</button>
+    </div>
+    <div id="actionButtonsApproved" style="display:none; margin-top:18px; gap:8px; justify-content:center;">
+        <button type="button" class="complete-btn"  onclick="submitStatus('completed')">Completed</button>
+        <button type="button" class="cancelled-btn" onclick="submitStatus('cancelled')">Cancel</button>
+    </div>
+</form>
         </div>
     </div>
 </div>
@@ -139,7 +139,10 @@ function openModal(id, patient, service, doctor, date, time, status) {
 }
 
 function closeModal() { document.getElementById('bookingModal').style.display = 'none'; }
-function setStatus(s) { document.getElementById('status_value').value = s; }
+function submitStatus(s) {
+    document.getElementById('status_value').value = s;
+    document.getElementById('statusForm').submit();
+}
 
 window.onclick = e => {
     if (e.target === document.getElementById('bookingModal')) closeModal();

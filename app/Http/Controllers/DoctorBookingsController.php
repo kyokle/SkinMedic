@@ -122,12 +122,7 @@ class DoctorBookingsController extends Controller
         );
     }
 
-    // Old slot is now free — notify waitlist
-\App\Http\Controllers\WaitlistController::notifyNext(
-    $appt->service_id,
-    $appt->appointment_date,  // original date before reschedule
-    $appt->appointment_time   // original time before reschedule
-);
+    
 
     return back()->with('success', 'Appointment cancelled successfully.');
 }

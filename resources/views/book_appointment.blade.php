@@ -83,8 +83,9 @@
         </select>
       </div>
       @endif
+    </div>
 
-       </div>{{-- closes .form-row --}}
+       
 
     {{-- Time slot section --}}
     <div class="form-group">
