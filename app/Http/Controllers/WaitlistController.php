@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Session;
 use Illuminate\Support\Str;
 use App\Helpers\NotificationHelper;
@@ -59,6 +60,7 @@ class WaitlistController extends Controller
             'updated_at'     => now(),
         ]);
 
+        // In-app notification
         NotificationHelper::send(
             $userId,
             'Added to Waitlist',
@@ -69,17 +71,22 @@ class WaitlistController extends Controller
             null
         );
 
-        // Send confirmation email to the patient
-        $user = DB::table('users')->where('user_id', $userId)->first();
-        if ($user && $user->email) {
+        // Send confirmation email
+        try {
+            $user    = DB::table('users')->where('user_id', $userId)->first();
             $service = DB::table('services')->where('service_id', $request->service_id)->first();
-            Mail::to($user->email)->send(new WaitlistJoinedMail(
-                firstName:     $user->firstName,
-                serviceName:   $service?->name ?? 'your selected service',
-                preferredDate: $request->preferred_date,
-                preferredTime: $request->preferred_time,
-                position:      $position,
-            ));
+
+            if ($user && $user->email) {
+                Mail::to($user->email)->send(new WaitlistJoinedMail(
+                    firstName:     $user->firstName,
+                    serviceName:   $service?->name ?? 'your selected service',
+                    preferredDate: $request->preferred_date,
+                    preferredTime: $request->preferred_time,
+                    position:      $position,
+                ));
+            }
+        } catch (\Exception $e) {
+            Log::error('WaitlistJoinedMail failed: ' . $e->getMessage());
         }
 
         return response()->json([
@@ -92,8 +99,6 @@ class WaitlistController extends Controller
     // ── Patient claims a slot via token link ────────────────────
     public function claim(Request $request, $token)
     {
-        $userId = (int) Session::get('user_id');
-
         $entry = DB::table('appointment_waitlist')
             ->where('claim_token', $token)
             ->where('status', 'notified')
@@ -106,12 +111,11 @@ class WaitlistController extends Controller
 
         // Check 30-minute window
         if (now()->gt($entry->claim_expires_at)) {
-            // Expire this entry and notify next in queue
             DB::table('appointment_waitlist')
                 ->where('waitlist_id', $entry->waitlist_id)
                 ->update(['status' => 'expired', 'updated_at' => now()]);
 
-            $this->notifyNext($entry->service_id, $entry->preferred_date, $entry->preferred_time);
+            self::notifyNext($entry->service_id, $entry->preferred_date, $entry->preferred_time);
 
             return redirect()->route('patient.bookings')
                 ->with('error', 'Sorry, your claim window expired. The slot has been offered to the next person.');
@@ -167,7 +171,6 @@ class WaitlistController extends Controller
     // ── Called whenever a slot is freed ────────────────────────
     public static function notifyNext($serviceId, $date, $time)
     {
-        // Find the next waiting person in queue order
         $next = DB::table('appointment_waitlist')
             ->where('service_id',     $serviceId)
             ->where('preferred_date', $date)
@@ -176,7 +179,7 @@ class WaitlistController extends Controller
             ->orderBy('queue_position')
             ->first();
 
-        if (!$next) return; // nobody waiting
+        if (!$next) return;
 
         $token   = Str::random(40);
         $expires = now()->addMinutes(30);
@@ -193,6 +196,7 @@ class WaitlistController extends Controller
 
         $claimUrl = route('waitlist.claim', ['token' => $token]);
 
+        // In-app notification
         NotificationHelper::send(
             $next->user_id,
             '🔔 Your Waitlisted Slot is Available!',
@@ -203,18 +207,23 @@ class WaitlistController extends Controller
             null
         );
 
-        // Send slot-available email to the next patient
-        $user = DB::table('users')->where('user_id', $next->user_id)->first();
-        if ($user && $user->email) {
+        // Send slot-available email
+        try {
+            $user    = DB::table('users')->where('user_id', $next->user_id)->first();
             $service = DB::table('services')->where('service_id', $serviceId)->first();
-            Mail::to($user->email)->send(new WaitlistSlotAvailableMail(
-                firstName:     $user->firstName,
-                serviceName:   $service?->name ?? 'your selected service',
-                preferredDate: $date,
-                preferredTime: $time,
-                claimUrl:      $claimUrl,
-                expiresAt:     $expires->format('g:i A \o\n F j, Y'),
-            ));
+
+            if ($user && $user->email) {
+                Mail::to($user->email)->send(new WaitlistSlotAvailableMail(
+                    firstName:     $user->firstName,
+                    serviceName:   $service?->name ?? 'your selected service',
+                    preferredDate: $date,
+                    preferredTime: $time,
+                    claimUrl:      $claimUrl,
+                    expiresAt:     $expires->format('g:i A \o\n F j, Y'),
+                ));
+            }
+        } catch (\Exception $e) {
+            Log::error('WaitlistSlotAvailableMail failed: ' . $e->getMessage());
         }
     }
 

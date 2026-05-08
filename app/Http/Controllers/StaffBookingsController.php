@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Session;
 use App\Helpers\NotificationHelper;
+use App\Http\Controllers\WaitlistController;
 
 class StaffBookingsController extends Controller
 {
@@ -209,6 +210,15 @@ class StaffBookingsController extends Controller
         $adminStaff = DB::table('users')->whereIn('role', ['admin', 'staff'])->get();
         foreach ($adminStaff as $u) {
             NotificationHelper::send($u->user_id, $title, $staffMsg, $staffType, $id);
+        }
+
+        // Notify next waitlisted patient when slot is freed
+        if ($status === 'cancelled') {
+            WaitlistController::notifyNext(
+                $appt->service_id,
+                $appt->appointment_date,
+                $appt->appointment_time
+            );
         }
 
         return redirect()->route('staff.bookings');
