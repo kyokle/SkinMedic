@@ -42,6 +42,6 @@ class WaitlistSlotAvailableMail extends Mailable
 
     public function content(): Content
     {
-        return new Content(view: 'emails.waitlist-slot-available');
+        return new Content(view: 'emails.waitlist_slot_available');
     }
 }
