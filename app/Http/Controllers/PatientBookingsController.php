@@ -140,7 +140,6 @@ public function cancel(Request $request)
     // ── Always trigger waitlist — patient cancels always free the slot ──
 
     WaitlistController::notifyNext(
-            $appointment->service_id,
             $appointment->appointment_date,
             $appointment->appointment_time
         );
