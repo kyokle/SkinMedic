@@ -33,6 +33,13 @@
             {{ ucfirst($tab) }}
         </button>
         @endforeach
+        <button onclick="toggleWaitlistPanel(this)"
+            id="waitlistToggleBtn"
+            style="padding:7px 18px;border:2px solid #f59e0b;border-radius:20px;
+                   background:#fff;color:#f59e0b;cursor:pointer;font-size:0.85rem;
+                   font-weight:500;margin-left:auto;font-family:inherit;">
+        🔔 My Waitlist
+    </button>
     </div>
 
     <table id="bookingsTable">
@@ -77,6 +84,21 @@
         </tbody>
     </table>
 
+</div>
+
+{{-- Waitlist Panel --}}
+<div id="waitlistPanel" style="display:none;margin-top:24px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+        <h3 style="font-size:15px;font-weight:700;color:#1a1f16;margin:0;">
+            🔔 My Waitlist Entries
+        </h3>
+        <span style="font-size:12px;color:#999;">
+            You will be notified when a slot opens. You have 30 mins to claim it.
+        </span>
+    </div>
+    <div id="waitlistEntries">
+        <p style="color:#999;font-size:13px;">Loading...</p>
+    </div>
 </div>
 
 {{-- Patient Appointment Detail Modal --}}
@@ -249,6 +271,110 @@ function formatTime(t) {
     const [h, m] = t.split(':');
     const hr = parseInt(h);
     return (hr % 12 || 12) + ':' + m + ' ' + (hr < 12 ? 'AM' : 'PM');
+}
+
+// ── Waitlist Panel ────────────────────────────────────────
+async function toggleWaitlistPanel(btn) {
+    const panel = document.getElementById('waitlistPanel');
+    const isOpen = panel.style.display !== 'none';
+
+    if (isOpen) {
+        panel.style.display = 'none';
+        btn.style.background = '#fff';
+        btn.style.color = '#f59e0b';
+    } else {
+        panel.style.display = 'block';
+        btn.style.background = '#f59e0b';
+        btn.style.color = '#fff';
+        loadWaitlist();
+    }
+}
+
+async function loadWaitlist() {
+    const container = document.getElementById('waitlistEntries');
+    container.innerHTML = '<p style="color:#999;font-size:13px;">Loading...</p>';
+
+    try {
+        const res  = await fetch('{{ route("waitlist.mine") }}');
+        const data = await res.json();
+
+        if (!data.entries || !data.entries.length) {
+            container.innerHTML = '<p style="color:#999;font-size:13px;padding:16px 0;">You have no active waitlist entries.</p>';
+            return;
+        }
+
+        container.innerHTML = data.entries.map(e => {
+            const time    = formatTime(e.preferred_time);
+            const date    = e.preferred_date;
+
+            const expiresHtml = e.claim_expires_at
+                ? `<span style="color:#ef4444;font-size:11px;display:block;margin-top:2px;">
+                       ⏰ Claim by ${new Date(e.claim_expires_at).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}
+                   </span>`
+                : '';
+
+            const statusBadge = e.status === 'notified'
+                ? `<span style="background:#fef9c3;color:#854d0e;padding:3px 10px;
+                               border-radius:10px;font-size:11px;font-weight:600;">
+                       🔔 SLOT OPEN
+                   </span>`
+                : `<span style="background:#e5e7eb;color:#666;padding:3px 10px;
+                               border-radius:10px;font-size:11px;">
+                       #${e.queue_position} in queue
+                   </span>`;
+
+            return `
+            <div style="background:#fff;border:1px solid #f0f0ee;border-radius:10px;
+                        padding:14px 16px;margin-bottom:10px;display:flex;
+                        align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+                <div>
+                    <p style="font-weight:600;font-size:13.5px;margin:0 0 3px;color:#1a1f16;">
+                        ${e.service_name}
+                    </p>
+                    <p style="font-size:12px;color:#888;margin:0;">
+                        ${date} at ${time}
+                    </p>
+                    ${expiresHtml}
+                </div>
+                <div style="display:flex;align-items:center;gap:10px;">
+                    ${statusBadge}
+                    <button onclick="leaveWaitlist(${e.waitlist_id}, this)"
+                            style="padding:5px 12px;background:#fee2e2;color:#991b1b;
+                                   border:1px solid #fca5a5;border-radius:6px;
+                                   font-size:12px;cursor:pointer;font-family:inherit;">
+                        Remove
+                    </button>
+                </div>
+            </div>`;
+        }).join('');
+
+    } catch (err) {
+        container.innerHTML = '<p style="color:#ef4444;font-size:13px;">Failed to load waitlist. Please try again.</p>';
+    }
+}
+
+async function leaveWaitlist(id, btn) {
+    if (!confirm('Remove yourself from this waitlist?')) return;
+
+    btn.disabled    = true;
+    btn.textContent = '...';
+
+    try {
+        const res  = await fetch('{{ route("waitlist.leave") }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+            },
+            body: JSON.stringify({ waitlist_id: id }),
+        });
+        const data = await res.json();
+        if (data.success) loadWaitlist();
+        else { btn.disabled = false; btn.textContent = 'Remove'; }
+    } catch (err) {
+        btn.disabled = false;
+        btn.textContent = 'Remove';
+    }
 }
 
 window.onclick = e => {

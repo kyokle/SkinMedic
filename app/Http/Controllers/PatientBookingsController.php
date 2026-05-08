@@ -94,49 +94,54 @@ class PatientBookingsController extends Controller
 
         return back()->with('success', 'Appointment rescheduled successfully.');
     }
+public function cancel(Request $request)
+{
+    $request->validate([
+        'appointment_id' => 'required|integer',
+    ]);
 
-    public function cancel(Request $request)
-    {
-        $request->validate([
-            'appointment_id' => 'required|integer',
+    $apptId = (int) $request->appointment_id;
+    $userId = (int) Session::get('user_id');
+
+    $appt = DB::table('appointments')
+        ->where('appointment_id', $apptId)
+        ->where('user_id', $userId)
+        ->first();
+
+    if (!$appt || $appt->status === 'cancelled') {
+        return back()->with('error', 'This appointment cannot be cancelled.');
+    }
+
+    DB::table('appointments')
+        ->where('appointment_id', $apptId)
+        ->update([
+            'status'        => 'cancelled',
+            'cancel_reason' => 'patient_request', // ← patient cancel is always patient_request
         ]);
 
-        $apptId = (int) $request->appointment_id;
-        $userId = (int) Session::get('user_id');
+    $title    = 'Appointment Cancelled by Patient';
+    $msg      = 'Your appointment on ' . $appt->appointment_date . ' at ' . $appt->appointment_time . ' has been cancelled.';
+    $staffMsg = 'A patient has cancelled their appointment on ' . $appt->appointment_date . ' at ' . $appt->appointment_time . '.';
 
-        // Make sure the appointment belongs to this patient
-        $appt = DB::table('appointments')
-            ->where('appointment_id', $apptId)
-            ->where('user_id', $userId)
-            ->first();
+    NotificationHelper::send($userId, $title, $msg, 'cancelled', $apptId);
 
-        if (!$appt || $appt->status === 'cancelled') {
-            return back()->with('error', 'This appointment cannot be cancelled.');
-        }
-
-        DB::table('appointments')
-            ->where('appointment_id', $apptId)
-            ->update(['status' => 'cancelled']);
-
-        $title    = 'Appointment Cancelled by Patient';
-        $msg      = 'Your appointment on ' . $appt->appointment_date . ' at ' . $appt->appointment_time . ' has been cancelled.';
-        $staffMsg = 'A patient has cancelled their appointment on ' . $appt->appointment_date . ' at ' . $appt->appointment_time . '.';
-
-        // Notify the patient
-        NotificationHelper::send($userId, $title, $msg, 'cancelled', $apptId);
-
-        // Notify the doctor
-        $doctor = DB::table('doctor')->where('doctor_id', $appt->doctor_id)->first();
-        if ($doctor && $doctor->user_id) {
-            NotificationHelper::send($doctor->user_id, $title, $staffMsg, 'booking', $apptId);
-        }
-
-        // Notify admin/staff
-        $adminStaff = DB::table('users')->whereIn('role', ['admin', 'staff'])->get();
-        foreach ($adminStaff as $u) {
-            NotificationHelper::send($u->user_id, $title, $staffMsg, 'booking', $apptId);
-        }
-
-        return back()->with('success', 'Appointment cancelled successfully.');
+    $doctor = DB::table('doctor')->where('doctor_id', $appt->doctor_id)->first();
+    if ($doctor && $doctor->user_id) {
+        NotificationHelper::send($doctor->user_id, $title, $staffMsg, 'booking', $apptId);
     }
+
+    $adminStaff = DB::table('users')->whereIn('role', ['admin', 'staff'])->get();
+    foreach ($adminStaff as $u) {
+        NotificationHelper::send($u->user_id, $title, $staffMsg, 'booking', $apptId);
+    }
+
+    // ── Always trigger waitlist — patient cancels always free the slot ──
+    \App\Http\Controllers\WaitlistController::notifyNext(
+        $appt->service_id,
+        $appt->appointment_date,
+        $appt->appointment_time
+    );
+
+    return back()->with('success', 'Appointment cancelled successfully.');
+}
 }

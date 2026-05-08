@@ -11,6 +11,7 @@ use App\Http\Controllers\SkinAnalysisController;
 use App\Http\Controllers\BookAppointmentController;
 use App\Http\Controllers\ReviewController;
 use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\WaitlistController;
 
 use App\Http\Controllers\PatientPageController;
 use App\Http\Controllers\PatientServicesController;
@@ -57,6 +58,7 @@ Route::get('/book-appointment', [BookAppointmentController::class, 'show'])->nam
 Route::post('/book-appointment', [BookAppointmentController::class, 'store'])->name('book.appointment.store');
 Route::get('/services', [IndexController::class, 'services'])->name('services.index');
 Route::get('/get-available-times', [BookAppointmentController::class, 'getAvailableTimes']);
+Route::post('/appointments/check-slot', [YourBookingController::class, 'checkSlot'])->name('appointments.checkSlot');
 Route::get('/test-mail', function () {
     Mail::to('jlouise1425@gmail.com')->send(new TestMail());
     return '✅ Email sent! Check your Mailtrap inbox.';
@@ -93,6 +95,12 @@ Route::get('/patient/services',                 [PatientServicesController::clas
 Route::get('/patient/bookings',                 [PatientBookingsController::class, 'index'])->name('patient.bookings');
 Route::post('/patient/bookings/reschedule', [PatientBookingsController::class, 'reschedule'])->name('patient.bookings.reschedule');
 Route::post('/patient/bookings/cancel',     [PatientBookingsController::class, 'cancel'])->name('patient.bookings.cancel');
+
+// Waitlist routes (patient)
+Route::post('/waitlist/join',         [WaitlistController::class, 'join'])->name('waitlist.join');
+Route::get('/waitlist/claim/{token}', [WaitlistController::class, 'claim'])->name('waitlist.claim');
+Route::get('/waitlist/mine',          [WaitlistController::class, 'myWaitlist'])->name('waitlist.mine');
+Route::post('/waitlist/leave',        [WaitlistController::class, 'leave'])->name('waitlist.leave');
 
 // ── Patient Profile ──────────────────────────────────
 Route::get('/patient/profile',                  [PatientProfileController::class,  'index'])->name('patient.profile');

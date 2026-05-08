@@ -194,4 +194,33 @@ class BookAppointmentController extends Controller
 
     return response()->json($slots);
 }
+
+// Add to your booking/appointment creation controller
+public function checkSlot(Request $request)
+{
+    $request->validate([
+        'service_id' => 'required|integer',
+        'date'       => 'required|date',
+        'time'       => 'required',
+    ]);
+
+    $taken = DB::table('appointments')
+        ->where('service_id',       $request->service_id)
+        ->where('appointment_date', $request->date)
+        ->where('appointment_time', $request->time)
+        ->whereIn('status', ['pending', 'approved'])
+        ->exists();
+
+    $waitlistCount = DB::table('appointment_waitlist')
+        ->where('service_id',     $request->service_id)
+        ->where('preferred_date', $request->date)
+        ->where('preferred_time', $request->time)
+        ->whereIn('status', ['waiting', 'notified'])
+        ->count();
+
+    return response()->json([
+        'available'      => !$taken,
+        'waitlist_count' => $waitlistCount,
+    ]);
+}
 }

@@ -94,7 +94,7 @@
     </div>
 
     {{-- Conflict box — shown when regular customer's preferred time is taken --}}
-    <div class="conflict-box" id="conflictBox">
+    <div class="conflict-box" id="conflictBox" style="display:none;">
       <h4>⏰ Your preferred time is taken</h4>
       <p id="conflictMsg">The <strong id="conflictTime"></strong> slot is already booked.
          You can join the waitlist and be notified if it opens, or pick another time below.</p>
@@ -113,6 +113,8 @@
 
   <a href="{{ url('patient/services') }}" class="back-btn">← Back to Services</a>
 </div>
+
+
 
 {{-- Waitlist success toast --}}
 <div class="waitlist-toast" id="waitlistToast">

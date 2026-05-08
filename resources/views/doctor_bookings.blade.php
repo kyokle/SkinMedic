@@ -126,34 +126,60 @@
         <p id="noRescheduleMsg" class="bk-no-action"></p>
 
         <div id="cancelConfirm"
-             style="display:none; position:absolute; inset:0; background:rgba(0,0,0,0.45);
-                    border-radius:14px; z-index:10; align-items:center; justify-content:center;">
-            <div style="background:#fff; border-radius:12px; padding:28px 24px;
-                        max-width:280px; text-align:center; box-shadow:0 8px 32px rgba(0,0,0,0.18);">
-                <div style="font-size:2rem; margin-bottom:10px;">⚠️</div>
-                <p style="font-weight:700; font-size:15px; margin-bottom:6px;">Cancel Appointment?</p>
-                <p style="font-size:13px; color:#666; margin-bottom:20px;">
-                    This action cannot be undone. The patient and clinic will be notified.
-                </p>
-                <div style="display:flex; gap:10px; justify-content:center;">
-                    <button onclick="closeCancelConfirm()"
-                            style="padding:8px 20px; border-radius:8px; border:1px solid #ddd;
-                                   background:#f5f5f5; cursor:pointer; font-family:inherit; font-size:13px;">
-                        Go Back
-                    </button>
-                    <form method="POST" action="{{ route('doctor.bookings.cancel') }}" style="margin:0;">
-                        @csrf
-                        <input type="hidden" name="appointment_id" id="cancel_appt_id">
-                        <button type="submit"
-                                style="padding:8px 20px; border-radius:8px; border:none;
-                                       background:#dc2626; color:#fff; cursor:pointer;
-                                       font-family:inherit; font-size:13px; font-weight:600;">
-                            Yes, Cancel
-                        </button>
-                    </form>
-                </div>
-            </div>
+     style="display:none; position:absolute; inset:0; background:rgba(0,0,0,0.45);
+            border-radius:14px; z-index:10; align-items:center; justify-content:center;">
+    <div style="background:#fff; border-radius:12px; padding:28px 24px;
+                max-width:300px; text-align:center; box-shadow:0 8px 32px rgba(0,0,0,0.18);">
+        <div style="font-size:2rem; margin-bottom:10px;">⚠️</div>
+        <p style="font-weight:700; font-size:15px; margin-bottom:6px;">Cancel Appointment?</p>
+        <p style="font-size:13px; color:#666; margin-bottom:16px;">
+            Please select a reason. This determines whether the slot will be offered to waiting patients.
+        </p>
+
+        {{-- Reason selector --}}
+        <select id="cancelReasonSelect"
+                style="width:100%;padding:9px 12px;border:1.5px solid #ddd;border-radius:8px;
+                       font-size:13px;margin-bottom:6px;outline:none;font-family:inherit;">
+            <option value="">— Select reason —</option>
+            <optgroup label="Doctor Side (slot removed)">
+                <option value="doctor_unavailable">Doctor unavailable that day</option>
+                <option value="doctor_emergency">Doctor emergency</option>
+            </optgroup>
+            <optgroup label="Patient Side (slot re-opens)">
+                <option value="patient_request">Patient requested cancellation</option>
+                <option value="patient_noshow">Patient no-show</option>
+                <option value="other">Other</option>
+            </optgroup>
+        </select>
+
+        {{-- Hint text that changes based on selection --}}
+        <p id="cancelReasonHint"
+           style="font-size:11.5px;color:#aaa;margin-bottom:16px;min-height:32px;
+                  text-align:left;padding:0 2px;">
+            Select a reason above to continue.
+        </p>
+
+        <div style="display:flex; gap:10px; justify-content:center;">
+            <button onclick="closeCancelConfirm()"
+                    style="padding:8px 20px; border-radius:8px; border:1px solid #ddd;
+                           background:#f5f5f5; cursor:pointer; font-family:inherit; font-size:13px;">
+                Go Back
+            </button>
+            <form method="POST" action="{{ route('doctor.bookings.cancel') }}" style="margin:0;" id="cancelForm">
+                @csrf
+                <input type="hidden" name="appointment_id" id="cancel_appt_id">
+                <input type="hidden" name="cancel_reason"  id="cancel_reason_input">
+                <button type="button"
+                        onclick="submitCancel()"
+                        style="padding:8px 20px; border-radius:8px; border:none;
+                               background:#dc2626; color:#fff; cursor:pointer;
+                               font-family:inherit; font-size:13px; font-weight:600;">
+                    Yes, Cancel
+                </button>
+            </form>
         </div>
+    </div>
+</div>
 
     </div>
 </div>
@@ -230,5 +256,39 @@ window.addEventListener('DOMContentLoaded', function () {
         if (row) row.click();
     }
 });
+
+// Hint text that updates when doctor picks a reason
+document.getElementById('cancelReasonSelect').addEventListener('change', function () {
+    const hint = document.getElementById('cancelReasonHint');
+    const doctorSide = ['doctor_unavailable', 'doctor_emergency'];
+    if (!this.value) {
+        hint.style.color = '#aaa';
+        hint.textContent = 'Select a reason above to continue.';
+    } else if (doctorSide.includes(this.value)) {
+        hint.style.color = '#ef4444';
+        hint.textContent = '⛔ Waitlist will NOT be triggered — this slot will not be offered to waiting patients.';
+    } else {
+        hint.style.color = '#80a833';
+        hint.textContent = '✅ Waitlist WILL be triggered — the next waiting patient will be notified.';
+    }
+});
+
+function submitCancel() {
+    const reason = document.getElementById('cancelReasonSelect').value;
+    if (!reason) {
+        alert('Please select a cancellation reason before continuing.');
+        return;
+    }
+    document.getElementById('cancel_reason_input').value = reason;
+    document.getElementById('cancelForm').submit();
+}
+
+// Reset reason dropdown when modal closes
+function closeCancelConfirm() {
+    document.getElementById('cancelReasonSelect').value = '';
+    document.getElementById('cancelReasonHint').textContent = 'Select a reason above to continue.';
+    document.getElementById('cancelReasonHint').style.color = '#aaa';
+    document.getElementById('cancelConfirm').style.display = 'none';
+}
 </script>
 @endpush
