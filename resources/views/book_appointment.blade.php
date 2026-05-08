@@ -84,6 +84,8 @@
       </div>
       @endif
 
+       </div>{{-- closes .form-row --}}
+
     {{-- Time slot section --}}
     <div class="form-group">
       <label>Available Time <span class="req">*</span></label>
