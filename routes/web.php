@@ -103,6 +103,9 @@ Route::get('/patient/bookings',                 [PatientBookingsController::clas
 Route::post('/patient/bookings/reschedule', [PatientBookingsController::class, 'reschedule'])->name('patient.bookings.reschedule');
 Route::post('/patient/bookings/cancel',     [PatientBookingsController::class, 'cancel'])->name('patient.bookings.cancel');
 
+// Patient Products
+Route::get('/patient/products', [PatientProductsController::class, 'index'])
+    ->name('patient.products');
 
 // ── Patient Profile ──────────────────────────────────
 Route::get('/patient/profile',                  [PatientProfileController::class,  'index'])->name('patient.profile');
