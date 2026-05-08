@@ -23,6 +23,8 @@ use App\Http\Controllers\PatientAR_Skin_AnalysisController;
 use App\Http\Controllers\DoctorPageController;
 use App\Http\Controllers\DoctorBookingsController;
 use App\Http\Controllers\DoctorProfileController;
+use App\Http\Controllers\DoctorServicesController;
+use App\Http\Controllers\DoctorProductsController;
 
 use App\Http\Controllers\AdminPageController;
 use App\Http\Controllers\AdminAddAccountController;
