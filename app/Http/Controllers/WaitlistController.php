@@ -4,9 +4,12 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Session;
 use Illuminate\Support\Str;
 use App\Helpers\NotificationHelper;
+use App\Mail\WaitlistJoinedMail;
+use App\Mail\WaitlistSlotAvailableMail;
 
 class WaitlistController extends Controller
 {
@@ -65,6 +68,19 @@ class WaitlistController extends Controller
             'waitlist',
             null
         );
+
+        // Send confirmation email to the patient
+        $user = DB::table('users')->where('user_id', $userId)->first();
+        if ($user && $user->email) {
+            $service = DB::table('services')->where('service_id', $request->service_id)->first();
+            Mail::to($user->email)->send(new WaitlistJoinedMail(
+                firstName:     $user->firstName,
+                serviceName:   $service?->name ?? 'your selected service',
+                preferredDate: $request->preferred_date,
+                preferredTime: $request->preferred_time,
+                position:      $position,
+            ));
+        }
 
         return response()->json([
             'success'  => true,
@@ -186,6 +202,20 @@ class WaitlistController extends Controller
             'waitlist_available',
             null
         );
+
+        // Send slot-available email to the next patient
+        $user = DB::table('users')->where('user_id', $next->user_id)->first();
+        if ($user && $user->email) {
+            $service = DB::table('services')->where('service_id', $serviceId)->first();
+            Mail::to($user->email)->send(new WaitlistSlotAvailableMail(
+                firstName:     $user->firstName,
+                serviceName:   $service?->name ?? 'your selected service',
+                preferredDate: $date,
+                preferredTime: $time,
+                claimUrl:      $claimUrl,
+                expiresAt:     $expires->format('g:i A \o\n F j, Y'),
+            ));
+        }
     }
 
     // ── Patient's own waitlist entries ──────────────────────────

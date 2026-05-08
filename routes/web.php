@@ -58,7 +58,7 @@ Route::get('/book-appointment', [BookAppointmentController::class, 'show'])->nam
 Route::post('/book-appointment', [BookAppointmentController::class, 'store'])->name('book.appointment.store');
 Route::get('/services', [IndexController::class, 'services'])->name('services.index');
 Route::get('/get-available-times', [BookAppointmentController::class, 'getAvailableTimes']);
-Route::post('/appointments/check-slot', [YourBookingController::class, 'checkSlot'])->name('appointments.checkSlot');
+Route::post('/appointments/check-slot', [BookAppointmentController::class, 'checkSlot'])->name('appointments.checkSlot');
 Route::get('/test-mail', function () {
     Mail::to('jlouise1425@gmail.com')->send(new TestMail());
     return '✅ Email sent! Check your Mailtrap inbox.';
@@ -83,6 +83,11 @@ Route::post('/verify-email-otp', [IndexController::class, 'verifyEmailOtp'])->na
 Route::post('/reviews',          [ReviewController::class, 'store'])->name('reviews.store');
 Route::delete('/reviews/{id}',   [ReviewController::class, 'destroy'])->name('reviews.destroy');
 
+//Waitlist routes
+Route::post('/waitlist/join',         [WaitlistController::class, 'join'])->name('waitlist.join');
+Route::get('/waitlist/claim/{token}', [WaitlistController::class, 'claim'])->name('waitlist.claim');
+Route::get('/waitlist/mine',          [WaitlistController::class, 'myWaitlist'])->name('waitlist.mine');
+Route::post('/waitlist/leave',        [WaitlistController::class, 'leave'])->name('waitlist.leave');
 
 // ── Patient ─────────────────────────────────────
 Route::get('/patient',                          [PatientPageController::class,    'index'])->name('patient.home');
