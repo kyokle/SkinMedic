@@ -200,8 +200,7 @@ function renderSlots(slots, preselect, showTaken) {
   slotGrid.innerHTML = '';
 
   slots.forEach(slot => {
-    // If regular and conflict, only hide taken slots that aren't their preferred
-    if (!showTaken && slot.taken && slot.time !== preferredTime) return;
+    // Skip taken slots unless showTaken mode (conflict view)
     if (!showTaken && slot.taken) return;
 
     const btn   = document.createElement('button');
@@ -229,8 +228,13 @@ function renderSlots(slots, preselect, showTaken) {
       btn.addEventListener('click', () => selectSlot(slot.time, btn));
     }
 
-    slotGrid.appendChild(btn);
+   slotGrid.appendChild(btn);
   });
+
+  // Show "no slots" message if nothing was rendered
+  if (!slotGrid.children.length) {
+    noSlotsMsg.style.display = 'block';
+  }
 }
 
 // ── Select a slot ─────────────────────────────────────────────
@@ -309,6 +313,13 @@ function formatTime(t) {
 doctorEl?.addEventListener('change', loadTimes);
 dateEl?.addEventListener('change',   loadTimes);
 prefEl?.addEventListener('change',   loadTimes);
+
+// ── Auto-load if values already filled (after validation error redirect) ──
+window.addEventListener('DOMContentLoaded', function () {
+    if (doctorEl?.value && dateEl?.value) {
+        loadTimes();
+    }
+});
 
 // ── Form submit guard ─────────────────────────────────────────
 form.addEventListener('submit', function(e) {
