@@ -28,7 +28,6 @@ class WaitlistController extends Controller
         // Prevent duplicate waitlist entry for same slot
         $exists = DB::table('appointment_waitlist')
             ->where('user_id',        $userId)
-            ->where('service_id',     $request->service_id)
             ->where('preferred_date', $request->preferred_date)
             ->where('preferred_time', $request->preferred_time)
             ->whereIn('status', ['waiting', 'notified'])
@@ -43,7 +42,6 @@ class WaitlistController extends Controller
 
         // Get next queue position for this slot
         $position = DB::table('appointment_waitlist')
-            ->where('service_id',     $request->service_id)
             ->where('preferred_date', $request->preferred_date)
             ->where('preferred_time', $request->preferred_time)
             ->whereIn('status', ['waiting', 'notified'])
@@ -172,7 +170,6 @@ class WaitlistController extends Controller
     public static function notifyNext($serviceId, $date, $time)
     {
         $next = DB::table('appointment_waitlist')
-            ->where('service_id',     $serviceId)
             ->where('preferred_date', $date)
             ->where('preferred_time', $time)
             ->where('status', 'waiting')

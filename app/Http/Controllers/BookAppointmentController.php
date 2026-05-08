@@ -212,7 +212,6 @@ public function checkSlot(Request $request)
         ->exists();
 
     $waitlistCount = DB::table('appointment_waitlist')
-        ->where('service_id',     $request->service_id)
         ->where('preferred_date', $request->date)
         ->where('preferred_time', $request->time)
         ->whereIn('status', ['waiting', 'notified'])
