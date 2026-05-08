@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Session;
 use App\Helpers\NotificationHelper;
+use app\Http\Controllers\WaitlistController;
 
 class PatientBookingsController extends Controller
 {
@@ -140,9 +141,9 @@ public function cancel(Request $request)
     // ── Always trigger waitlist — patient cancels always free the slot ──
 
     WaitlistController::notifyNext(
-            $appointment->appointment_date,
-            $appointment->appointment_time
-        );
+    $appt->appointment_date,
+    $appt->appointment_time
+);
 
     return back()->with('success', 'Appointment cancelled successfully.');
 }
