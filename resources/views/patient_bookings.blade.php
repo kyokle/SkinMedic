@@ -314,14 +314,17 @@ async function loadWaitlist() {
                 : '';
 
             const statusBadge = e.status === 'notified'
-                ? `<span style="background:#fef9c3;color:#854d0e;padding:3px 10px;
-                               border-radius:10px;font-size:11px;font-weight:600;">
-                       🔔 SLOT OPEN
-                   </span>`
-                : `<span style="background:#e5e7eb;color:#666;padding:3px 10px;
-                               border-radius:10px;font-size:11px;">
-                       #${e.queue_position} in queue
-                   </span>`;
+    ? `<a href="/waitlist/claim/${e.claim_token}"
+          style="background:#fef9c3;color:#854d0e;padding:3px 10px;
+                 border-radius:10px;font-size:11px;font-weight:600;
+                 text-decoration:none;display:inline-block;cursor:pointer;
+                 border:1px solid #fde68a;">
+           🔔 SLOT OPEN — Click to Claim
+       </a>`
+    : `<span style="background:#e5e7eb;color:#666;padding:3px 10px;
+                   border-radius:10px;font-size:11px;">
+           #${e.queue_position} in queue
+       </span>`;
 
             return `
             <div style="background:#fff;border:1px solid #f0f0ee;border-radius:10px;

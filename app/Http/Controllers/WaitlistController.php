@@ -245,7 +245,8 @@ class WaitlistController extends Controller
                 'w.preferred_time',
                 'w.status',
                 'w.queue_position',
-                'w.claim_expires_at'
+                'w.claim_expires_at',
+                'w.claim_token',
             )
             ->get();
 
