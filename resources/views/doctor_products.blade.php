@@ -13,7 +13,7 @@
 
   @if(session('role') === 'doctor')
     @include('partials.sidebar_doctor')
-  @elseif
+  @elseif(session('role') === 'staff')
     @include('partials.sidebar_staff')
   @else
     @include('partials.sidebar_admin')
