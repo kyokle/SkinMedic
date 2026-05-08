@@ -31,7 +31,7 @@ class PatientProductsController extends Controller
             ->distinct()
             ->pluck('category');
 
-        return view('patient.patient_products', array_merge(
+        return view('patient.products', array_merge(
             $this->sidebarData(),
             compact('products', 'categories')
         ));
