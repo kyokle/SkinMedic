@@ -43,6 +43,11 @@
               <span class="ni">🤳🏻</span> AR Skin Analysis
         </a>
 
+        <a href="{{ route('patient.products') }}"
+           class="{{ request()->routeIs('patient.products') ? 'active' : '' }}">
+            <span class="ni">🧴</span> Products
+        </a>
+
         <a href="{{ route('patient.bookings') }}"
            class="{{ request()->routeIs('patient.bookings') ? 'active' : '' }}">
             <span class="ni">🧾</span> My Bookings
