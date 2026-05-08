@@ -230,9 +230,16 @@ function renderSlots(slots, preselect, showTaken) {
           ? `<span class="waitlist-count">${slot.waitlist_count} waiting</span>`
           : '<span class="waitlist-count">Fully booked</span>');
     } else {
-      btn.className = 'slot-btn' + (isPreferred && !pickedOtherTime ? ' preferred-locked' : '');
-      btn.innerHTML = label + (isPreferred && !pickedOtherTime ? '<span class="slot-star">⭐</span>' : '');
-      if (preselect === slot.time) btn.classList.add('selected');
+      const isLocked = isPreferred && !pickedOtherTime;
+      btn.className = 'slot-btn' + (isLocked ? ' preferred-locked' : '');
+      btn.innerHTML = label + (isLocked ? '<span class="slot-star">⭐</span>' : '');
+
+      // Auto-select preferred slot AND ensure hiddenTime is always populated
+      if (preselect === slot.time || isLocked) {
+        btn.classList.add('selected');
+        hiddenTime.value = slot.time;
+      }
+
       btn.addEventListener('click', () => selectSlot(slot.time, btn));
     }
 
@@ -312,17 +319,12 @@ dateEl?.addEventListener('change',   loadTimes);
 prefEl?.addEventListener('change',   loadTimes);
 
 // ── Trigger on page load if values already set ──
-// Use setTimeout to ensure old() values are fully rendered in DOM
+// Delay ensures old() values and DOM are fully ready before fetching slots
 setTimeout(function () {
   if (doctorEl?.value && dateEl?.value) {
     loadTimes();
   }
-}, 100);
-
-// ── Also trigger immediately in case setTimeout isn't needed ──
-if (doctorEl?.value && dateEl?.value) {
-  loadTimes();
-}
+}, 150);
 
 // ── Form submit guard ──
 form.addEventListener('submit', function(e) {
