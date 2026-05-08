@@ -6,7 +6,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Session;
 use App\Helpers\NotificationHelper;
-use app\Http\Controllers\WaitlistController;
+use App\Http\Controllers\WaitlistController;
 
 class PatientBookingsController extends Controller
 {
