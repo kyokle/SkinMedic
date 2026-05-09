@@ -49,7 +49,6 @@
   </a>
 
   <div class="sr-header">
-    <p class="kicker">AI-POWERED RESULTS</p>
     <h1 class="sr-title">Your Skin Analysis</h1>
   </div>
 
