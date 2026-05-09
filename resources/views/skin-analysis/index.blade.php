@@ -103,7 +103,7 @@
 
         <div class="sa-cam-controls">
           <button type="button" class="sa-cam-cancel" id="cancelCameraBtn">Cancel</button>
-          <button type="button" class="sa-cam-capture" id="captureBtn" title="Capture photo">
+          <button type="button" class="sa-cam-capture" id="captureBtn" disabled title="Capture photo">
             <span class="sa-shutter"></span>
           </button>
           <button type="button" class="sa-cam-flip" id="flipCameraBtn" title="Flip camera">
@@ -269,7 +269,7 @@
 }
 .sa-ar-container video {
   width: 100%; display: block; max-height: 420px;
-  object-fit: cover; transform: scaleX(-1); /* mirror */
+  object-fit: cover; transform: scaleX(-1);
 }
 .sa-ar-container canvas#arCanvas {
   position: absolute; top: 0; left: 0;
@@ -448,7 +448,7 @@ let capturedBlob  = null;
 let faceMesh      = null;
 let camera        = null;
 let arRunning     = false;
-let faceDetected  = false; // ← ADDED: tracks whether MediaPipe sees a face
+let faceDetected  = false;
 
 // ── Skin-type color map ───────────────────────────────────────────────────────
 const SKIN_COLORS = {
@@ -459,7 +459,6 @@ const SKIN_COLORS = {
   Unknown:     { r:200, g:200, b:200 },
 };
 
-// ── Landmark index groups ─────────────────────────────────────────────────────
 const FOREHEAD_PTS    = [10, 67, 109, 338, 297, 332];
 const LEFT_CHEEK_PTS  = [50, 101, 118, 117, 123];
 const RIGHT_CHEEK_PTS = [280, 330, 347, 346, 352];
@@ -542,26 +541,23 @@ function onFaceMeshResults(results) {
 
   ctx.clearRect(0, 0, w, h);
 
-  // ── ADDED: guard — no face detected ──────────────────────────────────────
   if (!results.multiFaceLandmarks || results.multiFaceLandmarks.length === 0) {
     arStatusText.textContent = 'No face detected';
     arStatusDot.classList.remove('active');
     skinBadge.classList.add('hidden');
-    faceDetected = false;          // ← reset flag
-    captureBtn.disabled = true;    // ← disable shutter
+    faceDetected = false;
+    captureBtn.disabled = true;
     return;
   }
-  // ─────────────────────────────────────────────────────────────────────────
 
   arStatusText.textContent = 'Face tracked ✓';
   arStatusDot.classList.add('active');
   skinBadge.classList.remove('hidden');
-  faceDetected = true;             // ← set flag
-  captureBtn.disabled = false;     // ← enable shutter
+  faceDetected = true;
+  captureBtn.disabled = false;
 
   const lm = results.multiFaceLandmarks[0];
 
-  // Scale landmarks to canvas size (mirrored: flip x)
   const scaled = lm.map(p => ({ x: (1 - p.x) * w, y: p.y * h }));
 
   drawMesh(ctx, scaled);
@@ -572,7 +568,7 @@ function onFaceMeshResults(results) {
   offCtx.drawImage(videoFeed, 0, 0, w, h);
   const rawScaled = lm.map(p => ({ x: p.x * w, y: p.y * h }));
 
-  const fPts  = FOREHEAD_PTS.map(i  => rawScaled[i]);
+  const fPts  = FOREHEAD_PTS.map(i    => rawScaled[i]);
   const lPts  = LEFT_CHEEK_PTS.map(i  => rawScaled[i]);
   const rPts  = RIGHT_CHEEK_PTS.map(i => rawScaled[i]);
 
@@ -580,7 +576,7 @@ function onFaceMeshResults(results) {
   const lType = analyzeRegionPixels(offCtx, lPts, w, h);
   const rType = analyzeRegionPixels(offCtx, rPts, w, h);
 
-  const mFPts = FOREHEAD_PTS.map(i  => scaled[i]);
+  const mFPts = FOREHEAD_PTS.map(i    => scaled[i]);
   const mLPts = LEFT_CHEEK_PTS.map(i  => scaled[i]);
   const mRPts = RIGHT_CHEEK_PTS.map(i => scaled[i]);
 
@@ -607,7 +603,7 @@ async function startARCamera() {
   cameraView.classList.remove('hidden');
   legendCard.classList.remove('hidden');
   arStatusText.textContent = 'Starting camera…';
-  captureBtn.disabled = true; // ← disabled until face detected
+  captureBtn.disabled = true;
 
   try {
     stream = await navigator.mediaDevices.getUserMedia({
@@ -655,7 +651,7 @@ function stopCamera() {
   if (camera)  { camera.stop(); camera = null; }
   if (stream)  { stream.getTracks().forEach(t => t.stop()); stream = null; }
   arRunning     = false;
-  faceDetected  = false; // ← ADDED: reset flag on stop
+  faceDetected  = false;
   resultHistory = [];
   captureBtn.disabled = true;
   cameraView.classList.add('hidden');
@@ -674,9 +670,8 @@ document.getElementById('flipCameraBtn').addEventListener('click', async () => {
 
 document.getElementById('cancelCameraBtn').addEventListener('click', stopCamera);
 
-// ── Capture ── (ADDED: face detection guard) ──────────────────────────────────
+// ── Capture ───────────────────────────────────────────────────────────────────
 captureBtn.addEventListener('click', () => {
-  // ← ADDED: block capture if no face detected
   if (!faceDetected) {
     alert('No face detected. Please position your face in the camera.');
     return;
@@ -693,14 +688,12 @@ captureBtn.addEventListener('click', () => {
 
   snapCanvas.toBlob(blob => {
     capturedBlob = blob;
-    showPreview(URL.createObjectURL(blob), true); // true = from camera (face already confirmed)
+    showPreview(URL.createObjectURL(blob), true);
     stopCamera();
   }, 'image/jpeg', 0.92);
 });
 
-// ── Upload ── (ADDED: face-api.js check on selected file) ────────────────────
-
-// Load face-api models once (tiny model = fast, ~2MB)
+// ── Upload ────────────────────────────────────────────────────────────────────
 let faceApiReady = false;
 const MODEL_URL  = 'https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/weights';
 
@@ -710,7 +703,6 @@ async function loadFaceApiModels() {
   faceApiReady = true;
 }
 
-// Run face detection on an <img> element, returns true/false
 async function imageHasFace(imgEl) {
   await loadFaceApiModels();
   const detection = await faceapi.detectSingleFace(
@@ -729,32 +721,28 @@ photoFileInput.addEventListener('change', async () => {
   const file    = photoFileInput.files[0];
   const url     = URL.createObjectURL(file);
 
-  // Show preview immediately, then run face check
-  showPreview(url, false); // false = from upload, needs face check
+  showPreview(url, false);
 
-  // Show "checking" status
-  faceCheckMsg.className  = 'sa-face-check';   // reset to warning style
+  faceCheckMsg.className    = 'sa-face-check';
   faceCheckText.textContent = '🔍 Checking for a face in your photo…';
   submitBtn.disabled = true;
 
-  // Load image into a temp element for face-api
   const tempImg = new Image();
   tempImg.src   = url;
   tempImg.onload = async () => {
     try {
       const hasFace = await imageHasFace(tempImg);
       if (hasFace) {
-        faceCheckMsg.className  = 'sa-face-check success';
+        faceCheckMsg.className    = 'sa-face-check success';
         faceCheckText.textContent = '✓ Face detected — ready to analyze!';
         submitBtn.disabled = false;
       } else {
-        faceCheckMsg.className  = 'sa-face-check error';
+        faceCheckMsg.className    = 'sa-face-check error';
         faceCheckText.textContent = '✗ No face detected. Please upload a clear photo of your face.';
         submitBtn.disabled = true;
       }
     } catch (err) {
-      // If face-api fails to load / network issue, allow submission anyway
-      faceCheckMsg.className  = 'sa-face-check success';
+      faceCheckMsg.className    = 'sa-face-check success';
       faceCheckText.textContent = '✓ Photo loaded — ready to analyze.';
       submitBtn.disabled = false;
     }
@@ -768,13 +756,11 @@ function showPreview(url, faceAlreadyConfirmed) {
   saForm.classList.remove('hidden');
 
   if (faceAlreadyConfirmed) {
-    // Camera capture — face was already confirmed by MediaPipe
-    faceCheckMsg.className  = 'sa-face-check success';
+    faceCheckMsg.className    = 'sa-face-check success';
     faceCheckText.textContent = '✓ Face detected — ready to analyze!';
     faceCheckMsg.classList.remove('hidden');
     submitBtn.disabled = false;
   } else {
-    // Upload — face check runs async after this
     faceCheckMsg.classList.remove('hidden');
     submitBtn.disabled = true;
   }
@@ -793,8 +779,6 @@ document.getElementById('retakeBtn').addEventListener('click', () => {
 // ── Submit ────────────────────────────────────────────────────────────────────
 saForm.addEventListener('submit', function(e) {
   e.preventDefault();
-
-  // Final safety guard — should not be reachable with button disabled, but just in case
   if (submitBtn.disabled) return;
 
   const formData = new FormData(this);
@@ -804,14 +788,16 @@ saForm.addEventListener('submit', function(e) {
   submitBtn.querySelector('.sa-btn-loader').classList.remove('hidden');
   submitBtn.disabled = true;
 
+  // ── FIX: removed redirect:'manual' so browser follows redirects naturally.
+  // response.url is the final URL after all redirects — whether that's the
+  // result page (success) or back to this page (error flash).
   fetch(this.action, {
-    method: 'POST', body: formData, redirect: 'manual',
+    method: 'POST',
+    body: formData,
   })
   .then(response => {
-    if (response.type === 'opaqueredirect' || response.status === 302) {
-      window.location.href = '{{ route("skin-analysis.result") }}';
-    } else if (response.ok) {
-      window.location.href = '{{ route("skin-analysis.result") }}';
+    if (response.ok) {
+      window.location.href = response.url;
     } else {
       return response.text().then(html => {
         document.open(); document.write(html); document.close();
@@ -827,4 +813,4 @@ saForm.addEventListener('submit', function(e) {
 });
 </script>
 
-@endsections
+@endsection

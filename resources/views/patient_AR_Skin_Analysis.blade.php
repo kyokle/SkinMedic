@@ -246,7 +246,7 @@ let capturedBlob  = null;
 let faceMesh      = null;
 let camera        = null;
 let arRunning     = false;
-let faceDetected  = false; // ← tracks whether MediaPipe currently sees a face
+let faceDetected  = false;
 let resultHistory = [];
 
 const HISTORY_SIZE = 15;
@@ -314,23 +314,20 @@ function onFaceMeshResults(results) {
   const ctx = arCanvas.getContext('2d');
   ctx.clearRect(0, 0, w, h);
 
-  // ── No face detected guard ────────────────────────────────────────────────
   if (!results.multiFaceLandmarks || !results.multiFaceLandmarks.length) {
     arStatusText.textContent = 'No face detected';
     arStatusDot.classList.remove('active');
     skinBadge.classList.add('hidden');
-    faceDetected = false;       // ← reset flag
-    captureBtn.disabled = true; // ← disable shutter button
+    faceDetected = false;
+    captureBtn.disabled = true;
     return;
   }
-  // ─────────────────────────────────────────────────────────────────────────
 
   arStatusText.textContent = 'Face tracked ✓';
   arStatusDot.classList.add('active');
   skinBadge.classList.remove('hidden');
-  faceDetected = false;        // will be set true below only if confirmed
-  faceDetected = true;          // ← face confirmed, enable shutter
-  captureBtn.disabled = false;  // ← enable shutter button
+  faceDetected = true;
+  captureBtn.disabled = false;
 
   const lm     = results.multiFaceLandmarks[0];
   const scaled = lm.map(p => ({ x: (1 - p.x) * w, y: p.y * h }));
@@ -367,7 +364,7 @@ async function startARCamera() {
   cameraView.classList.remove('hidden');
   legendCard.classList.remove('hidden');
   arStatusText.textContent = 'Starting camera…';
-  captureBtn.disabled = true; // ← starts disabled until face detected
+  captureBtn.disabled = true;
 
   try {
     stream = await navigator.mediaDevices.getUserMedia({
@@ -402,7 +399,7 @@ function stopCamera() {
   if (camera) { camera.stop(); camera = null; }
   if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
   arRunning     = false;
-  faceDetected  = false;       // ← reset flag on stop
+  faceDetected  = false;
   resultHistory = [];
   captureBtn.disabled = true;
   cameraView.classList.add('hidden');
@@ -422,9 +419,8 @@ document.getElementById('flipCameraBtn').addEventListener('click', async () => {
 
 document.getElementById('cancelCameraBtn').addEventListener('click', stopCamera);
 
-// ── Capture (with face guard) ─────────────────────────────────────────────────
+// ── Capture ───────────────────────────────────────────────────────────────────
 captureBtn.addEventListener('click', () => {
-  // ← Safety guard: block if no face detected
   if (!faceDetected) {
     alert('No face detected. Please position your face in the camera.');
     return;
@@ -441,12 +437,12 @@ captureBtn.addEventListener('click', () => {
 
   snapCanvas.toBlob(blob => {
     capturedBlob = blob;
-    showPreview(URL.createObjectURL(blob), true); // true = face already confirmed
+    showPreview(URL.createObjectURL(blob), true);
     stopCamera();
   }, 'image/jpeg', 0.92);
 });
 
-// ── Upload (with face-api.js check) ──────────────────────────────────────────
+// ── Upload ────────────────────────────────────────────────────────────────────
 let faceApiReady = false;
 const MODEL_URL  = 'https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/weights';
 
@@ -472,9 +468,8 @@ photoFileInput.addEventListener('change', async () => {
   capturedBlob = null;
 
   const url = URL.createObjectURL(photoFileInput.files[0]);
-  showPreview(url, false); // false = upload, needs face check
+  showPreview(url, false);
 
-  // Show "checking" state
   faceCheckMsg.className    = 'sa-face-check';
   faceCheckText.textContent = '🔍 Checking for a face in your photo…';
   submitBtn.disabled        = true;
@@ -494,7 +489,6 @@ photoFileInput.addEventListener('change', async () => {
         submitBtn.disabled        = true;
       }
     } catch (err) {
-      // face-api failed to load (network issue etc.) — fail open
       faceCheckMsg.className    = 'sa-face-check success';
       faceCheckText.textContent = '✓ Photo loaded — ready to analyze.';
       submitBtn.disabled        = false;
@@ -510,13 +504,11 @@ function showPreview(url, faceAlreadyConfirmed) {
   saForm.classList.remove('hidden');
 
   if (faceAlreadyConfirmed) {
-    // Camera path — MediaPipe already confirmed the face
     faceCheckMsg.className    = 'sa-face-check success';
     faceCheckText.textContent = '✓ Face detected — ready to analyze!';
     faceCheckMsg.classList.remove('hidden');
     submitBtn.disabled = false;
   } else {
-    // Upload path — async face check runs after this
     faceCheckMsg.classList.remove('hidden');
     submitBtn.disabled = true;
   }
@@ -536,7 +528,7 @@ document.getElementById('retakeBtn').addEventListener('click', () => {
 // ── Submit ────────────────────────────────────────────────────────────────────
 saForm.addEventListener('submit', function(e) {
   e.preventDefault();
-  if (submitBtn.disabled) return; // final safety guard
+  if (submitBtn.disabled) return;
 
   const fd = new FormData(this);
   if (capturedBlob) { fd.delete('photo'); fd.set('photo', capturedBlob, 'capture.jpg'); }
@@ -545,12 +537,15 @@ saForm.addEventListener('submit', function(e) {
   submitBtn.querySelector('.sa-btn-loader').classList.remove('hidden');
   submitBtn.disabled = true;
 
-  fetch(this.action, { method: 'POST', body: fd, redirect: 'manual' })
-    .then(r => {
-      if (r.type === 'opaqueredirect' || r.status === 302 || r.ok) {
-        window.location.href = '{{ route("patient.skin-analysis.result") }}';
+  // ── FIX: removed redirect:'manual' so browser follows redirects naturally.
+  // response.url is the final URL after all redirects — whether that's the
+  // result page (success) or back to this page (error flash).
+  fetch(this.action, { method: 'POST', body: fd })
+    .then(response => {
+      if (response.ok) {
+        window.location.href = response.url;
       } else {
-        return r.text().then(html => { document.open(); document.write(html); document.close(); });
+        return response.text().then(html => { document.open(); document.write(html); document.close(); });
       }
     })
     .catch(() => {
