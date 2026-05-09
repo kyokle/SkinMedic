@@ -179,17 +179,7 @@
         </ul>
       </div>
 
-      {{-- Live skin type legend (shown when camera is active) --}}
-      <div class="sa-info-card sa-legend-card hidden" id="legendCard">
-        <h3 class="sa-info-title">Live Detection</h3>
-        <div class="sa-legend">
-          <div class="sa-legend-item"><span class="sa-legend-dot" style="background:#22c55e"></span> Normal</div>
-          <div class="sa-legend-item"><span class="sa-legend-dot" style="background:#3b82f6"></span> Dry</div>
-          <div class="sa-legend-item"><span class="sa-legend-dot" style="background:#f97316"></span> Oily</div>
-          <div class="sa-legend-item"><span class="sa-legend-dot" style="background:#a855f7"></span> Combination</div>
-        </div>
-        <p style="font-size:11px;color:#9c8f83;margin:10px 0 0;">Colors shown on your face regions update in real time.</p>
-      </div>
+      
 
       <p class="sa-disclaimer">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
