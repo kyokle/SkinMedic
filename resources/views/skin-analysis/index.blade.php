@@ -11,6 +11,9 @@
 <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js" crossorigin="anonymous"></script>
 
+{{-- face-api.js for upload face detection --}}
+<script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+
 <div class="sa-page">
 
   <a href="{{ url('/') }}" class="sr-back-btn">
@@ -117,6 +120,12 @@
       <form action="{{ route('skin-analysis.analyze') }}" method="POST"
             enctype="multipart/form-data" id="saForm" class="hidden">
         @csrf
+
+        {{-- Upload face-check status message --}}
+        <div class="sa-face-check hidden" id="faceCheckMsg">
+          <span id="faceCheckText">Checking for a face in your photo…</span>
+        </div>
+
         <div class="sa-preview-wrap">
           <img id="previewImg" src="" alt="Your photo"/>
           <button type="button" class="sa-retake-btn" id="retakeBtn">
@@ -128,7 +137,7 @@
           </button>
         </div>
         <input type="file" name="photo" id="photoFileInput" accept="image/*" class="hidden">
-        <button type="submit" class="sa-submit-btn" id="submitBtn">
+        <button type="submit" class="sa-submit-btn" id="submitBtn" disabled>
           <span class="sa-btn-text">Analyze My Skin</span>
           <span class="sa-btn-loader hidden">Analyzing…</span>
         </button>
@@ -329,9 +338,10 @@
   width: 64px; height: 64px; border-radius: 50%;
   background: rgba(255,255,255,.15); border: 3px solid #fff;
   display: flex; align-items: center; justify-content: center;
-  cursor: pointer; transition: transform .1s;
+  cursor: pointer; transition: transform .1s, opacity .2s;
 }
 .sa-cam-capture:active { transform: scale(.92); }
+.sa-cam-capture:disabled { opacity: 0.4; cursor: not-allowed; }
 .sa-shutter { width: 48px; height: 48px; border-radius: 50%; background: #fff; display: block; }
 .sa-cam-flip {
   background: none; border: none; color: #fff; cursor: pointer;
@@ -355,10 +365,26 @@
   background: #80a833; color: #fff; border: none;
   padding: 13px 60px; border-radius: 30px;
   font-size: 15px; font-family: 'Poppins', sans-serif;
-  font-weight: 600; cursor: pointer; transition: background .2s; width: 100%;
+  font-weight: 600; cursor: pointer; transition: background .2s, opacity .2s; width: 100%;
 }
-.sa-submit-btn:hover { background: #6b9228; }
+.sa-submit-btn:hover:not(:disabled) { background: #6b9228; }
+.sa-submit-btn:disabled { opacity: 0.45; cursor: not-allowed; }
 .sa-btn-loader.hidden, .sa-btn-text.hidden { display: none; }
+
+/* Face check status message */
+.sa-face-check {
+  display: flex; align-items: center; gap: 8px;
+  border-radius: 10px; padding: 10px 14px; margin-bottom: 12px;
+  font-size: 13px; font-weight: 500; font-family: 'Poppins', sans-serif;
+  background: #faeeda; color: #854f0b; border: 1px solid #f0d0a0;
+  transition: background .3s, color .3s;
+}
+.sa-face-check.success {
+  background: #f0f7e0; color: #4a6e10; border-color: #c5d98a;
+}
+.sa-face-check.error {
+  background: #fcebeb; color: #a32d2d; border-color: #f5c4b3;
+}
 
 /* Info cards */
 .sa-info-card {
@@ -412,29 +438,33 @@ const arStatusText   = document.getElementById('arStatusText');
 const skinBadge      = document.getElementById('skinBadge');
 const skinBadgeText  = document.getElementById('skinBadgeText');
 const legendCard     = document.getElementById('legendCard');
+const captureBtn     = document.getElementById('captureBtn');
+const faceCheckMsg   = document.getElementById('faceCheckMsg');
+const faceCheckText  = document.getElementById('faceCheckText');
 
-let stream       = null;
-let facingMode   = 'user';
-let capturedBlob = null;
-let faceMesh     = null;
-let camera       = null;
-let arRunning    = false;
+let stream        = null;
+let facingMode    = 'user';
+let capturedBlob  = null;
+let faceMesh      = null;
+let camera        = null;
+let arRunning     = false;
+let faceDetected  = false; // ← ADDED: tracks whether MediaPipe sees a face
 
 // ── Skin-type color map ───────────────────────────────────────────────────────
 const SKIN_COLORS = {
-  Normal:      { r:34,  g:197, b:94  },   // green
-  Dry:         { r:59,  g:130, b:246 },   // blue
-  Oily:        { r:249, g:115, b:22  },   // orange
-  Combination: { r:168, g:85,  b:247 },   // purple
+  Normal:      { r:34,  g:197, b:94  },
+  Dry:         { r:59,  g:130, b:246 },
+  Oily:        { r:249, g:115, b:22  },
+  Combination: { r:168, g:85,  b:247 },
   Unknown:     { r:200, g:200, b:200 },
 };
 
-// ── Landmark index groups (same as your Python script) ───────────────────────
-const FOREHEAD_PTS  = [10, 67, 109, 338, 297, 332];
+// ── Landmark index groups ─────────────────────────────────────────────────────
+const FOREHEAD_PTS    = [10, 67, 109, 338, 297, 332];
 const LEFT_CHEEK_PTS  = [50, 101, 118, 117, 123];
 const RIGHT_CHEEK_PTS = [280, 330, 347, 346, 352];
 
-// ── Simple brightness/saturation analysis (mirrors your Python logic) ─────────
+// ── Simple brightness/saturation analysis ─────────────────────────────────────
 function analyzeRegionPixels(ctx, pts, w, h) {
   if (!pts || pts.length === 0) return 'Unknown';
   const xs = pts.map(p => p.x * w);
@@ -454,11 +484,9 @@ function analyzeRegionPixels(ctx, pts, w, h) {
   if (count === 0) return 'Unknown';
   const r = totalR/count, g = totalG/count, b = totalB/count;
 
-  // HSV approximation
   const max = Math.max(r,g,b)/255, min = Math.min(r,g,b)/255;
   const s = max === 0 ? 0 : (max - min) / max;
   const v = max;
-  // Lightness (LAB L approx)
   const l = 0.299*r + 0.587*g + 0.114*b;
 
   const sat255 = s * 255, val255 = v * 255;
@@ -481,7 +509,6 @@ function drawRegion(ctx, pts, color, alpha = 0.35) {
   ctx.fill();
   ctx.globalAlpha = 1;
 
-  // Outline
   ctx.strokeStyle = `rgba(${color.r},${color.g},${color.b},0.8)`;
   ctx.lineWidth = 1.5;
   ctx.beginPath();
@@ -515,31 +542,34 @@ function onFaceMeshResults(results) {
 
   ctx.clearRect(0, 0, w, h);
 
+  // ── ADDED: guard — no face detected ──────────────────────────────────────
   if (!results.multiFaceLandmarks || results.multiFaceLandmarks.length === 0) {
     arStatusText.textContent = 'No face detected';
     arStatusDot.classList.remove('active');
     skinBadge.classList.add('hidden');
+    faceDetected = false;          // ← reset flag
+    captureBtn.disabled = true;    // ← disable shutter
     return;
   }
+  // ─────────────────────────────────────────────────────────────────────────
 
   arStatusText.textContent = 'Face tracked ✓';
   arStatusDot.classList.add('active');
   skinBadge.classList.remove('hidden');
+  faceDetected = true;             // ← set flag
+  captureBtn.disabled = false;     // ← enable shutter
 
   const lm = results.multiFaceLandmarks[0];
 
   // Scale landmarks to canvas size (mirrored: flip x)
   const scaled = lm.map(p => ({ x: (1 - p.x) * w, y: p.y * h }));
 
-  // Draw mesh
   drawMesh(ctx, scaled);
 
-  // Get pixel data from video for analysis (un-mirrored canvas)
   const offscreen = document.createElement('canvas');
   offscreen.width = w; offscreen.height = h;
   const offCtx = offscreen.getContext('2d');
   offCtx.drawImage(videoFeed, 0, 0, w, h);
-  // un-mirrored landmarks (original x)
   const rawScaled = lm.map(p => ({ x: p.x * w, y: p.y * h }));
 
   const fPts  = FOREHEAD_PTS.map(i  => rawScaled[i]);
@@ -550,7 +580,6 @@ function onFaceMeshResults(results) {
   const lType = analyzeRegionPixels(offCtx, lPts, w, h);
   const rType = analyzeRegionPixels(offCtx, rPts, w, h);
 
-  // Draw colored regions (mirrored coords)
   const mFPts = FOREHEAD_PTS.map(i  => scaled[i]);
   const mLPts = LEFT_CHEEK_PTS.map(i  => scaled[i]);
   const mRPts = RIGHT_CHEEK_PTS.map(i => scaled[i]);
@@ -559,7 +588,6 @@ function onFaceMeshResults(results) {
   drawRegion(ctx, mLPts, SKIN_COLORS[lType]  || SKIN_COLORS.Unknown);
   drawRegion(ctx, mRPts, SKIN_COLORS[rType]  || SKIN_COLORS.Unknown);
 
-  // Overall skin type (most common)
   const all = [fType, lType, rType];
   const overall = all.sort((a,b) =>
     all.filter(v=>v===b).length - all.filter(v=>v===a).length)[0];
@@ -568,7 +596,6 @@ function onFaceMeshResults(results) {
   const smoothed = resultHistory.sort((a,b) =>
     resultHistory.filter(v=>v===b).length - resultHistory.filter(v=>v===a).length)[0];
 
-  // Update badge
   const c = SKIN_COLORS[smoothed] || SKIN_COLORS.Unknown;
   skinBadgeText.textContent = smoothed + ' Skin';
   skinBadge.style.background = `rgba(${c.r},${c.g},${c.b},0.9)`;
@@ -580,6 +607,7 @@ async function startARCamera() {
   cameraView.classList.remove('hidden');
   legendCard.classList.remove('hidden');
   arStatusText.textContent = 'Starting camera…';
+  captureBtn.disabled = true; // ← disabled until face detected
 
   try {
     stream = await navigator.mediaDevices.getUserMedia({
@@ -590,11 +618,9 @@ async function startARCamera() {
     await new Promise(r => videoFeed.onloadedmetadata = r);
     videoFeed.play();
 
-    // Size canvas to match video
     arCanvas.width  = videoFeed.videoWidth  || 640;
     arCanvas.height = videoFeed.videoHeight || 480;
 
-    // Init MediaPipe FaceMesh
     faceMesh = new FaceMesh({ locateFile: file =>
       `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`
     });
@@ -608,7 +634,6 @@ async function startARCamera() {
 
     arStatusText.textContent = 'Loading AR model…';
 
-    // Use Camera utility for continuous frames
     camera = new Camera(videoFeed, {
       onFrame: async () => {
         await faceMesh.send({ image: videoFeed });
@@ -629,8 +654,10 @@ async function startARCamera() {
 function stopCamera() {
   if (camera)  { camera.stop(); camera = null; }
   if (stream)  { stream.getTracks().forEach(t => t.stop()); stream = null; }
-  arRunning = false;
+  arRunning     = false;
+  faceDetected  = false; // ← ADDED: reset flag on stop
   resultHistory = [];
+  captureBtn.disabled = true;
   cameraView.classList.add('hidden');
   legendCard.classList.add('hidden');
   chooser.classList.remove('hidden');
@@ -647,11 +674,16 @@ document.getElementById('flipCameraBtn').addEventListener('click', async () => {
 
 document.getElementById('cancelCameraBtn').addEventListener('click', stopCamera);
 
-// ── Capture ───────────────────────────────────────────────────────────────────
-document.getElementById('captureBtn').addEventListener('click', () => {
+// ── Capture ── (ADDED: face detection guard) ──────────────────────────────────
+captureBtn.addEventListener('click', () => {
+  // ← ADDED: block capture if no face detected
+  if (!faceDetected) {
+    alert('No face detected. Please position your face in the camera.');
+    return;
+  }
+
   snapCanvas.width  = videoFeed.videoWidth  || 640;
   snapCanvas.height = videoFeed.videoHeight || 480;
-  // Draw mirrored (what user sees)
   const sCtx = snapCanvas.getContext('2d');
   sCtx.save();
   sCtx.translate(snapCanvas.width, 0);
@@ -661,37 +693,110 @@ document.getElementById('captureBtn').addEventListener('click', () => {
 
   snapCanvas.toBlob(blob => {
     capturedBlob = blob;
-    showPreview(URL.createObjectURL(blob));
+    showPreview(URL.createObjectURL(blob), true); // true = from camera (face already confirmed)
     stopCamera();
   }, 'image/jpeg', 0.92);
 });
 
-// ── Upload ────────────────────────────────────────────────────────────────────
+// ── Upload ── (ADDED: face-api.js check on selected file) ────────────────────
+
+// Load face-api models once (tiny model = fast, ~2MB)
+let faceApiReady = false;
+const MODEL_URL  = 'https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/weights';
+
+async function loadFaceApiModels() {
+  if (faceApiReady) return;
+  await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
+  faceApiReady = true;
+}
+
+// Run face detection on an <img> element, returns true/false
+async function imageHasFace(imgEl) {
+  await loadFaceApiModels();
+  const detection = await faceapi.detectSingleFace(
+    imgEl,
+    new faceapi.TinyFaceDetectorOptions({ inputSize: 320, scoreThreshold: 0.5 })
+  );
+  return !!detection;
+}
+
 document.getElementById('openUploadBtn').addEventListener('click', () => photoFileInput.click());
-photoFileInput.addEventListener('change', () => {
+
+photoFileInput.addEventListener('change', async () => {
   if (!photoFileInput.files.length) return;
   capturedBlob = null;
-  showPreview(URL.createObjectURL(photoFileInput.files[0]));
+
+  const file    = photoFileInput.files[0];
+  const url     = URL.createObjectURL(file);
+
+  // Show preview immediately, then run face check
+  showPreview(url, false); // false = from upload, needs face check
+
+  // Show "checking" status
+  faceCheckMsg.className  = 'sa-face-check';   // reset to warning style
+  faceCheckText.textContent = '🔍 Checking for a face in your photo…';
+  submitBtn.disabled = true;
+
+  // Load image into a temp element for face-api
+  const tempImg = new Image();
+  tempImg.src   = url;
+  tempImg.onload = async () => {
+    try {
+      const hasFace = await imageHasFace(tempImg);
+      if (hasFace) {
+        faceCheckMsg.className  = 'sa-face-check success';
+        faceCheckText.textContent = '✓ Face detected — ready to analyze!';
+        submitBtn.disabled = false;
+      } else {
+        faceCheckMsg.className  = 'sa-face-check error';
+        faceCheckText.textContent = '✗ No face detected. Please upload a clear photo of your face.';
+        submitBtn.disabled = true;
+      }
+    } catch (err) {
+      // If face-api fails to load / network issue, allow submission anyway
+      faceCheckMsg.className  = 'sa-face-check success';
+      faceCheckText.textContent = '✓ Photo loaded — ready to analyze.';
+      submitBtn.disabled = false;
+    }
+  };
 });
 
-function showPreview(url) {
+function showPreview(url, faceAlreadyConfirmed) {
   previewImg.src = url;
   chooser.classList.add('hidden');
   cameraView.classList.add('hidden');
   saForm.classList.remove('hidden');
+
+  if (faceAlreadyConfirmed) {
+    // Camera capture — face was already confirmed by MediaPipe
+    faceCheckMsg.className  = 'sa-face-check success';
+    faceCheckText.textContent = '✓ Face detected — ready to analyze!';
+    faceCheckMsg.classList.remove('hidden');
+    submitBtn.disabled = false;
+  } else {
+    // Upload — face check runs async after this
+    faceCheckMsg.classList.remove('hidden');
+    submitBtn.disabled = true;
+  }
 }
 
 document.getElementById('retakeBtn').addEventListener('click', () => {
   saForm.classList.add('hidden');
+  faceCheckMsg.classList.add('hidden');
   chooser.classList.remove('hidden');
   previewImg.src = '';
   photoFileInput.value = '';
-  capturedBlob = null;
+  capturedBlob  = null;
+  submitBtn.disabled = true;
 });
 
 // ── Submit ────────────────────────────────────────────────────────────────────
 saForm.addEventListener('submit', function(e) {
   e.preventDefault();
+
+  // Final safety guard — should not be reachable with button disabled, but just in case
+  if (submitBtn.disabled) return;
+
   const formData = new FormData(this);
   if (capturedBlob) { formData.delete('photo'); formData.set('photo', capturedBlob, 'capture.jpg'); }
 
@@ -722,4 +827,4 @@ saForm.addEventListener('submit', function(e) {
 });
 </script>
 
-@endsection
+@endsections

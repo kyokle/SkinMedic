@@ -42,15 +42,13 @@ class PatientAR_Skin_AnalysisController extends Controller
             return back()->withErrors($validator)->withInput();
         }
 
-        $file    = $request->file('photo');
-        $base64  = base64_encode(file_get_contents($file->getRealPath()));
-        $dataUri = 'data:' . $file->getMimeType() . ';base64,' . $base64;
+        $file = $request->file('photo');
 
         try {
+            // Send as multipart/form-data — matches Python API's UploadFile parameter
             $response = Http::timeout(30)
-                ->post("{$this->pythonApiUrl}/analyze", [
-                    'image' => $dataUri,
-                ]);
+                ->attach('file', file_get_contents($file->getRealPath()), $file->getClientOriginalName())
+                ->post("{$this->pythonApiUrl}/analyze");
 
             if ($response->failed()) {
                 throw new \Exception('Skin analysis service returned an error: ' . $response->body());
@@ -58,9 +56,24 @@ class PatientAR_Skin_AnalysisController extends Controller
 
             $result = $response->json();
 
+            // ── Face detection guard ──────────────────────────────────────────
+            // skin_api.py already runs MediaPipe face detection inside /analyze
+            // and returns { "success": false, "error": "..." } when no face found.
+            if (isset($result['success']) && $result['success'] === false) {
+                return back()->with(
+                    'error',
+                    $result['error'] ?? 'No face detected in your photo. Please upload a clear, well-lit photo of your face and try again.'
+                );
+            }
+            // ─────────────────────────────────────────────────────────────────
+
         } catch (\Exception $e) {
             return back()->with('error', 'Analysis failed: ' . $e->getMessage());
         }
+
+        // Store photo as base64 data URI for the result view
+        $base64  = base64_encode(file_get_contents($file->getRealPath()));
+        $dataUri = 'data:' . $file->getMimeType() . ';base64,' . $base64;
 
         return redirect()->route('patient.skin-analysis.result')
             ->with('result',   $result)
@@ -68,22 +81,22 @@ class PatientAR_Skin_AnalysisController extends Controller
     }
 
     public function result()
-{
-    if (!Session::has('user_id')) {
-        return redirect('/')->with('error', 'Please login first.');
+    {
+        if (!Session::has('user_id')) {
+            return redirect('/')->with('error', 'Please login first.');
+        }
+
+        $result   = session('result');
+        $photoUrl = session('photoUrl');
+
+        if (!$result) {
+            return redirect()->route('patient.skin-analysis')
+                             ->with('error', 'No result found. Please try again.');
+        }
+
+        return view('patient_Skin_Analysis_result', array_merge(
+            $this->sidebarData(),
+            compact('result', 'photoUrl')
+        ));
     }
-
-    $result   = session('result');
-    $photoUrl = session('photoUrl');
-
-    if (!$result) {
-        return redirect()->route('patient.skin-analysis')
-                         ->with('error', 'No result found. Please try again.');
-    }
-
-    return view('patient_Skin_Analysis_result', array_merge(  // ← changed view name
-        $this->sidebarData(),
-        compact('result', 'photoUrl')
-    ));
-}
 }

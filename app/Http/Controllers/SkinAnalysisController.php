@@ -31,33 +31,41 @@ class SkinAnalysisController extends Controller
 
         $file = $request->file('photo');
 
-        $base64  = base64_encode(file_get_contents($file->getRealPath()));
-        $dataUri = 'data:' . $file->getMimeType() . ';base64,' . $base64;
-
         try {
+            // Send as multipart/form-data — matches Python API's UploadFile parameter
             $response = Http::timeout(60)
-                ->withHeaders(['Content-Type' => 'application/json'])
-                ->post("{$this->pythonApiUrl}/analyze", [
-                    'image' => $dataUri,
-                ]);
+                ->attach('file', file_get_contents($file->getRealPath()), $file->getClientOriginalName())
+                ->post("{$this->pythonApiUrl}/analyze");
 
             if ($response->failed()) {
                 throw new \Exception('Skin analysis service returned an error: ' . $response->body());
             }
 
             $result = $response->json();
+
+            // ── Face detection guard ──────────────────────────────────────────
+            // skin_api.py already runs MediaPipe face detection inside /analyze
+            // and returns { "success": false, "error": "..." } when no face found.
+            if (isset($result['success']) && $result['success'] === false) {
+                return back()->with(
+                    'error',
+                    $result['error'] ?? 'No face detected in your photo. Please upload a clear, well-lit photo of your face and try again.'
+                );
+            }
+            // ─────────────────────────────────────────────────────────────────
+
         } catch (\Exception $e) {
             return back()->with('error', 'Analysis failed: ' . $e->getMessage());
         }
 
-        $label         = $result['label']          ?? 'Unknown';
-        $confidence    = $result['confidence']     ?? 0;
-        $severityScore = $result['severity_score'] ?? 0;
-        $treatment     = $result['treatment']      ?? [];
-        $detections    = $result['detections']     ?? [];
-        $condSummary   = $result['condition_summary'] ?? [];
+        $label          = $result['label']             ?? 'Unknown';
+        $confidence     = $result['confidence']        ?? 0;
+        $severityScore  = $result['severity_score']    ?? 0;
+        $treatment      = $result['treatment']         ?? [];
+        $detections     = $result['detections']        ?? [];
+        $condSummary    = $result['condition_summary'] ?? [];
         $allPredictions = array_map(fn($p) => [
-            'condition'  => $p['condition'] ?? '',
+            'condition'  => $p['condition']  ?? '',
             'confidence' => $p['confidence'] ?? 0,
         ], $result['all_predictions'] ?? []);
 
@@ -76,6 +84,10 @@ class SkinAnalysisController extends Controller
                 'urgency'     => $treatment['urgency']     ?? 'low',
             ],
         ];
+
+        // Store photo as base64 data URI for the result view
+        $base64  = base64_encode(file_get_contents($file->getRealPath()));
+        $dataUri = 'data:' . $file->getMimeType() . ';base64,' . $base64;
 
         return redirect()->route('skin-analysis.result')
             ->with('result',   $transformed)
