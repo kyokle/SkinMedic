@@ -530,39 +530,23 @@ saForm.addEventListener('submit', function(e) {
   e.preventDefault();
   if (submitBtn.disabled) return;
 
-  const fd = new FormData(this);
-  if (capturedBlob) { fd.delete('photo'); fd.set('photo', capturedBlob, 'capture.jpg'); }
-
   submitBtn.querySelector('.sa-btn-text').classList.add('hidden');
   submitBtn.querySelector('.sa-btn-loader').classList.remove('hidden');
   submitBtn.disabled = true;
 
-  const tempForm = document.createElement('form');
-  tempForm.method = 'POST';
-  tempForm.action = this.action;
-  tempForm.enctype = 'multipart/form-data';
-  tempForm.style.display = 'none';
+  const doSubmit = () => {
+    this.submit(); // real browser form POST — session flash preserved
+  };
 
-  for (const [key, value] of fd.entries()) {
-    if (value instanceof Blob) {
-      const dt = new DataTransfer();
-      dt.items.add(new File([value], 'capture.jpg', { type: 'image/jpeg' }));
-      const fileInput = document.createElement('input');
-      fileInput.type = 'file';
-      fileInput.name = key;
-      fileInput.files = dt.files;
-      tempForm.appendChild(fileInput);
-    } else {
-      const input = document.createElement('input');
-      input.type = 'hidden';
-      input.name = key;
-      input.value = value;
-      tempForm.appendChild(input);
-    }
+  if (capturedBlob) {
+    // Swap the blob into the real file input via DataTransfer
+    const dt = new DataTransfer();
+    dt.items.add(new File([capturedBlob], 'capture.jpg', { type: 'image/jpeg' }));
+    photoFileInput.files = dt.files;
+    doSubmit();
+  } else {
+    doSubmit();
   }
-
-  document.body.appendChild(tempForm);
-  tempForm.submit();
 });
 </script>
 
