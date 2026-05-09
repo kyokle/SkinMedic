@@ -68,7 +68,6 @@
 
   <div class="sa-page">
     <div class="sa-header">
-      <p class="kicker">AI-POWERED</p>
       <h1 class="sa-title">AR Skin Analysis</h1>
       <p class="sa-sub">Take or upload a photo to get an instant skin condition assessment and personalized treatment recommendations from our clinic.</p>
     </div>
@@ -181,7 +180,7 @@
           <ol class="sa-steps-list">
             <li><strong>Take or upload</strong> a clear close-up photo of your face</li>
             <li><strong>AR tracks</strong> your face regions in real time</li>
-            <li><strong>AI analyzes</strong> your skin condition in seconds</li>
+            <li><strong>AI assist to analyzes</strong> your skin condition in seconds</li>
             <li><strong>Get recommendations</strong> matched to our clinic's treatments</li>
           </ol>
         </div>
