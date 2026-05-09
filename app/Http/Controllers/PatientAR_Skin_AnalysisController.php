@@ -46,9 +46,12 @@ class PatientAR_Skin_AnalysisController extends Controller
 
         try {
             // Send as multipart/form-data — matches Python API's UploadFile parameter
-            $response = Http::timeout(30)
-                ->attach('file', file_get_contents($file->getRealPath()), $file->getClientOriginalName())
-                ->post("{$this->pythonApiUrl}/analyze");
+            $base64Image = 'data:' . $file->getMimeType() . ';base64,' . base64_encode(file_get_contents($file->getRealPath()));
+
+$response = Http::timeout(30)
+    ->post("{$this->pythonApiUrl}/analyze", [
+        'image' => $base64Image,
+    ]);
 
             if ($response->failed()) {
                 throw new \Exception('Skin analysis service returned an error: ' . $response->body());
@@ -59,12 +62,9 @@ class PatientAR_Skin_AnalysisController extends Controller
             // ── Face detection guard ──────────────────────────────────────────
             // skin_api.py already runs MediaPipe face detection inside /analyze
             // and returns { "success": false, "error": "..." } when no face found.
-            if (isset($result['success']) && $result['success'] === false) {
-                return back()->with(
-                    'error',
-                    $result['error'] ?? 'No face detected in your photo. Please upload a clear, well-lit photo of your face and try again.'
-                );
-            }
+            if (isset($result['error'])) {
+    return back()->with('error', $result['error']);
+}
             // ─────────────────────────────────────────────────────────────────
 
         } catch (\Exception $e) {
