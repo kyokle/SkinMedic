@@ -49,7 +49,11 @@ $response = Http::timeout(30)
             // ── Face detection guard ──────────────────────────────────────────
             // skin_api.py already runs MediaPipe face detection inside /analyze
             // and returns { "success": false, "error": "..." } when no face found.
-            if (isset($result['error'])) {
+            if (isset($result['success']) && $result['success'] === false) {
+    return back()->with('error', $result['error'] ?? 'No face detected. Please try again.');
+}
+
+if (isset($result['error'])) {
     return back()->with('error', $result['error']);
 }
             // ─────────────────────────────────────────────────────────────────
