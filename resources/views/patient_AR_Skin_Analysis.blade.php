@@ -537,23 +537,32 @@ saForm.addEventListener('submit', function(e) {
   submitBtn.querySelector('.sa-btn-loader').classList.remove('hidden');
   submitBtn.disabled = true;
 
-  // ── FIX: removed redirect:'manual' so browser follows redirects naturally.
-  // response.url is the final URL after all redirects — whether that's the
-  // result page (success) or back to this page (error flash).
-  fetch(this.action, { method: 'POST', body: fd })
-    .then(response => {
-      if (response.ok) {
-        window.location.href = response.url;
-      } else {
-        return response.text().then(html => { document.open(); document.write(html); document.close(); });
-      }
-    })
-    .catch(() => {
-      alert('Something went wrong. Please try again.');
-      submitBtn.querySelector('.sa-btn-text').classList.remove('hidden');
-      submitBtn.querySelector('.sa-btn-loader').classList.add('hidden');
-      submitBtn.disabled = false;
-    });
+  const tempForm = document.createElement('form');
+  tempForm.method = 'POST';
+  tempForm.action = this.action;
+  tempForm.enctype = 'multipart/form-data';
+  tempForm.style.display = 'none';
+
+  for (const [key, value] of fd.entries()) {
+    if (value instanceof Blob) {
+      const dt = new DataTransfer();
+      dt.items.add(new File([value], 'capture.jpg', { type: 'image/jpeg' }));
+      const fileInput = document.createElement('input');
+      fileInput.type = 'file';
+      fileInput.name = key;
+      fileInput.files = dt.files;
+      tempForm.appendChild(fileInput);
+    } else {
+      const input = document.createElement('input');
+      input.type = 'hidden';
+      input.name = key;
+      input.value = value;
+      tempForm.appendChild(input);
+    }
+  }
+
+  document.body.appendChild(tempForm);
+  tempForm.submit();
 });
 </script>
 

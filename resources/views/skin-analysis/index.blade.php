@@ -781,35 +781,39 @@ saForm.addEventListener('submit', function(e) {
   e.preventDefault();
   if (submitBtn.disabled) return;
 
-  const formData = new FormData(this);
-  if (capturedBlob) { formData.delete('photo'); formData.set('photo', capturedBlob, 'capture.jpg'); }
+  const fd = new FormData(this);
+  if (capturedBlob) { fd.delete('photo'); fd.set('photo', capturedBlob, 'capture.jpg'); }
 
   submitBtn.querySelector('.sa-btn-text').classList.add('hidden');
   submitBtn.querySelector('.sa-btn-loader').classList.remove('hidden');
   submitBtn.disabled = true;
 
-  // ── FIX: removed redirect:'manual' so browser follows redirects naturally.
-  // response.url is the final URL after all redirects — whether that's the
-  // result page (success) or back to this page (error flash).
-  fetch(this.action, {
-    method: 'POST',
-    body: formData,
-  })
-  .then(response => {
-    if (response.ok) {
-      window.location.href = response.url;
+  const tempForm = document.createElement('form');
+  tempForm.method = 'POST';
+  tempForm.action = this.action;
+  tempForm.enctype = 'multipart/form-data';
+  tempForm.style.display = 'none';
+
+  for (const [key, value] of fd.entries()) {
+    if (value instanceof Blob) {
+      const dt = new DataTransfer();
+      dt.items.add(new File([value], 'capture.jpg', { type: 'image/jpeg' }));
+      const fileInput = document.createElement('input');
+      fileInput.type = 'file';
+      fileInput.name = key;
+      fileInput.files = dt.files;
+      tempForm.appendChild(fileInput);
     } else {
-      return response.text().then(html => {
-        document.open(); document.write(html); document.close();
-      });
+      const input = document.createElement('input');
+      input.type = 'hidden';
+      input.name = key;
+      input.value = value;
+      tempForm.appendChild(input);
     }
-  })
-  .catch(() => {
-    alert('Something went wrong. Please try again.');
-    submitBtn.querySelector('.sa-btn-text').classList.remove('hidden');
-    submitBtn.querySelector('.sa-btn-loader').classList.add('hidden');
-    submitBtn.disabled = false;
-  });
+  }
+
+  document.body.appendChild(tempForm);
+  tempForm.submit();
 });
 </script>
 
