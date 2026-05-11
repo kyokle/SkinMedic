@@ -24,10 +24,12 @@
 body { background: var(--cream); font-family: 'DM Sans', sans-serif; color: var(--text); }
 
 .shop-main {
-    margin-left: 210px;
-    padding: 28px 28px 60px;
-    width: calc(100% - 210px); 
+    margin-left: 250px;
+    padding: 24px 28px 60px;
+    width: calc(100% - 250px); 
     min-height: 100vh;
+    box-sizing: border-box;
+    overflow-x: hidden;
 }
 
 /* ── TOP BAR ────────────────────────────────── */
