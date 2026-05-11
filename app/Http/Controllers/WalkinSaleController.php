@@ -28,26 +28,26 @@ class WalkinSaleController extends Controller
         // Services available to add on
         $services = DB::table('services')
             ->where('status', 'available')
-            ->orderBy('name')
+            ->orderBy('firstName')
             ->get();
 
         // Registered patients only
         $patients = DB::table('users')
             ->where('role', 'patient')
-            ->orderBy('name')
+            ->orderBy('firstName')
             ->get();
 
         // Doctors for service slot booking
         $doctors = DB::table('users')
             ->where('role', 'doctor')
-            ->orderBy('name')
+            ->orderBy('firstName')
             ->get();
 
         // Recent sales for sidebar history
         $recentSales = DB::table('walkin_sales as s')
             ->join('users as p', 'p.user_id', '=', 's.user_id')
             ->join('users as st', 'st.user_id', '=', 's.staff_id')
-            ->select('s.*', 'p.name as patient_name', 'st.name as staff_name')
+            ->select('s.*', DB::raw('CONCAT(p.firstName, " ", p.lastName) as patient_name'), DB::raw('CONCAT(st.firstName, " ", st.lastName) as staff_name'))
             ->orderByDesc('s.created_at')
             ->limit(10)
             ->get();
@@ -145,7 +145,7 @@ class WalkinSaleController extends Controller
                     if ($conflict) {
                         $doctor = DB::table('users')->where('user_id', $svc['doctor_id'])->first();
                         throw new \Exception(
-                            "Time slot {$svc['appointment_date']} {$svc['appointment_time']} is already taken for Dr. {$doctor->name}."
+                            'Time slot ' . $svc['appointment_date'] . ' ' . $svc['appointment_time'] . ' is already taken for Dr. ' . $doctor->firstName . ' ' . $doctor->lastName . '.'
                         );
                     }
 
@@ -273,7 +273,7 @@ class WalkinSaleController extends Controller
         $sale = DB::table('walkin_sales as s')
             ->join('users as p',  'p.user_id',  '=', 's.user_id')
             ->join('users as st', 'st.user_id', '=', 's.staff_id')
-            ->select('s.*', 'p.name as patient_name', 'p.email as patient_email', 'st.name as staff_name')
+            ->select('s.*', DB::raw('CONCAT(p.firstName, " ", p.lastName) as patient_name'), 'p.email as patient_email', DB::raw('CONCAT(st.firstName, " ", st.lastName) as staff_name'))
             ->where('s.sale_id', $id)
             ->first();
 
@@ -289,7 +289,7 @@ class WalkinSaleController extends Controller
             ->join('appointments as a',  'a.appointment_id', '=', 'ss.appointment_id')
             ->join('services as sv',     'sv.service_id',    '=', 'a.service_id')
             ->join('users as d',         'd.user_id',         '=', 'a.doctor_id')
-            ->select('ss.*', 'sv.name as service_name', 'a.appointment_date', 'a.appointment_time', 'd.name as doctor_name')
+            ->select('ss.*', 'sv.name as service_name', 'a.appointment_date', 'a.appointment_time', DB::raw('CONCAT(d.firstName, " ", d.lastName) as doctor_name'))
             ->where('ss.sale_id', $id)
             ->get();
 
