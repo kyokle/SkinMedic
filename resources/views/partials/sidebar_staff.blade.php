@@ -72,6 +72,11 @@
             <span class="ni">📦</span> Inventory
         </a>
 
+        <a href="{{ route('staff.walkin') }}"
+           class="{{ request()->routeIs('staff.walkin*') ? 'active' : '' }}">
+            <span class="ni">🛒</span> Walk-in Sale
+        </a>
+
         <span class="sb-label">Account</span>
         <a href="{{ route('staff.profile') }}"
            class="{{ request()->routeIs('staff.profile') ? 'active' : '' }}">
