@@ -108,6 +108,10 @@ Route::post('/patient/bookings/cancel',     [PatientBookingsController::class, '
 Route::get('/patient/products', [PatientProductsController::class, 'index'])
     ->name('patient.products');
 
+// Place order (called from checkout form)
+Route::post('/patient/order/place', [PatientProductsController::class, 'placeOrder'])
+    ->name('patient.order.place');
+
 // ── Patient Profile ──────────────────────────────────
 Route::get('/patient/profile',                  [PatientProfileController::class,  'index'])->name('patient.profile');
 Route::post('/patient/profile/upload-pic',      [PatientProfileController::class,  'uploadPic'])->name('patient.profile.upload-pic');
