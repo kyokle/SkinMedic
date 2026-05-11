@@ -49,7 +49,7 @@
                         <option value="">— Select registered patient —</option>
                         @foreach($patients as $p)
                             <option value="{{ $p->user_id }}" {{ old('user_id') == $p->user_id ? 'selected' : '' }}>
-                                {{ $p->name }} ({{ $p->email }})
+                                {{ $p->firstName }} {{ $p->lastName }} ({{ $p->email }})
                             </option>
                         @endforeach
                     </select>
@@ -213,7 +213,7 @@
                 <select name="services[__IDX__][doctor_id]" class="svc-doctor" onchange="checkSlot(this)">
                     <option value="">— Select doctor —</option>
                     @foreach($doctors as $doc)
-                        <option value="{{ $doc->user_id }}">{{ $doc->name }}</option>
+                        <option value="{{ $doc->user_id }}">{{ $doc->firstName }} {{ $doc->lastName }}</option>
                     @endforeach
                 </select>
             </div>
