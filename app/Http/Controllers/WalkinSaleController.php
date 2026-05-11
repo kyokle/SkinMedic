@@ -28,7 +28,7 @@ class WalkinSaleController extends Controller
         // Services available to add on
         $services = DB::table('services')
             ->where('status', 'available')
-            ->orderBy('firstName')
+            ->orderBy('name')
             ->get();
 
         // Registered patients only
