@@ -12,6 +12,7 @@ use App\Http\Controllers\BookAppointmentController;
 use App\Http\Controllers\ReviewController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\WaitlistController;
+use App\Http\Controllers\WalkinSaleController;
 
 use App\Http\Controllers\PatientPageController;
 use App\Http\Controllers\PatientServicesController;
@@ -192,6 +193,12 @@ Route::get('/staff/products',  [StaffProductsController::class,  'index'])->name
 Route::post('/staff/products/store', [StaffProductsController::class, 'store'])->name('staff.products.store');
 Route::post('/staff/products/update',[StaffProductsController::class, 'update'])->name('staff.products.update');
 Route::post('/staff/products/delete',[StaffProductsController::class, 'delete'])->name('staff.products.delete');
+
+// ── Staff Walk-in Sales ───────────────────────────────────────
+Route::get('/staff/walkin',              [WalkinSaleController::class, 'index'])->name('staff.walkin');
+Route::post('/staff/walkin/store',       [WalkinSaleController::class, 'store'])->name('staff.walkin.store');
+Route::get('/staff/walkin/receipt/{id}', [WalkinSaleController::class, 'receipt'])->name('staff.walkin.receipt');
+Route::get('/staff/walkin/check-slot',   [WalkinSaleController::class, 'checkSlot'])->name('staff.walkin.check-slot');
 
 // ── Staff Profile ───────────────────────────────────────
 Route::get('staff/profile', [StaffProfileController::class, 'index'])

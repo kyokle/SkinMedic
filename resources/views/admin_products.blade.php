@@ -58,7 +58,7 @@
               '{{ $row->status }}'
             )">✏ Edit</button>
 
-            <form method="POST" action="{{ url('admin/products/delete') }}" style="display:inline;"
+            <form method="POST" action="{{ route('admin.products.delete') }}" style="display:inline;"
                   onsubmit="return confirm('Delete this product?');">
               @csrf
               <input type="hidden" name="product_id" value="{{ $row->product_id }}">
@@ -80,7 +80,7 @@
         <span class="close-btn" onclick="closeModal()">&times;</span>
       </div>
       <div class="modal-body">
-        <form method="POST" action="{{ url('admin/products/add') }}" enctype="multipart/form-data">
+        <form method="POST" action="{{ route('admin.products.add') }}" enctype="multipart/form-data">
           @csrf
           <label>Product Name</label>
           <input type="text" name="product_name" required>
@@ -127,7 +127,7 @@
         <span class="close-btn" onclick="closeEditModal()">&times;</span>
       </div>
       <div class="modal-body">
-        <form method="POST" action="{{ url('admin/products/update') }}" enctype="multipart/form-data">
+        <form method="POST" action="{{ route('admin.products.update') }}" enctype="multipart/form-data">
           @csrf
           <input type="hidden" name="product_id" id="edit_id">
           <label>Product Name</label>

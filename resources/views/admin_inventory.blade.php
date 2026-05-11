@@ -1,16 +1,21 @@
 {{-- resources/views/admin_inventory.blade.php --}}
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>Inventory — SkinMedic</title>
+
+@extends('layouts.app')
+
+@section('title', 'Inventory — SkinMedic')
+
+@push('styles')
     <link rel="stylesheet" href="{{ asset('asset/css/admin_inventory.css') }}">
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Fraunces:wght@700&display=swap" rel="stylesheet">
-</head>
+@endpush
 
-<body>
+@section('content')
+
+@if(session('role') === 'admin')
+    @include('partials.sidebar_admin')
+@else
+    @include('partials.sidebar_staff')
+@endif
 
 @if(session('role') === 'admin')
     @include('partials.sidebar_admin')
@@ -190,6 +195,7 @@
     </div>
 </div>
 
+@push('scripts')
 <script>
 function loadInvUnreadCount() {
     fetch('/notifications/unread-inventory')
@@ -281,6 +287,6 @@ function closeDeductModal(event) {
 loadInvUnreadCount();
 setInterval(loadInvUnreadCount, 30000);
 </script>
+@endpush
 
-</body>
-</html>
+@endsection
