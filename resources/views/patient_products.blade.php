@@ -57,9 +57,9 @@
             {{-- Image --}}
             <div class="card-img-wrap">
                 @if($p->image)
-                    <img src="{{ $row->image }}"
-                 alt="{{ $row->product_name }}"
-                 onerror="this.src='{{ asset('uploads/default.png') }}'">
+    <img src="{{ $p->image }}"
+         alt="{{ $p->product_name }}"
+         onerror="this.src='{{ asset('uploads/default.png') }}'">
                 @else
                     <div class="card-img-placeholder">
                         <svg viewBox="0 0 48 48" fill="none" width="40" height="40" opacity=".3">
