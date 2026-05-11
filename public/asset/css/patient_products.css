@@ -25,7 +25,7 @@ body { background: var(--cream); font-family: 'DM Sans', sans-serif; color: var(
 
 .shop-main {
     margin-left: 210px;
-    padding: 24px 28px 60px;
+    padding: 28px 28px 60px;
     width: calc(100% - 210px); 
     min-height: 100vh;
 }
