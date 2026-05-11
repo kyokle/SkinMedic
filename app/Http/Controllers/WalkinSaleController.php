@@ -134,18 +134,24 @@ class WalkinSaleController extends Controller
                         throw new \Exception("Service ID {$svc['service_id']} not found.");
                     }
 
+                    // Resolve the doctor row (appointments.doctor_id references doctor.doctor_id, not users.user_id)
+                    $doctorRow = DB::table('doctor')->where('user_id', $svc['doctor_id'])->first();
+                    if (!$doctorRow) {
+                        throw new \Exception('Doctor profile not found for the selected doctor.');
+                    }
+
                     // Check the time slot is free for that doctor
                     $conflict = DB::table('appointments')
-                        ->where('doctor_id',        $svc['doctor_id'])
+                        ->where('doctor_id',        $doctorRow->doctor_id)
                         ->where('appointment_date', $svc['appointment_date'])
                         ->where('appointment_time', $svc['appointment_time'])
                         ->whereNotIn('status', ['cancelled'])
                         ->exists();
 
                     if ($conflict) {
-                        $doctor = DB::table('users')->where('user_id', $svc['doctor_id'])->first();
+                        $doctorUser = DB::table('users')->where('user_id', $svc['doctor_id'])->first();
                         throw new \Exception(
-                            'Time slot ' . $svc['appointment_date'] . ' ' . $svc['appointment_time'] . ' is already taken for Dr. ' . $doctor->firstName . ' ' . $doctor->lastName . '.'
+                            'Time slot ' . $svc['appointment_date'] . ' ' . $svc['appointment_time'] . ' is already taken for Dr. ' . $doctorUser->firstName . ' ' . $doctorUser->lastName . '.'
                         );
                     }
 
@@ -154,7 +160,7 @@ class WalkinSaleController extends Controller
 
                     $serviceRows[] = [
                         'service'          => $service,
-                        'doctor_id'        => $svc['doctor_id'],
+                        'doctor_id'        => $doctorRow->doctor_id,  // actual doctor.doctor_id for appointments FK
                         'appointment_date' => $svc['appointment_date'],
                         'appointment_time' => $svc['appointment_time'],
                         'price'            => $price,
@@ -288,7 +294,8 @@ class WalkinSaleController extends Controller
         $serviceItems = DB::table('walkin_sale_services as ss')
             ->join('appointments as a',  'a.appointment_id', '=', 'ss.appointment_id')
             ->join('services as sv',     'sv.service_id',    '=', 'a.service_id')
-            ->join('users as d',         'd.user_id',         '=', 'a.doctor_id')
+            ->join('doctor as dc',       'dc.doctor_id',     '=', 'a.doctor_id')
+            ->join('users as d',         'd.user_id',        '=', 'dc.user_id')
             ->select('ss.*', 'sv.name as service_name', 'a.appointment_date', 'a.appointment_time', DB::raw('CONCAT(d.firstName, " ", d.lastName) as doctor_name'))
             ->where('ss.sale_id', $id)
             ->get();
@@ -310,8 +317,13 @@ class WalkinSaleController extends Controller
     // ─────────────────────────────────────────────────────────
     public function checkSlot(Request $request)
     {
+        $doctorRow = DB::table('doctor')->where('user_id', $request->doctor_id)->first();
+        if (!$doctorRow) {
+            return response()->json(['available' => false]);
+        }
+
         $taken = DB::table('appointments')
-            ->where('doctor_id',        $request->doctor_id)
+            ->where('doctor_id',        $doctorRow->doctor_id)
             ->where('appointment_date', $request->date)
             ->where('appointment_time', $request->time)
             ->whereNotIn('status', ['cancelled'])

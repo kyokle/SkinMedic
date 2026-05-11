@@ -193,6 +193,56 @@
 
 </div>{{-- /walkin-wrap --}}
 
+{{-- ── Confirmation Modal ── --}}
+<div id="confirmModal" class="cm-overlay" onclick="closeCM(event)">
+    <div class="cm-box">
+        <div class="cm-header">
+            <span class="cm-icon">🧾</span>
+            <h3>Confirm Sale</h3>
+            <button class="cm-close" onclick="document.getElementById('confirmModal').style.display='none'">×</button>
+        </div>
+
+        <div class="cm-patient-row">
+            <span class="cm-label">Patient</span>
+            <span id="cm-patient" class="cm-value"></span>
+        </div>
+
+        <div class="cm-section-label">Items</div>
+        <div id="cm-items" class="cm-items"></div>
+
+        <div class="cm-divider"></div>
+
+        <div class="cm-total-row">
+            <span>Total</span>
+            <strong id="cm-total"></strong>
+        </div>
+        <div class="cm-total-row">
+            <span>Payment</span>
+            <span id="cm-payment" class="cm-pay-badge"></span>
+        </div>
+        <div id="cm-change-row" class="cm-change-block" style="display:none;">
+            <div class="cm-total-row">
+                <span>Tendered</span>
+                <span id="cm-tendered"></span>
+            </div>
+            <div class="cm-total-row">
+                <span>Change</span>
+                <span id="cm-change" class="cm-change-amt"></span>
+            </div>
+        </div>
+
+        <div class="cm-actions">
+            <button type="button" class="cm-cancel-btn"
+                    onclick="document.getElementById('confirmModal').style.display='none'">
+                Cancel
+            </button>
+            <button type="button" class="cm-confirm-btn" onclick="submitSale()">
+                ✓ Confirm &amp; Generate Receipt
+            </button>
+        </div>
+    </div>
+</div>
+
 {{-- Hidden template for service lines --}}
 <template id="serviceTpl">
     <div class="service-line" data-index="__IDX__">
@@ -414,11 +464,59 @@ function confirmSale() {
         alert('Add at least one product or service.');
         return false;
     }
-    return confirm(`Complete sale for ₱${grandTotal.toFixed(2)}?`);
+
+    // Build summary for modal
+    const lines = [];
+    document.querySelectorAll('.product-line').forEach(line => {
+        const sel = line.querySelector('.prod-select');
+        const qty = parseInt(line.querySelector('.qty-input')?.value) || 0;
+        const opt = sel?.options[sel.selectedIndex];
+        const price = parseFloat(opt?.dataset?.price || 0);
+        if (sel?.value && qty > 0) {
+            lines.push(`<div class="cm-row"><span>${opt.text.split('(')[0].trim()} ×${qty}</span><span>₱${(price*qty).toFixed(2)}</span></div>`);
+        }
+    });
+    document.querySelectorAll('.service-line').forEach(line => {
+        const sel = line.querySelector('.svc-select');
+        const opt = sel?.options[sel.selectedIndex];
+        const price = parseFloat(opt?.dataset?.price || 0);
+        if (sel?.value) {
+            lines.push(`<div class="cm-row"><span>💆 ${opt.text.split('(')[0].trim()}</span><span>₱${price.toFixed(2)}</span></div>`);
+        }
+    });
+
+    const patientName = document.getElementById('patientSelect').options[document.getElementById('patientSelect').selectedIndex].text;
+    document.getElementById('cm-patient').textContent = patientName.split('(')[0].trim();
+    document.getElementById('cm-items').innerHTML = lines.join('');
+    document.getElementById('cm-total').textContent = '₱' + grandTotal.toFixed(2);
+
+    const method = document.querySelector('input[name="payment_method"]:checked')?.value || '';
+    document.getElementById('cm-payment').textContent = method.toUpperCase();
+
+    const tendered = parseFloat(document.getElementById('amountTendered')?.value) || 0;
+    const changeRow = document.getElementById('cm-change-row');
+    if (method === 'cash' && tendered > 0) {
+        changeRow.style.display = 'flex';
+        document.getElementById('cm-tendered').textContent = '₱' + tendered.toFixed(2);
+        document.getElementById('cm-change').textContent  = '₱' + Math.max(0, tendered - grandTotal).toFixed(2);
+    } else {
+        changeRow.style.display = 'none';
+    }
+
+    document.getElementById('confirmModal').style.display = 'flex';
+    return false; // prevent immediate submit — modal confirm button submits
 }
 
-// Init
-document.addEventListener('DOMContentLoaded', () => {
+function submitSale() {
+    document.getElementById('confirmModal').style.display = 'none';
+    document.getElementById('walkinForm').submit();
+}
+
+function closeCM(event) {
+    if (event.target === document.getElementById('confirmModal')) {
+        document.getElementById('confirmModal').style.display = 'none';
+    }
+}
     // Show/hide tendered based on default payment selection
     const defaultPay = document.querySelector('input[name="payment_method"]:checked');
     if (defaultPay) toggleTendered(defaultPay);
