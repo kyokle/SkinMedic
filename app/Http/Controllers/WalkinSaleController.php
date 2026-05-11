@@ -28,7 +28,7 @@ class WalkinSaleController extends Controller
         // Services available to add on
         $services = DB::table('services')
             ->where('status', 'available')
-            ->orderBy('service_name')
+            ->orderBy('name')
             ->get();
 
         // Registered patients only
@@ -289,7 +289,7 @@ class WalkinSaleController extends Controller
             ->join('appointments as a',  'a.appointment_id', '=', 'ss.appointment_id')
             ->join('services as sv',     'sv.service_id',    '=', 'a.service_id')
             ->join('users as d',         'd.user_id',         '=', 'a.doctor_id')
-            ->select('ss.*', 'sv.service_name', 'a.appointment_date', 'a.appointment_time', 'd.name as doctor_name')
+            ->select('ss.*', 'sv.name as service_name', 'a.appointment_date', 'a.appointment_time', 'd.name as doctor_name')
             ->where('ss.sale_id', $id)
             ->get();
 

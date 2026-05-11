@@ -203,7 +203,7 @@
                     <option value="">— Select service —</option>
                     @foreach($services as $svc)
                         <option value="{{ $svc->service_id }}" data-price="{{ $svc->price }}">
-                            {{ $svc->service_name }} (₱{{ number_format($svc->price, 2) }})
+                            {{ $svc->name }} (₱{{ number_format($svc->price, 2) }})
                         </option>
                     @endforeach
                 </select>
