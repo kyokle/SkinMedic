@@ -24,8 +24,9 @@
 body { background: var(--cream); font-family: 'DM Sans', sans-serif; color: var(--text); }
 
 .shop-main {
-    margin-left: 240px; /* sidebar width — adjust to match your sidebar */
-    padding: 32px 36px 60px;
+    margin-left: 210px;
+    padding: 24px 28px 60px;
+    width: calc(100% - 210px); 
     min-height: 100vh;
 }
 
