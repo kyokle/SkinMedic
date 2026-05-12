@@ -181,14 +181,7 @@
         </div>{{-- /walkin-grid --}}
     </form>
 
-</div>{{-- /walkin-wrap --}}
-
-{{-- ══════════════════════════════════════════════════════
-     TOGGLE PANEL (outside walkin-wrap so it spans full width)
-══════════════════════════════════════════════════════ --}}
-<div class="toggle-wrap">
-
-    {{-- Recent Sales Panel --}}
+    {{-- Recent Sales Panel (inside walkin-wrap so topbar/padding is shared) --}}
     <div id="historyPanel" class="history-panel" style="display:none;">
 
         {{-- Search & Filter bar --}}
@@ -248,8 +241,9 @@
         <p style="text-align:center;color:#aaa;padding:30px;">No sales recorded yet.</p>
         @endif
 
-    </div>
-</div>
+    </div>{{-- /historyPanel --}}
+
+</div>{{-- /walkin-wrap --}}
 
 {{-- ── Confirmation Modal ── --}}
 <div id="confirmModal" class="cm-overlay" onclick="closeCM(event)">
