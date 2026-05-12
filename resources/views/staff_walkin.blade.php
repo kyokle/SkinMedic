@@ -307,6 +307,7 @@ const DOCTORS  = {!! json_encode($doctors->map(function($d) { return ['id' => $d
 const TODAY    = "{{ now()->toDateString() }}";
 const PREFILL_PATIENT     = {{ request('patient_id', 'null') }};
 const FROM_APPOINTMENT_ID = {{ request('from_appointment', 'null') }};
+const PREFILL_SERVICE = {!! json_encode($prefillService) !!};
 
 let productIndex = 1;
 let serviceIndex = 0;
@@ -590,11 +591,12 @@ function clearFilters() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+ 
     // Populate the first product line with JS-built options
     const firstSelect = document.querySelector('.prod-select');
     if (firstSelect) firstSelect.innerHTML = productOptionsHTML();
-
-    // Auto-select patient if redirected from a completed booking
+ 
+    // ── Auto-select patient if redirected from a completed booking ──
     if (PREFILL_PATIENT) {
         const patientSel = document.getElementById('patientSelect');
         if (patientSel) {
@@ -603,11 +605,111 @@ document.addEventListener('DOMContentLoaded', () => {
             patientSel.style.background  = '#f0f7e6';
         }
     }
-
+ 
+    // ── Auto-populate service from completed appointment ──
+    // PREFILL_SERVICE is passed from PHP via WalkinSaleController@index
+    // It contains the service, doctor, date, and time from the appointment
+    if (PREFILL_SERVICE) {
+        prefillFromAppointment(PREFILL_SERVICE);
+    }
+ 
     const defaultPay = document.querySelector('input[name="payment_method"]:checked');
     if (defaultPay) toggleTendered(defaultPay);
     recalcTotal();
 });
+ 
+// ── Prefill service add-on from appointment data ──────────
+function prefillFromAppointment(svc) {
+    // Build a new service line (same as addServiceLine() but pre-filled)
+    const div = document.createElement('div');
+    div.className = 'service-line prefilled';
+    div.dataset.index = serviceIndex;
+ 
+    div.innerHTML = `
+        <div class="service-line-grid">
+            <div class="svc-field">
+                <label>Service <span class="prefill-tag">from appointment</span></label>
+                <select name="services[${serviceIndex}][service_id]"
+                        class="svc-select prefilled-field"
+                        onchange="updateSvcPrice(this)">
+                    ${serviceOptionsHTML()}
+                </select>
+            </div>
+            <div class="svc-field">
+                <label>Doctor</label>
+                <select name="services[${serviceIndex}][doctor_id]"
+                        class="svc-doctor prefilled-field"
+                        onchange="checkSlot(this)">
+                    ${doctorOptionsHTML()}
+                </select>
+            </div>
+            <div class="svc-field">
+                <label>Date</label>
+                <input type="date"
+                       name="services[${serviceIndex}][appointment_date]"
+                       class="svc-date prefilled-field"
+                       min="${TODAY}"
+                       onchange="checkSlot(this)">
+            </div>
+            <div class="svc-field">
+                <label>Time</label>
+                <input type="time"
+                       name="services[${serviceIndex}][appointment_time]"
+                       class="svc-time prefilled-field"
+                       onchange="checkSlot(this)">
+            </div>
+            <div class="svc-field svc-price-field">
+                <label>Price</label>
+                <span class="svc-price-display">₱0.00</span>
+            </div>
+            <div class="svc-slot-status"></div>
+        </div>
+        <button type="button" class="remove-line svc-remove"
+                onclick="removeServiceLine(this)" title="Remove">✕</button>
+    `;
+ 
+    document.getElementById('serviceLines').appendChild(div);
+ 
+    // Now set the values
+    const svcSelect    = div.querySelector('.svc-select');
+    const doctorSelect = div.querySelector('.svc-doctor');
+    const dateInput    = div.querySelector('.svc-date');
+    const timeInput    = div.querySelector('.svc-time');
+    const priceDisplay = div.querySelector('.svc-price-display');
+ 
+    // Set service
+    if (svc.service_id) {
+        svcSelect.value = svc.service_id;
+        // Trigger price update
+        const selOpt = svcSelect.options[svcSelect.selectedIndex];
+        const price  = parseFloat(selOpt?.dataset?.price || svc.service_price || 0);
+        priceDisplay.textContent = '₱' + price.toFixed(2);
+    }
+ 
+    // Set doctor
+    if (svc.doctor_user_id) {
+        doctorSelect.value = svc.doctor_user_id;
+    }
+ 
+    // Set date
+    if (svc.appointment_date) {
+        dateInput.value = svc.appointment_date;
+    }
+ 
+    // Set time (format HH:mm)
+    if (svc.appointment_time) {
+        timeInput.value = svc.appointment_time.substring(0, 5);
+    }
+ 
+    serviceIndex++;
+    recalcTotal();
+ 
+    // Show a subtle note that this came from the appointment
+    const note = document.createElement('p');
+    note.className = 'prefill-note';
+    note.innerHTML = `✅ Service pre-filled from Appointment #${svc.appointment_id} — you can edit or remove it.`;
+    document.getElementById('serviceLines').insertBefore(note, div);
+}
 </script>
 @endpush
 
