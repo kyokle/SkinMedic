@@ -243,85 +243,53 @@
     </div>
 </div>
 
-{{-- Hidden template for service lines --}}
-<template id="serviceTpl">
-    <div class="service-line" data-index="__IDX__">
-        <div class="service-line-grid">
-            <div class="svc-field">
-                <label>Service</label>
-                <select name="services[__IDX__][service_id]" class="svc-select" onchange="updateSvcPrice(this)">
-                    <option value="">— Select service —</option>
-                    @foreach($services as $svc)
-                        <option value="{{ $svc->service_id }}" data-price="{{ $svc->price }}">
-                            {{ $svc->name }} (₱{{ number_format($svc->price, 2) }})
-                        </option>
-                    @endforeach
-                </select>
-            </div>
-            <div class="svc-field">
-                <label>Doctor</label>
-                <select name="services[__IDX__][doctor_id]" class="svc-doctor" onchange="checkSlot(this)">
-                    <option value="">— Select doctor —</option>
-                    @foreach($doctors as $doc)
-                        <option value="{{ $doc->user_id }}">{{ $doc->firstName }} {{ $doc->lastName }}</option>
-                    @endforeach
-                </select>
-            </div>
-            <div class="svc-field">
-                <label>Date</label>
-                <input type="date" name="services[__IDX__][appointment_date]"
-                       class="svc-date" min="{{ now()->toDateString() }}" onchange="checkSlot(this)">
-            </div>
-            <div class="svc-field">
-                <label>Time</label>
-                <input type="time" name="services[__IDX__][appointment_time]"
-                       class="svc-time" onchange="checkSlot(this)">
-            </div>
-            <div class="svc-field svc-price-field">
-                <label>Price</label>
-                <span class="svc-price-display">₱0.00</span>
-            </div>
-            <div class="svc-slot-status"></div>
-        </div>
-        <button type="button" class="remove-line svc-remove" onclick="removeServiceLine(this)" title="Remove">✕</button>
-    </div>
-</template>
 
 @push('scripts')
 <script>
-let productIndex = 1;   // 0 already rendered
+// Data passed from PHP as JSON — avoids Blade-inside-template issues
+const PRODUCTS = @json($products->map(fn($p) => ['id' => $p->product_id, 'name' => $p->product_name, 'price' => $p->selling_price, 'stock' => $p->quantity]));
+const SERVICES = @json($services->map(fn($s) => ['id' => $s->service_id, 'name' => $s->name, 'price' => $s->price]));
+const DOCTORS  = @json($doctors->map(fn($d) => ['id' => $d->user_id, 'name' => $d->firstName . ' ' . $d->lastName]));
+const TODAY    = "{{ now()->toDateString() }}";
+
+let productIndex = 1;
 let serviceIndex = 0;
 let grandTotal   = 0;
 
+// ── Option builders ───────────────────────────────────────
+function productOptionsHTML() {
+    return '<option value="">— Select product —</option>' +
+        PRODUCTS.map(p => `<option value="${p.id}" data-price="${p.price}" data-stock="${p.stock}">${p.name} (₱${parseFloat(p.price).toFixed(2)}) — ${p.stock} in stock</option>`).join('');
+}
+function serviceOptionsHTML() {
+    return '<option value="">— Select service —</option>' +
+        SERVICES.map(s => `<option value="${s.id}" data-price="${s.price}">${s.name} (₱${parseFloat(s.price).toFixed(2)})</option>`).join('');
+}
+function doctorOptionsHTML() {
+    return '<option value="">— Select doctor —</option>' +
+        DOCTORS.map(d => `<option value="${d.id}">${d.name}</option>`).join('');
+}
+
 // ── Products ─────────────────────────────────────────────
 function addProductLine() {
-    const container = document.getElementById('productLines');
     const div = document.createElement('div');
     div.className = 'product-line';
     div.dataset.index = productIndex;
     div.innerHTML = `
         <select name="items[${productIndex}][product_id]" class="prod-select" onchange="updateLinePrice(this)">
-            <option value="">— Select product —</option>
-            ${getProductOptions()}
+            ${productOptionsHTML()}
         </select>
         <input type="number" name="items[${productIndex}][quantity]" class="qty-input"
-               min="1" value="1" placeholder="Qty" onchange="recalcTotal()">
+               min="1" value="1" placeholder="Qty" oninput="recalcTotal()">
         <span class="line-price">₱0.00</span>
         <button type="button" class="remove-line" onclick="removeLine(this)" title="Remove">✕</button>
     `;
-    container.appendChild(div);
+    document.getElementById('productLines').appendChild(div);
     productIndex++;
 }
 
-function getProductOptions() {
-    // Clone options from first select
-    const src = document.querySelector('.prod-select');
-    return src ? src.innerHTML : '';
-}
-
 function removeLine(btn) {
-    const line = btn.closest('.product-line');
-    line.remove();
+    btn.closest('.product-line').remove();
     recalcTotal();
 }
 
@@ -336,11 +304,42 @@ function updateLinePrice(sel) {
 
 // ── Services ─────────────────────────────────────────────
 function addServiceLine() {
-    const tpl     = document.getElementById('serviceTpl').innerHTML
-                      .replaceAll('__IDX__', serviceIndex);
-    const wrapper = document.createElement('div');
-    wrapper.innerHTML = tpl;
-    document.getElementById('serviceLines').appendChild(wrapper.firstElementChild);
+    const div = document.createElement('div');
+    div.className = 'service-line';
+    div.dataset.index = serviceIndex;
+    div.innerHTML = `
+        <div class="service-line-grid">
+            <div class="svc-field">
+                <label>Service</label>
+                <select name="services[${serviceIndex}][service_id]" class="svc-select" onchange="updateSvcPrice(this)">
+                    ${serviceOptionsHTML()}
+                </select>
+            </div>
+            <div class="svc-field">
+                <label>Doctor</label>
+                <select name="services[${serviceIndex}][doctor_id]" class="svc-doctor" onchange="checkSlot(this)">
+                    ${doctorOptionsHTML()}
+                </select>
+            </div>
+            <div class="svc-field">
+                <label>Date</label>
+                <input type="date" name="services[${serviceIndex}][appointment_date]"
+                       class="svc-date" min="${TODAY}" onchange="checkSlot(this)">
+            </div>
+            <div class="svc-field">
+                <label>Time</label>
+                <input type="time" name="services[${serviceIndex}][appointment_time]"
+                       class="svc-time" onchange="checkSlot(this)">
+            </div>
+            <div class="svc-field svc-price-field">
+                <label>Price</label>
+                <span class="svc-price-display">₱0.00</span>
+            </div>
+            <div class="svc-slot-status"></div>
+        </div>
+        <button type="button" class="remove-line svc-remove" onclick="removeServiceLine(this)" title="Remove">✕</button>
+    `;
+    document.getElementById('serviceLines').appendChild(div);
     serviceIndex++;
     recalcTotal();
 }
@@ -353,8 +352,7 @@ function removeServiceLine(btn) {
 function updateSvcPrice(sel) {
     const opt   = sel.options[sel.selectedIndex];
     const price = parseFloat(opt?.dataset?.price || 0);
-    const line  = sel.closest('.service-line');
-    line.querySelector('.svc-price-display').textContent = '₱' + price.toFixed(2);
+    sel.closest('.service-line').querySelector('.svc-price-display').textContent = '₱' + price.toFixed(2);
     recalcTotal();
 }
 
@@ -365,22 +363,14 @@ function checkSlot(el) {
     const date   = line.querySelector('.svc-date')?.value;
     const time   = line.querySelector('.svc-time')?.value;
     const status = line.querySelector('.svc-slot-status');
-
     if (!doctor || !date || !time) { status.textContent = ''; return; }
-
     status.textContent = 'Checking...';
     status.className   = 'svc-slot-status checking';
-
     fetch(`{{ route('staff.walkin.check-slot') }}?doctor_id=${doctor}&date=${date}&time=${time}`)
         .then(r => r.json())
         .then(data => {
-            if (data.available) {
-                status.textContent = '✓ Slot available';
-                status.className   = 'svc-slot-status available';
-            } else {
-                status.textContent = '✕ Slot taken';
-                status.className   = 'svc-slot-status taken';
-            }
+            status.textContent = data.available ? '✓ Slot available' : '✕ Slot taken';
+            status.className   = 'svc-slot-status ' + (data.available ? 'available' : 'taken');
         })
         .catch(() => { status.textContent = ''; });
 }
@@ -388,123 +378,97 @@ function checkSlot(el) {
 // ── Totals ────────────────────────────────────────────────
 function recalcTotal() {
     let total = 0;
-    const summaryEl = document.getElementById('summaryLines');
     let lines = [];
 
-    // Products
     document.querySelectorAll('.product-line').forEach(line => {
         const sel   = line.querySelector('.prod-select');
         const qty   = parseInt(line.querySelector('.qty-input')?.value) || 0;
         const opt   = sel?.options[sel.selectedIndex];
         const price = parseFloat(opt?.dataset?.price || 0);
-        const name  = opt?.text?.split('(')[0]?.trim();
-
-        // Update inline price display
         line.querySelector('.line-price').textContent = '₱' + (price * qty).toFixed(2);
-
         if (sel?.value && qty > 0) {
             total += price * qty;
-            lines.push({ name: name + ' ×' + qty, amount: price * qty });
+            lines.push({ name: opt.text.split('(')[0].trim() + ' ×' + qty, amount: price * qty });
         }
     });
 
-    // Services
     document.querySelectorAll('.service-line').forEach(line => {
         const sel   = line.querySelector('.svc-select');
         const opt   = sel?.options[sel.selectedIndex];
         const price = parseFloat(opt?.dataset?.price || 0);
-        const name  = opt?.text?.split('(')[0]?.trim();
-
         if (sel?.value) {
             total += price;
-            lines.push({ name: '💆 ' + name, amount: price });
+            lines.push({ name: '💆 ' + opt.text.split('(')[0].trim(), amount: price });
         }
     });
 
     grandTotal = total;
     document.getElementById('totalDisplay').textContent = '₱' + total.toFixed(2);
-    summaryEl.innerHTML = lines.length
-        ? lines.map(l => `
-            <div class="summary-row">
-                <span>${l.name}</span>
-                <span>₱${l.amount.toFixed(2)}</span>
-            </div>`).join('')
+    document.getElementById('summaryLines').innerHTML = lines.length
+        ? lines.map(l => `<div class="summary-row"><span>${l.name}</span><span>₱${l.amount.toFixed(2)}</span></div>`).join('')
         : '<p class="empty-summary">No items added yet.</p>';
-
     calcChange();
 }
 
 // ── Payment ──────────────────────────────────────────────
 function toggleTendered(radio) {
-    document.getElementById('tenderedRow').style.display =
-        radio.value === 'cash' ? 'block' : 'none';
+    document.getElementById('tenderedRow').style.display = radio.value === 'cash' ? 'block' : 'none';
     calcChange();
 }
 
 function calcChange() {
     const tendered = parseFloat(document.getElementById('amountTendered')?.value) || 0;
     const changeEl = document.getElementById('changeDisplay');
-    const changeAmt= document.getElementById('changeAmt');
-
     if (tendered >= grandTotal && grandTotal > 0) {
         changeEl.style.display = 'block';
-        changeAmt.textContent  = '₱' + (tendered - grandTotal).toFixed(2);
+        document.getElementById('changeAmt').textContent = '₱' + (tendered - grandTotal).toFixed(2);
     } else {
         changeEl.style.display = 'none';
     }
 }
 
+// ── Confirmation modal ────────────────────────────────────
 function confirmSale() {
     const patient = document.getElementById('patientSelect').value;
     if (!patient) { alert('Please select a patient.'); return false; }
-
     const hasProduct = [...document.querySelectorAll('.prod-select')].some(s => s.value);
     const hasService = [...document.querySelectorAll('.svc-select')].some(s => s.value);
-    if (!hasProduct && !hasService) {
-        alert('Add at least one product or service.');
-        return false;
-    }
+    if (!hasProduct && !hasService) { alert('Add at least one product or service.'); return false; }
 
-    // Build summary for modal
     const lines = [];
     document.querySelectorAll('.product-line').forEach(line => {
         const sel = line.querySelector('.prod-select');
         const qty = parseInt(line.querySelector('.qty-input')?.value) || 0;
         const opt = sel?.options[sel.selectedIndex];
         const price = parseFloat(opt?.dataset?.price || 0);
-        if (sel?.value && qty > 0) {
+        if (sel?.value && qty > 0)
             lines.push(`<div class="cm-row"><span>${opt.text.split('(')[0].trim()} ×${qty}</span><span>₱${(price*qty).toFixed(2)}</span></div>`);
-        }
     });
     document.querySelectorAll('.service-line').forEach(line => {
         const sel = line.querySelector('.svc-select');
         const opt = sel?.options[sel.selectedIndex];
         const price = parseFloat(opt?.dataset?.price || 0);
-        if (sel?.value) {
+        if (sel?.value)
             lines.push(`<div class="cm-row"><span>💆 ${opt.text.split('(')[0].trim()}</span><span>₱${price.toFixed(2)}</span></div>`);
-        }
     });
 
-    const patientName = document.getElementById('patientSelect').options[document.getElementById('patientSelect').selectedIndex].text;
-    document.getElementById('cm-patient').textContent = patientName.split('(')[0].trim();
-    document.getElementById('cm-items').innerHTML = lines.join('');
+    const patientSel = document.getElementById('patientSelect');
+    document.getElementById('cm-patient').textContent = patientSel.options[patientSel.selectedIndex].text.split('(')[0].trim();
+    document.getElementById('cm-items').innerHTML   = lines.join('');
     document.getElementById('cm-total').textContent = '₱' + grandTotal.toFixed(2);
-
     const method = document.querySelector('input[name="payment_method"]:checked')?.value || '';
     document.getElementById('cm-payment').textContent = method.toUpperCase();
-
-    const tendered = parseFloat(document.getElementById('amountTendered')?.value) || 0;
+    const tendered  = parseFloat(document.getElementById('amountTendered')?.value) || 0;
     const changeRow = document.getElementById('cm-change-row');
     if (method === 'cash' && tendered > 0) {
         changeRow.style.display = 'flex';
         document.getElementById('cm-tendered').textContent = '₱' + tendered.toFixed(2);
-        document.getElementById('cm-change').textContent  = '₱' + Math.max(0, tendered - grandTotal).toFixed(2);
+        document.getElementById('cm-change').textContent   = '₱' + Math.max(0, tendered - grandTotal).toFixed(2);
     } else {
         changeRow.style.display = 'none';
     }
-
     document.getElementById('confirmModal').style.display = 'flex';
-    return false; // prevent immediate submit — modal confirm button submits
+    return false;
 }
 
 function submitSale() {
@@ -513,11 +477,15 @@ function submitSale() {
 }
 
 function closeCM(event) {
-    if (event.target === document.getElementById('confirmModal')) {
+    if (event.target === document.getElementById('confirmModal'))
         document.getElementById('confirmModal').style.display = 'none';
-    }
 }
-    // Show/hide tendered based on default payment selection
+
+// ── Init ─────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+    // Populate the first product line with JS-built options
+    const firstSelect = document.querySelector('.prod-select');
+    if (firstSelect) firstSelect.innerHTML = productOptionsHTML();
     const defaultPay = document.querySelector('input[name="payment_method"]:checked');
     if (defaultPay) toggleTendered(defaultPay);
     recalcTotal();
