@@ -15,13 +15,13 @@
 
 <div class="walkin-wrap">
 
-    {{-- ── Header ── --}}
-    <div class="walkin-header">
+    {{-- ── Topbar ── --}}
+    <div class="topbar">
         <div>
             <h2>Walk-in Sale</h2>
             <p class="walkin-sub">{{ now()->format('l, F j Y') }}</p>
         </div>
-        <div class="header-right">
+        <div style="display:flex;align-items:center;gap:14px;">
             <div class="toggle-tabs">
                 <button class="tab-btn active" id="tabSale" onclick="switchTab('sale')">
                     🛒 Walk-in Sale
@@ -34,6 +34,11 @@
                 </button>
             </div>
             <a href="{{ route('staff.home') }}" class="back-btn">← Back to Dashboard</a>
+            <div class="date-box">
+                <p>Today's Date</p>
+                <strong>{{ now()->toDateString() }}</strong>
+            </div>
+            @include('partials.notif_bell_staff')
         </div>
     </div>
 

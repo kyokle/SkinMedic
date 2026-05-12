@@ -2,52 +2,101 @@
    staff_walkin.css — Walk-in Sale & Receipt
 ============================================= */
 
-/* ── Layout ── */
-.walkin-wrap {
-    padding: 32px 36px 16px;
-    background: #f4f4f4;
-    font-family: 'DM Sans', sans-serif;
-    margin-left: 260px;
-}
-
-.walkin-header {
+/* Topbar — matches the standard page header pattern */
+.topbar {
     display: flex;
-    justify-content: space-between;
     align-items: center;
+    justify-content: space-between;
     margin-bottom: 24px;
 }
-
-.header-right {
+ 
+.topbar h2 {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--text, #1a1f16);
+}
+ 
+.walkin-sub {
+    font-size: 0.82rem;
+    color: #888;
+    margin-top: 2px;
+}
+ 
+/* Date box — same as bookings/home */
+.date-box {
+    background: #fff;
+    border: 1px solid #e2e6ea;
+    border-radius: 8px;
+    padding: 8px 16px;
+    text-align: right;
+    font-size: 0.8rem;
+    color: #666;
+}
+.date-box p      { margin: 0; }
+.date-box strong { display: block; color: #1a1f16; font-size: 0.9rem; }
+ 
+/* Back to dashboard button */
+.back-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 16px;
+    border: 1px solid #d0d5dd;
+    border-radius: 8px;
+    background: #fff;
+    color: #444;
+    font-size: 0.84rem;
+    font-family: 'DM Sans', sans-serif;
+    text-decoration: none;
+    transition: background 0.15s, border-color 0.15s;
+    white-space: nowrap;
+}
+.back-btn:hover { background: #f5f4f0; border-color: #bbb; }
+ 
+/* Toggle tabs (Walk-in Sale / Recent Sales) */
+.toggle-tabs {
+    display: flex;
+    background: #f0f0ec;
+    border-radius: 10px;
+    padding: 4px;
+    gap: 4px;
+}
+.tab-btn {
+    padding: 7px 16px;
+    border: none;
+    border-radius: 7px;
+    background: transparent;
+    color: #666;
+    font-size: 0.84rem;
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 6px;
+    white-space: nowrap;
 }
-
-.walkin-header h2 {
-    font-family: 'Fraunces', serif;
-    font-size: 1.8rem;
-    color: #1a1f16;
-    margin: 0 0 4px;
+.tab-btn.active {
+    background: #80a833;
+    color: #fff;
+    box-shadow: 0 1px 4px rgba(128,168,51,0.25);
 }
-
-.walkin-sub {
-    font-size: 0.85rem;
-    color: #888;
-    margin: 0;
-}
-
-.back-btn {
+.tab-btn:not(.active):hover { background: #e4e4df; color: #333; }
+ 
+.tab-badge {
     background: #fff;
-    border: 1.5px solid #d0d7c8;
-    color: #444;
-    padding: 9px 18px;
-    border-radius: 8px;
-    font-size: 0.85rem;
-    font-weight: 500;
-    text-decoration: none;
-    transition: background 0.15s;
+    color: #80a833;
+    border-radius: 10px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 1px 6px;
+    line-height: 1.4;
 }
-.back-btn:hover { background: #f0f0f0; }
+.tab-btn.active .tab-badge {
+    background: rgba(255,255,255,0.25);
+    color: #fff;
+}
 
 /* ── Flash messages ── */
 .flash {
