@@ -246,10 +246,10 @@
 
 @push('scripts')
 <script>
-// Data passed from PHP as JSON — avoids Blade-inside-template issues
-const PRODUCTS = @json($products->map(fn($p) => ['id' => $p->product_id, 'name' => $p->product_name, 'price' => $p->selling_price, 'stock' => $p->quantity]));
-const SERVICES = @json($services->map(fn($s) => ['id' => $s->service_id, 'name' => $s->name, 'price' => $s->price]));
-const DOCTORS  = @json($doctors->map(fn($d) => ['id' => $d->user_id, 'name' => $d->firstName . ' ' . $d->lastName]));
+// Data passed from PHP as JSON
+const PRODUCTS = {!! json_encode($products->map(function($p) { return ['id' => $p->product_id, 'name' => $p->product_name, 'price' => $p->selling_price, 'stock' => $p->quantity]; })->values()) !!};
+const SERVICES = {!! json_encode($services->map(function($s) { return ['id' => $s->service_id, 'name' => $s->name, 'price' => $s->price]; })->values()) !!};
+const DOCTORS  = {!! json_encode($doctors->map(function($d) { return ['id' => $d->user_id, 'name' => $d->firstName . ' ' . $d->lastName]; })->values()) !!};
 const TODAY    = "{{ now()->toDateString() }}";
 
 let productIndex = 1;
