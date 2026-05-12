@@ -78,14 +78,12 @@
         <label>Preferred Time of Day</label>
         <select id="time_preference">
           <option value="">Any Time</option>
-          <option value="AM">AM (8am - 12pm)</option>
-          <option value="PM">PM (12pm - 7pm)</option>
+          <option value="AM">AM (8:00 AM – 11:00 AM)</option>
+          <option value="PM">PM (12:00 PM – 7:00 PM)</option>
         </select>
       </div>
       @endif
     </div>
-
-       
 
     {{-- Time slot section --}}
     <div class="form-group">
@@ -115,8 +113,6 @@
 
   <a href="{{ url('patient/services') }}" class="back-btn">← Back to Services</a>
 </div>
-
-
 
 {{-- Waitlist success toast --}}
 <div class="waitlist-toast" id="waitlistToast">

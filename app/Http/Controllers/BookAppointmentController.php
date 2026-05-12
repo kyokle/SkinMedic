@@ -146,80 +146,87 @@ class BookAppointmentController extends Controller
     }
 
     public function getAvailableTimes(Request $request)
-{
-    $date       = $request->query('date');
-    $doctorId   = $request->query('doctor_id');
-    $serviceId  = $request->query('service_id');
-    $preference = $request->query('preference');
+    {
+        $date       = $request->query('date');
+        $doctorId   = $request->query('doctor_id');
+        $serviceId  = $request->query('service_id');
+        $preference = $request->query('preference');
 
-    $allSlots = [
-        '08:00', '09:00', '10:00', '11:00',
-        '12:00', '13:00', '14:00', '15:00',
-        '16:00', '17:00', '18:00', '19:00',
-    ];
-
-    if ($preference === 'AM') {
-        $allSlots = array_filter($allSlots, fn($t) => (int)explode(':', $t)[0] < 12);
-    } elseif ($preference === 'PM') {
-        $allSlots = array_filter($allSlots, fn($t) => (int)explode(':', $t)[0] >= 12);
-    }
-
-    $booked = DB::table('appointments')
-        ->where('doctor_id',        $doctorId)
-        ->where('appointment_date', $date)
-        ->whereIn('status', ['pending', 'approved'])
-        ->pluck('appointment_time')
-        ->map(fn($t) => substr($t, 0, 5))
-        ->toArray();
-
-    // Build slots with waitlist counts attached
-    $slots = [];
-    foreach ($allSlots as $slot) {
-        $taken = in_array($slot, $booked);
-        $waitlistCount = 0;
-        if ($taken && $serviceId) {
-            $waitlistCount = DB::table('appointment_waitlist')
-                ->where('service_id',     $serviceId)
-                ->where('preferred_date', $date)
-                ->where('preferred_time', $slot)
-                ->whereIn('status', ['waiting', 'notified'])
-                ->count();
-        }
-        $slots[] = [
-            'time'           => $slot,
-            'taken'          => $taken,
-            'waitlist_count' => $waitlistCount,
+        // AM: 8am–11am | PM: 12nn–7pm
+        $allSlots = [
+            '08:00', '09:00', '10:00', '11:00',
+            '12:00', '13:00', '14:00', '17:00',
+            '18:00', '19:00',
         ];
+
+        // Filter by AM/PM preference
+        if ($preference === 'AM') {
+            $allSlots = array_filter($allSlots, fn($t) => (int)explode(':', $t)[0] < 12);
+        } elseif ($preference === 'PM') {
+            $allSlots = array_filter($allSlots, fn($t) => (int)explode(':', $t)[0] >= 12);
+        }
+
+        // ── Filter out past time slots when booking for today ──
+        if ($date === now()->toDateString()) {
+            $currentTime = now()->format('H:i');
+            $allSlots = array_filter($allSlots, fn($t) => $t > $currentTime);
+        }
+
+        $booked = DB::table('appointments')
+            ->where('doctor_id',        $doctorId)
+            ->where('appointment_date', $date)
+            ->whereIn('status', ['pending', 'approved'])
+            ->pluck('appointment_time')
+            ->map(fn($t) => substr($t, 0, 5))
+            ->toArray();
+
+        // Build slots with waitlist counts attached
+        $slots = [];
+        foreach ($allSlots as $slot) {
+            $taken = in_array($slot, $booked);
+            $waitlistCount = 0;
+            if ($taken && $serviceId) {
+                $waitlistCount = DB::table('appointment_waitlist')
+                    ->where('service_id',     $serviceId)
+                    ->where('preferred_date', $date)
+                    ->where('preferred_time', $slot)
+                    ->whereIn('status', ['waiting', 'notified'])
+                    ->count();
+            }
+            $slots[] = [
+                'time'           => $slot,
+                'taken'          => $taken,
+                'waitlist_count' => $waitlistCount,
+            ];
+        }
+
+        return response()->json($slots);
     }
 
-    return response()->json($slots);
-}
+    public function checkSlot(Request $request)
+    {
+        $request->validate([
+            'service_id' => 'required|integer',
+            'date'       => 'required|date',
+            'time'       => 'required',
+        ]);
 
-// Add to your booking/appointment creation controller
-public function checkSlot(Request $request)
-{
-    $request->validate([
-        'service_id' => 'required|integer',
-        'date'       => 'required|date',
-        'time'       => 'required',
-    ]);
+        $taken = DB::table('appointments')
+            ->where('service_id',       $request->service_id)
+            ->where('appointment_date', $request->date)
+            ->where('appointment_time', $request->time)
+            ->whereIn('status', ['pending', 'approved'])
+            ->exists();
 
-    $taken = DB::table('appointments')
-        ->where('service_id',       $request->service_id)
-        ->where('appointment_date', $request->date)
-        ->where('appointment_time', $request->time)
-        ->whereIn('status', ['pending', 'approved'])
-        ->exists();
+        $waitlistCount = DB::table('appointment_waitlist')
+            ->where('preferred_date', $request->date)
+            ->where('preferred_time', $request->time)
+            ->whereIn('status', ['waiting', 'notified'])
+            ->count();
 
-    $waitlistCount = DB::table('appointment_waitlist')
-        ->where('preferred_date', $request->date)
-        ->where('preferred_time', $request->time)
-        ->whereIn('status', ['waiting', 'notified'])
-        ->count();
-
-    return response()->json([
-        'available'      => !$taken,
-        'waitlist_count' => $waitlistCount,
-    ]);
-}
+        return response()->json([
+            'available'      => !$taken,
+            'waitlist_count' => $waitlistCount,
+        ]);
+    }
 }
