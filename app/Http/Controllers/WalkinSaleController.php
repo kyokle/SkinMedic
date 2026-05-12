@@ -157,14 +157,17 @@ class WalkinSaleController extends Controller
                     $doctorRow = DB::table('doctor')->where('user_id', $svc['doctor_id'])->first();
                     if (!$doctorRow) throw new \Exception('Doctor profile not found for the selected doctor.');
 
-                    // Only check for conflicts if this is a NEW service booking
-                    // (not the already-completed appointment being billed)
                     $isExisting = !empty($svc['existing_appointment_id']);
+
+                    // Only check for conflicts for NEW add-on bookings
                     if (!$isExisting) {
+                        // Normalize time to H:i:s so it matches DB storage format
+                        $normalizedTime = date('H:i:s', strtotime($svc['appointment_time']));
+
                         $conflict = DB::table('appointments')
                             ->where('doctor_id',        $doctorRow->doctor_id)
                             ->where('appointment_date', $svc['appointment_date'])
-                            ->where('appointment_time', $svc['appointment_time'])
+                            ->whereRaw("TIME(appointment_time) = ?", [$normalizedTime])
                             ->whereNotIn('status', ['cancelled'])
                             ->exists();
 
@@ -176,9 +179,9 @@ class WalkinSaleController extends Controller
 
                     $price = $service->price ?? 0;
 
-                    // Prefilled (already-completed) services are NOT charged again —
-                    // the patient already paid / will not be double-billed.
-                    if (!$isExisting) {
+                    // Prefilled (completed appointment) IS billed now — patient is paying for it.
+                    // New add-ons are NOT billed now — they'll be billed when completed later.
+                    if ($isExisting) {
                         $subtotal += $price;
                     }
 
@@ -351,10 +354,13 @@ class WalkinSaleController extends Controller
         $doctorRow = DB::table('doctor')->where('user_id', $request->doctor_id)->first();
         if (!$doctorRow) return response()->json(['available' => false]);
 
+        // Normalize time to H:i:s — browser sends "15:00", DB stores "15:00:00"
+        $normalizedTime = date('H:i:s', strtotime($request->time));
+
         $query = DB::table('appointments')
             ->where('doctor_id',        $doctorRow->doctor_id)
             ->where('appointment_date', $request->date)
-            ->where('appointment_time', $request->time)
+            ->whereRaw("TIME(appointment_time) = ?", [$normalizedTime])
             ->whereNotIn('status', ['cancelled']);
 
         // Exclude the prefilled appointment's own slot so it doesn't

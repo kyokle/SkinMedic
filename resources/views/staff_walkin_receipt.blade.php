@@ -81,7 +81,7 @@
         </table>
         @endif
 
-        {{-- Prefilled service (from completed appointment — already billed, no charge) --}}
+        {{-- Prefilled service (from completed appointment — billed in this sale) --}}
         @if($prefilledService)
         <p class="receipt-section-label" style="margin-top:16px;">💆 Appointment Service</p>
         <table class="receipt-table">
@@ -101,17 +101,15 @@
                         {{ \Carbon\Carbon::parse($prefilledService->appointment_date)->format('M j, Y') }}
                         {{ \Carbon\Carbon::createFromFormat('H:i:s', $prefilledService->appointment_time)->format('g:i A') }}
                     </td>
-                    <td class="text-right" style="color:#888;font-style:italic;">
-                        Billed via appointment
-                    </td>
+                    <td class="text-right">₱{{ number_format($prefilledService->service_price, 2) }}</td>
                 </tr>
             </tbody>
         </table>
         @endif
 
-        {{-- New service add-ons (these are charged in this sale) --}}
+        {{-- New service add-ons (booked for future — NOT charged in this sale) --}}
         @if($addonServices->isNotEmpty())
-        <p class="receipt-section-label" style="margin-top:16px;">➕ Service Add-ons</p>
+        <p class="receipt-section-label" style="margin-top:16px;">➕ Service Add-ons <span style="font-size:0.75rem;color:#888;font-weight:400;">(booked — billed on completion)</span></p>
         <table class="receipt-table">
             <thead>
                 <tr>
@@ -130,7 +128,7 @@
                         {{ \Carbon\Carbon::parse($item->appointment_date)->format('M j, Y') }}
                         {{ \Carbon\Carbon::createFromFormat('H:i:s', $item->appointment_time)->format('g:i A') }}
                     </td>
-                    <td class="text-right">₱{{ number_format($item->service_price, 2) }}</td>
+                    <td class="text-right" style="color:#888;font-style:italic;">Billed on completion</td>
                 </tr>
                 @endforeach
             </tbody>

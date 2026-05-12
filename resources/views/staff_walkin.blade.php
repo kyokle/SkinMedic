@@ -459,11 +459,12 @@ function recalcTotal() {
         const isPrefilled = !!line.querySelector('input[name*="existing_appointment_id"]');
         if (sel?.value) {
             if (isPrefilled) {
-                // Prefilled (completed appointment) — show on summary but don't add to total
-                lines.push({ name: '💆 ' + opt.text.split('(')[0].trim(), amount: null, prefilled: true });
-            } else {
+                // Prefilled (completed appointment) — this IS billed now
                 total += price;
                 lines.push({ name: '💆 ' + opt.text.split('(')[0].trim(), amount: price });
+            } else {
+                // New add-on — booked for future, NOT charged now
+                lines.push({ name: '💆 ' + opt.text.split('(')[0].trim(), amount: null, addon: true });
             }
         }
     });
@@ -471,8 +472,8 @@ function recalcTotal() {
     grandTotal = total;
     document.getElementById('totalDisplay').textContent = '₱' + total.toFixed(2);
     document.getElementById('summaryLines').innerHTML = lines.length
-        ? lines.map(l => l.prefilled
-            ? `<div class="summary-row"><span>${l.name}</span><span style="color:#888;font-style:italic;font-size:0.8rem;">Billed via appt.</span></div>`
+        ? lines.map(l => l.addon
+            ? `<div class="summary-row"><span>${l.name}</span><span style="color:#888;font-style:italic;font-size:0.8rem;">Billed on completion</span></div>`
             : `<div class="summary-row"><span>${l.name}</span><span>₱${l.amount.toFixed(2)}</span></div>`
           ).join('')
         : '<p class="empty-summary">No items added yet.</p>';
@@ -520,9 +521,11 @@ function confirmSale() {
         const isPrefilled = !!line.querySelector('input[name*="existing_appointment_id"]');
         if (sel?.value) {
             if (isPrefilled) {
-                lines.push(`<div class="cm-row"><span>💆 ${opt.text.split('(')[0].trim()}</span><span style="color:#888;font-style:italic;">Billed via appt.</span></div>`);
-            } else {
+                // Prefilled (completed appointment) — billed now
                 lines.push(`<div class="cm-row"><span>💆 ${opt.text.split('(')[0].trim()}</span><span>₱${price.toFixed(2)}</span></div>`);
+            } else {
+                // New add-on — future appointment, not charged now
+                lines.push(`<div class="cm-row"><span>💆 ${opt.text.split('(')[0].trim()}</span><span style="color:#888;font-style:italic;">Billed on completion</span></div>`);
             }
         }
     });
