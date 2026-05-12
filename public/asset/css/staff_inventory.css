@@ -290,3 +290,38 @@
     transition: background .2s;
 }
 .save-deduct-btn:hover { background: #6b9228; }
+/* ── Search filter bar ── */
+.search-bar-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 16px;
+}
+
+.inventory-search {
+    padding: 8px 14px 8px 36px;
+    border: 1px solid #d4edb3;
+    border-radius: 8px;
+    font-family: inherit;
+    font-size: 14px;
+    width: 280px;
+    background: #f9fff2 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%2380a833' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='m21 21-4.35-4.35'/%3E%3C/svg%3E") no-repeat 10px center;
+    outline: none;
+    transition: border-color .2s;
+}
+
+.inventory-search:focus {
+    border-color: #80a833;
+}
+
+.search-count {
+    font-size: 13px;
+    color: #888;
+}
+
+.no-results-row td {
+    text-align: center;
+    color: #999;
+    padding: 24px;
+    font-style: italic;
+}

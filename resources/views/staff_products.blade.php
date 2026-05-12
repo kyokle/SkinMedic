@@ -1,4 +1,4 @@
-{{-- resources/views/admin/admin_products.blade.php --}}
+{{-- resources/views/staff_products.blade.php --}}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -20,29 +20,68 @@
   @endif
 
   <main class="content">
-   <header class="header">
-    <h2>Product Management</h2>
-    <div style="display:flex;align-items:center;gap:14px;">
+    <header class="header">
+      <h2>Product Management</h2>
+      <div style="display:flex;align-items:center;gap:14px;">
         <div class="date-box">
-            <p>Today's Date</p>
-            <strong>{{ now()->format('Y-m-d') }}</strong><br>
-            <button class="add-product-btn" onclick="openModal()">+ Add Product</button>
+          <p>Today's Date</p>
+          <strong>{{ now()->format('Y-m-d') }}</strong><br>
+          <button class="add-product-btn" onclick="openModal()">+ Add Product</button>
         </div>
         @include('partials.notif_bell_staff')
-    </div>
-</header>
+      </div>
+    </header>
 
-    <div class="product-list">
+    {{-- ── Filter bar ── --}}
+    <div class="filter-bar">
+      <div class="product-search-wrap">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#aaa" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+        </svg>
+        <input
+          type="text"
+          id="productSearch"
+          class="product-search"
+          placeholder="Search product name…"
+          oninput="applyFilters()"
+          autocomplete="off"
+        >
+      </div>
+
+      <div class="category-tabs" id="categoryTabs">
+        <button class="cat-tab active" data-cat="all" onclick="selectCat(this)">All</button>
+        @php
+          $categories = $products->pluck('category')->filter()->unique()->sort()->values();
+        @endphp
+        @foreach($categories as $cat)
+          <button class="cat-tab" data-cat="{{ strtolower($cat) }}" onclick="selectCat(this)">
+            {{ $cat }}
+          </button>
+        @endforeach
+      </div>
+
+      <span class="filter-count" id="productCount"></span>
+    </div>
+
+    {{-- ── Product grid ── --}}
+    <div class="product-list" id="productGrid">
       @forelse ($products as $row)
         @php $statusClass = strtolower($row->status) === 'available' ? 'on' : 'off'; @endphp
-        <div class="product-card">
-          <img src="{{  $row->image }}"
+        <div class="product-card"
+             data-name="{{ strtolower($row->product_name) }}"
+             data-category="{{ strtolower($row->category ?? '') }}">
+          <img src="{{ $row->image }}"
                alt="{{ $row->product_name }}"
                onerror="this.src='{{ asset('uploads/default.png') }}'">
           <h3>{{ $row->product_name }}</h3>
           <p>{{ $row->description }}</p>
           <p><strong>₱{{ $row->selling_price }}</strong></p>
           <p class="status {{ $statusClass }}">Status: {{ $row->status }}</p>
+          @if($row->category)
+            <p class="category-badge">
+              <span>{{ $row->category }}</span>
+            </p>
+          @endif
           <div class="action-buttons">
             <button class="edit-btn" onclick="openEditModal(
               '{{ $row->product_id }}',
@@ -69,6 +108,10 @@
       @empty
         <p style="text-align:center;color:#666;">No products added yet.</p>
       @endforelse
+
+      <p id="noProductsMsg" class="no-products-msg" style="display:none;">
+        No products match your search.
+      </p>
     </div>
   </main>
 
@@ -162,6 +205,7 @@
   </div>
 
   <script>
+  /* ── Modal helpers ── */
   const addModal  = document.getElementById('addProductModal');
   const editModal = document.getElementById('editProductModal');
   function openModal()      { addModal.style.display  = 'flex'; }
@@ -185,6 +229,41 @@
     if (e.target === addModal)  closeModal();
     if (e.target === editModal) closeEditModal();
   };
+
+  /* ── Filter logic ── */
+  let activeCat = 'all';
+
+  function selectCat(btn) {
+    document.querySelectorAll('.cat-tab').forEach(t => t.classList.remove('active'));
+    btn.classList.add('active');
+    activeCat = btn.getAttribute('data-cat');
+    applyFilters();
+  }
+
+  function applyFilters() {
+    const query = document.getElementById('productSearch').value.toLowerCase().trim();
+    const cards = document.querySelectorAll('#productGrid .product-card');
+    let visible = 0;
+
+    cards.forEach(card => {
+      const name = card.getAttribute('data-name');
+      const cat  = card.getAttribute('data-category');
+
+      const matchesSearch = !query || name.includes(query);
+      const matchesCat    = activeCat === 'all' || cat === activeCat;
+
+      const show = matchesSearch && matchesCat;
+      card.style.display = show ? '' : 'none';
+      if (show) visible++;
+    });
+
+    const noMsg = document.getElementById('noProductsMsg');
+    noMsg.style.display = visible === 0 ? 'block' : 'none';
+
+    const countEl = document.getElementById('productCount');
+    const isFiltering = query || activeCat !== 'all';
+    countEl.textContent = isFiltering ? `${visible} of ${cards.length} product(s)` : '';
+  }
   </script>
 </body>
 </html>

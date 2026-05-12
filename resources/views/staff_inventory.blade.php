@@ -77,6 +77,19 @@
     </div>
     @endif
 
+    {{-- Search Bar --}}
+    <div class="search-bar-wrapper">
+        <input
+            type="text"
+            id="inventorySearch"
+            class="inventory-search"
+            placeholder="Search product name…"
+            oninput="filterInventory()"
+            autocomplete="off"
+        >
+        <span class="search-count" id="inventoryCount"></span>
+    </div>
+
     {{-- Inventory Table --}}
     <div class="table-wrapper">
         <table class="inventory-table">
@@ -95,7 +108,7 @@
                     <th>Edit Stock</th>
                 </tr>
             </thead>
-            <tbody>
+            <tbody id="inventoryTableBody">
                 @foreach($products as $row)
                     @php
                         $expClass = 'exp-ok';
@@ -106,7 +119,7 @@
                             elseif ($daysLeft <= 7) $expClass = 'exp-warning';
                         }
                     @endphp
-                    <tr>
+                    <tr data-product-name="{{ strtolower($row->product_name) }}">
                         <td>{{ $row->product_id }}</td>
                         <td class="product-name">{{ $row->product_name }}</td>
                         <td>{{ $row->quantity }}</td>
@@ -160,6 +173,9 @@
                         </td>
                     </tr>
                 @endforeach
+                <tr id="noResultsRow" class="no-results-row" style="display:none;">
+                    <td colspan="11">No products match your search.</td>
+                </tr>
             </tbody>
         </table>
     </div>
@@ -187,6 +203,27 @@
 
 @push('scripts')
 <script>
+/* ── Inventory search filter ── */
+function filterInventory() {
+    const query = document.getElementById('inventorySearch').value.toLowerCase().trim();
+    const rows  = document.querySelectorAll('#inventoryTableBody tr[data-product-name]');
+    let visible = 0;
+
+    rows.forEach(row => {
+        const name = row.getAttribute('data-product-name');
+        const show = !query || name.includes(query);
+        row.style.display = show ? '' : 'none';
+        if (show) visible++;
+    });
+
+    const noResults = document.getElementById('noResultsRow');
+    noResults.style.display = visible === 0 ? '' : 'none';
+
+    const countEl = document.getElementById('inventoryCount');
+    countEl.textContent = query ? `${visible} of ${rows.length} product(s)` : '';
+}
+
+/* ── Notification helpers ── */
 function loadInvUnreadCount() {
     fetch('/notifications/unread-inventory')
         .then(r => r.json())
@@ -259,6 +296,7 @@ document.addEventListener('click', function(e) {
     }
 });
 
+/* ── Deduct modal ── */
 function openDeductModal(id, name, qty) {
     document.getElementById('deductModal').style.display = 'flex';
     document.getElementById('deductProductId').value = id;

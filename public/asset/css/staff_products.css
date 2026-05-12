@@ -146,3 +146,95 @@
     from { opacity: 0; transform: translateY(-10px); }
     to   { opacity: 1; transform: translateY(0); }
 }
+/* ── Filter bar ── */
+.filter-bar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+}
+
+.product-search-wrap {
+    position: relative;
+}
+
+.product-search-wrap svg {
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    pointer-events: none;
+}
+
+.product-search {
+    padding: 8px 14px 8px 34px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-family: inherit;
+    font-size: 14px;
+    width: 240px;
+    outline: none;
+    transition: border-color .2s;
+}
+
+.product-search:focus {
+    border-color: #80a833;
+}
+
+/* ── Category tabs ── */
+.category-tabs {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.cat-tab {
+    padding: 6px 14px;
+    border-radius: 20px;
+    border: 1px solid #ddd;
+    background: #fff;
+    font-family: inherit;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all .15s;
+    white-space: nowrap;
+}
+
+.cat-tab:hover {
+    border-color: #80a833;
+    color: #80a833;
+}
+
+.cat-tab.active {
+    background: #80a833;
+    color: #fff;
+    border-color: #80a833;
+}
+
+.filter-count {
+    font-size: 13px;
+    color: #888;
+    margin-left: 4px;
+}
+
+/* ── Category badge on card ── */
+.category-badge {
+    font-size: 12px;
+    color: #888;
+    margin-top: 4px;
+}
+
+.category-badge span {
+    background: #f0f0f0;
+    padding: 2px 8px;
+    border-radius: 10px;
+}
+
+.no-products-msg {
+    text-align: center;
+    color: #999;
+    font-style: italic;
+    padding: 40px 0;
+    width: 100%;
+}
