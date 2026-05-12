@@ -139,6 +139,15 @@ let allSlots        = [];
 let pickedOtherTime = false;
 let waitlistSlot    = null;
 
+// Returns true if a "HH:MM" slot is in the past for today's local date
+function isPastSlot(dateStr, slotTime) {
+  const now     = new Date();
+  const todayStr = now.toLocaleDateString('en-CA'); // "YYYY-MM-DD" in local time
+  if (dateStr !== todayStr) return false;
+  const [h, m] = slotTime.split(':').map(Number);
+  return h < now.getHours() || (h === now.getHours() && m <= now.getMinutes());
+}
+
 function loadTimes() {
   const date     = dateEl?.value   || '';
   const doctorId = doctorEl?.value || '';
@@ -162,6 +171,13 @@ function loadTimes() {
     .then(r => r.json())
     .then(slots => {
       timeLoad.style.display = 'none';
+
+      // ── Client-side safety: remove any past slots the server may have missed ──
+      slots = slots.filter(s => {
+        const t = typeof s === 'string' ? s : s.time;
+        return !isPastSlot(date, t);
+      });
+
       allSlots = slots;
 
       if (!slots || !slots.length) {

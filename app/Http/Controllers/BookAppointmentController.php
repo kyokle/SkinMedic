@@ -166,9 +166,11 @@ class BookAppointmentController extends Controller
             $allSlots = array_filter($allSlots, fn($t) => (int)explode(':', $t)[0] >= 12);
         }
 
-        // ── Filter out past time slots when booking for today ──
-        if ($date === now()->toDateString()) {
-            $currentTime = now()->format('H:i');
+        // ── Filter out past time slots when booking for today (PHT UTC+8) ──
+        $nowManila   = now()->setTimezone('Asia/Manila');
+        $todayManila = $nowManila->toDateString();
+        if ($date === $todayManila) {
+            $currentTime = $nowManila->format('H:i');
             $allSlots = array_filter($allSlots, fn($t) => $t > $currentTime);
         }
 
