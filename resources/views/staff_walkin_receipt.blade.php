@@ -81,9 +81,9 @@
         </table>
         @endif
 
-        {{-- Service Add-ons --}}
-        @if($serviceItems->isNotEmpty())
-        <p class="receipt-section-label" style="margin-top:16px;">💆 Services</p>
+        {{-- Prefilled service (from completed appointment — already billed, no charge) --}}
+        @if($prefilledService)
+        <p class="receipt-section-label" style="margin-top:16px;">💆 Appointment Service</p>
         <table class="receipt-table">
             <thead>
                 <tr>
@@ -94,7 +94,35 @@
                 </tr>
             </thead>
             <tbody>
-                @foreach($serviceItems as $item)
+                <tr>
+                    <td>{{ $prefilledService->service_name }}</td>
+                    <td>{{ $prefilledService->doctor_name }}</td>
+                    <td>
+                        {{ \Carbon\Carbon::parse($prefilledService->appointment_date)->format('M j, Y') }}
+                        {{ \Carbon\Carbon::createFromFormat('H:i:s', $prefilledService->appointment_time)->format('g:i A') }}
+                    </td>
+                    <td class="text-right" style="color:#888;font-style:italic;">
+                        Billed via appointment
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+        @endif
+
+        {{-- New service add-ons (these are charged in this sale) --}}
+        @if($addonServices->isNotEmpty())
+        <p class="receipt-section-label" style="margin-top:16px;">➕ Service Add-ons</p>
+        <table class="receipt-table">
+            <thead>
+                <tr>
+                    <th>Service</th>
+                    <th>Doctor</th>
+                    <th>Date & Time</th>
+                    <th class="text-right">Price</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach($addonServices as $item)
                 <tr>
                     <td>{{ $item->service_name }}</td>
                     <td>{{ $item->doctor_name }}</td>

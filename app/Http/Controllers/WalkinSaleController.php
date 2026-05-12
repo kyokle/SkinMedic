@@ -174,8 +174,14 @@ class WalkinSaleController extends Controller
                         }
                     }
 
-                    $price       = $service->price ?? 0;
-                    $subtotal   += $price;
+                    $price = $service->price ?? 0;
+
+                    // Prefilled (already-completed) services are NOT charged again —
+                    // the patient already paid / will not be double-billed.
+                    if (!$isExisting) {
+                        $subtotal += $price;
+                    }
+
                     $serviceRows[] = [
                         'service'                => $service,
                         'doctor_id'              => $doctorRow->doctor_id,
@@ -242,18 +248,20 @@ class WalkinSaleController extends Controller
             foreach ($serviceRows as $row) {
                 // If this service came from an already-completed appointment,
                 // just link it to the sale — don't create a duplicate appointment
+                // and don't charge the patient again (is_prefilled = 1).
                 if (!empty($row['existing_appointment_id'])) {
                     DB::table('walkin_sale_services')->insert([
                         'sale_id'        => $saleId,
                         'appointment_id' => $row['existing_appointment_id'],
                         'service_price'  => $row['price'],
+                        'is_prefilled'   => 1,
                         'created_at'     => now(),
                         'updated_at'     => now(),
                     ]);
                     continue; // skip creating a new appointment
                 }
 
-                // New service — create appointment as before
+                // New service add-on — create appointment as before
                 $appointmentId = DB::table('appointments')->insertGetId([
                     'user_id'          => $request->user_id,
                     'doctor_id'        => $row['doctor_id'],
@@ -272,6 +280,7 @@ class WalkinSaleController extends Controller
                     'sale_id'        => $saleId,
                     'appointment_id' => $appointmentId,
                     'service_price'  => $row['price'],
+                    'is_prefilled'   => 0,
                     'created_at'     => now(),
                     'updated_at'     => now(),
                 ]);
@@ -317,6 +326,12 @@ class WalkinSaleController extends Controller
                 'a.appointment_time', DB::raw('CONCAT(d.firstName, " ", d.lastName) as doctor_name'))
             ->where('ss.sale_id', $id)->get();
 
+        // Separate the pre-filled (already-completed) appointment from
+        // new add-on services so the receipt can display them differently
+        // and avoids charging the patient twice for the prefilled service.
+        $prefilledService = $serviceItems->firstWhere('is_prefilled', 1);
+        $addonServices    = $serviceItems->where('is_prefilled', 0)->values();
+
         $change = null;
         if ($sale->payment_method === 'cash' && $sale->amount_tendered !== null) {
             $change = $sale->amount_tendered - $sale->total_amount;
@@ -324,7 +339,7 @@ class WalkinSaleController extends Controller
 
         return view('staff_walkin_receipt', array_merge(
             $this->sidebarData(),
-            compact('sale', 'productItems', 'serviceItems', 'change')
+            compact('sale', 'productItems', 'prefilledService', 'addonServices', 'change')
         ));
     }
 
