@@ -113,6 +113,7 @@ class WalkinSaleController extends Controller
             'services.*.doctor_id'        => 'required_with:services|integer|exists:users,user_id',
             'services.*.appointment_date' => 'required_with:services|date|after_or_equal:today',
             'services.*.appointment_time' => 'required_with:services|date_format:H:i',
+            'services.*.existing_appointment_id' => 'nullable|integer',
         ]);
 
         $hasItems    = !empty($request->items);
@@ -156,26 +157,32 @@ class WalkinSaleController extends Controller
                     $doctorRow = DB::table('doctor')->where('user_id', $svc['doctor_id'])->first();
                     if (!$doctorRow) throw new \Exception('Doctor profile not found for the selected doctor.');
 
-                    $conflict = DB::table('appointments')
-                        ->where('doctor_id',        $doctorRow->doctor_id)
-                        ->where('appointment_date', $svc['appointment_date'])
-                        ->where('appointment_time', $svc['appointment_time'])
-                        ->whereNotIn('status', ['cancelled'])
-                        ->exists();
+                    // Only check for conflicts if this is a NEW service booking
+                    // (not the already-completed appointment being billed)
+                    $isExisting = !empty($svc['existing_appointment_id']);
+                    if (!$isExisting) {
+                        $conflict = DB::table('appointments')
+                            ->where('doctor_id',        $doctorRow->doctor_id)
+                            ->where('appointment_date', $svc['appointment_date'])
+                            ->where('appointment_time', $svc['appointment_time'])
+                            ->whereNotIn('status', ['cancelled'])
+                            ->exists();
 
-                    if ($conflict) {
-                        $du = DB::table('users')->where('user_id', $svc['doctor_id'])->first();
-                        throw new \Exception("Time slot {$svc['appointment_date']} {$svc['appointment_time']} is already taken for Dr. {$du->firstName} {$du->lastName}.");
+                        if ($conflict) {
+                            $du = DB::table('users')->where('user_id', $svc['doctor_id'])->first();
+                            throw new \Exception("Time slot {$svc['appointment_date']} {$svc['appointment_time']} is already taken for Dr. {$du->firstName} {$du->lastName}.");
+                        }
                     }
 
                     $price       = $service->price ?? 0;
                     $subtotal   += $price;
                     $serviceRows[] = [
-                        'service'          => $service,
-                        'doctor_id'        => $doctorRow->doctor_id,
-                        'appointment_date' => $svc['appointment_date'],
-                        'appointment_time' => $svc['appointment_time'],
-                        'price'            => $price,
+                        'service'                => $service,
+                        'doctor_id'              => $doctorRow->doctor_id,
+                        'appointment_date'       => $svc['appointment_date'],
+                        'appointment_time'       => $svc['appointment_time'],
+                        'price'                  => $price,
+                        'existing_appointment_id'=> $svc['existing_appointment_id'] ?? null,
                     ];
                 }
             }
@@ -233,6 +240,20 @@ class WalkinSaleController extends Controller
 
             // ── 5. Book service add-ons ──
             foreach ($serviceRows as $row) {
+                // If this service came from an already-completed appointment,
+                // just link it to the sale — don't create a duplicate appointment
+                if (!empty($row['existing_appointment_id'])) {
+                    DB::table('walkin_sale_services')->insert([
+                        'sale_id'        => $saleId,
+                        'appointment_id' => $row['existing_appointment_id'],
+                        'service_price'  => $row['price'],
+                        'created_at'     => now(),
+                        'updated_at'     => now(),
+                    ]);
+                    continue; // skip creating a new appointment
+                }
+
+                // New service — create appointment as before
                 $appointmentId = DB::table('appointments')->insertGetId([
                     'user_id'          => $request->user_id,
                     'doctor_id'        => $row['doctor_id'],

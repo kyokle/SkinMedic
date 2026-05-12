@@ -669,6 +669,13 @@ function prefillFromAppointment(svc) {
     `;
  
     document.getElementById('serviceLines').appendChild(div);
+
+    // Add hidden field to mark this as already-completed (no re-booking needed)
+const hiddenAppt = document.createElement('input');
+hiddenAppt.type  = 'hidden';
+hiddenAppt.name  = `services[${serviceIndex}][existing_appointment_id]`;
+hiddenAppt.value = svc.appointment_id;
+div.appendChild(hiddenAppt);
  
     // Now set the values
     const svcSelect    = div.querySelector('.svc-select');
