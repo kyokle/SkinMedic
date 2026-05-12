@@ -21,6 +21,7 @@
             <p class="walkin-sub">Sale #{{ $sale->sale_id }}</p>
         </div>
         <div style="display:flex;gap:10px;">
+            <a href="{{ route('staff.walkin') }}" class="back-btn">← Back</a>
             <button onclick="window.print()" class="print-btn">🖨 Print Receipt</button>
             <a href="{{ route('staff.walkin') }}" class="back-btn">+ New Sale</a>
         </div>
@@ -116,10 +117,6 @@
                 <span>Subtotal</span>
                 <span>₱{{ number_format($sale->subtotal, 2) }}</span>
             </div>
-            <div class="receipt-total-row grand">
-                <span>Total</span>
-                <span>₱{{ number_format($sale->total_amount, 2) }}</span>
-            </div>
             <div class="receipt-total-row">
                 <span>Payment Method</span>
                 <span class="pay-badge {{ $sale->payment_method }}">{{ strtoupper($sale->payment_method) }}</span>
@@ -129,7 +126,13 @@
                 <span>Amount Tendered</span>
                 <span>₱{{ number_format($sale->amount_tendered, 2) }}</span>
             </div>
-            <div class="receipt-total-row">
+            @endif
+            <div class="receipt-total-row grand">
+                <span>Total</span>
+                <span>₱{{ number_format($sale->total_amount, 2) }}</span>
+            </div>
+            @if($sale->payment_method === 'cash' && $sale->amount_tendered !== null)
+            <div class="receipt-total-row change-row">
                 <span>Change</span>
                 <span>₱{{ number_format($change, 2) }}</span>
             </div>

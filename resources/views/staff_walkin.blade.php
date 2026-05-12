@@ -116,7 +116,7 @@
 
                     <label class="field-label">Method</label>
                     <div class="payment-methods">
-                        @foreach(['cash' => '💵 Cash', 'gcash' => '📱 GCash', 'card' => '💳 Card', 'other' => '🔄 Other'] as $val => $label)
+                        @foreach(['cash' => '💵 Cash', 'gcash' => '📱 GCash'] as $val => $label)
                         <label class="pay-opt {{ old('payment_method') === $val ? 'selected' : '' }}">
                             <input type="radio" name="payment_method" value="{{ $val }}"
                                    {{ old('payment_method', 'cash') === $val ? 'checked' : '' }}
@@ -156,42 +156,88 @@
         </div>{{-- /walkin-grid --}}
     </form>
 
-    {{-- ── Recent Sales ── --}}
-    @if($recentSales->isNotEmpty())
-    <div class="card recent-card">
-        <div class="card-title">🕒 Recent Sales</div>
-        <table class="recent-table">
-            <thead>
-                <tr>
-                    <th>#</th>
-                    <th>Patient</th>
-                    <th>Staff</th>
-                    <th>Total</th>
-                    <th>Payment</th>
-                    <th>Date</th>
-                    <th></th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach($recentSales as $rs)
-                <tr>
-                    <td>{{ $rs->sale_id }}</td>
-                    <td>{{ $rs->patient_name }}</td>
-                    <td>{{ $rs->staff_name }}</td>
-                    <td>₱{{ number_format($rs->total_amount, 2) }}</td>
-                    <td><span class="pay-badge {{ $rs->payment_method }}">{{ strtoupper($rs->payment_method) }}</span></td>
-                    <td>{{ \Carbon\Carbon::parse($rs->created_at)->format('M j, Y g:i A') }}</td>
-                    <td>
-                        <a href="{{ route('staff.walkin.receipt', $rs->sale_id) }}" class="receipt-link">Receipt</a>
-                    </td>
-                </tr>
-                @endforeach
-            </tbody>
-        </table>
-    </div>
-    @endif
-
 </div>{{-- /walkin-wrap --}}
+
+{{-- ══════════════════════════════════════════════════════
+     TOGGLE PANEL (outside walkin-wrap so it spans full width)
+══════════════════════════════════════════════════════ --}}
+<div class="toggle-wrap">
+
+    {{-- Tab buttons --}}
+    <div class="toggle-tabs">
+        <button class="tab-btn active" id="tabSale" onclick="switchTab('sale')">
+            🛒 Walk-in Sale
+        </button>
+        <button class="tab-btn" id="tabHistory" onclick="switchTab('history')">
+            🕒 Recent Sales
+            @if($recentSales->isNotEmpty())
+                <span class="tab-badge">{{ $recentSales->count() }}</span>
+            @endif
+        </button>
+    </div>
+
+    {{-- Recent Sales Panel --}}
+    <div id="historyPanel" class="history-panel" style="display:none;">
+
+        {{-- Search & Filter bar --}}
+        <div class="history-filters">
+            <div class="hf-search-wrap">
+                <span class="hf-icon">🔍</span>
+                <input type="text" id="hfSearch" placeholder="Search patient or staff..."
+                       oninput="filterSales()" class="hf-search">
+            </div>
+            <select id="hfPayment" onchange="filterSales()" class="hf-select">
+                <option value="">All Payments</option>
+                <option value="cash">Cash</option>
+                <option value="gcash">GCash</option>
+            </select>
+            <input type="date" id="hfDate" onchange="filterSales()" class="hf-select"
+                   placeholder="Filter by date">
+            <button onclick="clearFilters()" class="hf-clear">✕ Clear</button>
+        </div>
+
+        @if($recentSales->isNotEmpty())
+        <div class="history-table-wrap">
+            <table class="recent-table" id="salesTable">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Patient</th>
+                        <th>Staff</th>
+                        <th>Total</th>
+                        <th>Payment</th>
+                        <th>Date</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody id="salesBody">
+                    @foreach($recentSales as $rs)
+                    <tr class="sale-row"
+                        data-patient="{{ strtolower($rs->patient_name) }}"
+                        data-staff="{{ strtolower($rs->staff_name) }}"
+                        data-payment="{{ $rs->payment_method }}"
+                        data-date="{{ \Carbon\Carbon::parse($rs->created_at)->format('Y-m-d') }}">
+                        <td>{{ $rs->sale_id }}</td>
+                        <td>{{ $rs->patient_name }}</td>
+                        <td>{{ $rs->staff_name }}</td>
+                        <td>₱{{ number_format($rs->total_amount, 2) }}</td>
+                        <td><span class="pay-badge {{ $rs->payment_method }}">{{ strtoupper($rs->payment_method) }}</span></td>
+                        <td>{{ \Carbon\Carbon::parse($rs->created_at)->format('M j, Y g:i A') }}</td>
+                        <td>
+                            <a href="{{ route('staff.walkin.receipt', $rs->sale_id) }}" class="receipt-link">Receipt</a>
+                        </td>
+                    </tr>
+                    @endforeach
+                </tbody>
+            </table>
+            <p id="noResults" style="display:none;text-align:center;color:#aaa;padding:20px;">No sales match your filters.</p>
+        </div>
+        @else
+        <p style="text-align:center;color:#aaa;padding:30px;">No sales recorded yet.</p>
+        @endif
+
+    </div>
+</div>
 
 {{-- ── Confirmation Modal ── --}}
 <div id="confirmModal" class="cm-overlay" onclick="closeCM(event)">
@@ -481,7 +527,58 @@ function closeCM(event) {
         document.getElementById('confirmModal').style.display = 'none';
 }
 
-// ── Init ─────────────────────────────────────────────────
+// ── Tab toggle ────────────────────────────────────────────
+function switchTab(tab) {
+    const saleForm    = document.getElementById('walkinForm');
+    const saleGrid    = document.querySelector('.walkin-grid');
+    const historyPanel = document.getElementById('historyPanel');
+    const tabSale     = document.getElementById('tabSale');
+    const tabHistory  = document.getElementById('tabHistory');
+
+    if (tab === 'sale') {
+        saleGrid.style.display     = 'grid';
+        historyPanel.style.display = 'none';
+        tabSale.classList.add('active');
+        tabHistory.classList.remove('active');
+    } else {
+        saleGrid.style.display     = 'none';
+        historyPanel.style.display = 'block';
+        tabSale.classList.remove('active');
+        tabHistory.classList.add('active');
+    }
+}
+
+// ── Sales filter ──────────────────────────────────────────
+function filterSales() {
+    const search  = document.getElementById('hfSearch').value.toLowerCase();
+    const payment = document.getElementById('hfPayment').value;
+    const date    = document.getElementById('hfDate').value;
+    const rows    = document.querySelectorAll('.sale-row');
+    let visible   = 0;
+
+    rows.forEach(row => {
+        const matchSearch  = !search  || row.dataset.patient.includes(search) || row.dataset.staff.includes(search);
+        const matchPayment = !payment || row.dataset.payment === payment;
+        const matchDate    = !date    || row.dataset.date === date;
+
+        if (matchSearch && matchPayment && matchDate) {
+            row.style.display = '';
+            visible++;
+        } else {
+            row.style.display = 'none';
+        }
+    });
+
+    document.getElementById('noResults').style.display = visible === 0 ? 'block' : 'none';
+}
+
+function clearFilters() {
+    document.getElementById('hfSearch').value  = '';
+    document.getElementById('hfPayment').value = '';
+    document.getElementById('hfDate').value    = '';
+    filterSales();
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     // Populate the first product line with JS-built options
     const firstSelect = document.querySelector('.prod-select');

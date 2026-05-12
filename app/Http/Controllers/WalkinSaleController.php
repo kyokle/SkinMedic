@@ -49,7 +49,6 @@ class WalkinSaleController extends Controller
             ->join('users as st', 'st.user_id', '=', 's.staff_id')
             ->select('s.*', DB::raw('CONCAT(p.firstName, " ", p.lastName) as patient_name'), DB::raw('CONCAT(st.firstName, " ", st.lastName) as staff_name'))
             ->orderByDesc('s.created_at')
-            ->limit(10)
             ->get();
 
         return view('staff_walkin', array_merge(
@@ -66,7 +65,7 @@ class WalkinSaleController extends Controller
     {
         $request->validate([
             'user_id'           => 'required|integer|exists:users,user_id',
-            'payment_method'    => 'required|in:cash,gcash,card,other',
+            'payment_method'    => 'required|in:cash,gcash',
             'amount_tendered'   => 'nullable|numeric|min:0',
             'notes'             => 'nullable|string|max:500',
 
@@ -242,7 +241,7 @@ class WalkinSaleController extends Controller
                     'service_id'       => $row['service']->service_id,
                     'appointment_date' => $row['appointment_date'],
                     'appointment_time' => $row['appointment_time'],
-                    'status'           => 'confirmed',     // walk-in = already confirmed
+                    'status'           => 'approved',      // walk-in = already approved by staff
                     'cancel_reason'    => null,
                     'is_rescheduled'   => 0,
                     'notes'            => 'Walk-in add-on via sale #' . $saleId,
