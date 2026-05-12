@@ -21,23 +21,43 @@
 
 <main class="content">
     <header class="header">
-    <h2>Staff Service Management</h2>
-    <div style="display:flex;align-items:center;gap:14px;">
-        <div class="date-box">
-            <p>Today's Date</p>
-            <strong>{{ now()->format('Y-m-d') }}</strong><br>
-            <button class="add-service-btn" onclick="openModal()">+ Add New Service</button>
+        <h2>Staff Service Management</h2>
+        <div style="display:flex;align-items:center;gap:14px;">
+            <div class="date-box">
+                <p>Today's Date</p>
+                <strong>{{ now()->format('Y-m-d') }}</strong><br>
+                <button class="add-service-btn" onclick="openModal()">+ Add New Service</button>
+            </div>
+            @include('partials.notif_bell_staff')
         </div>
-        @include('partials.notif_bell_staff')
-    </div>
-</header>
+    </header>
 
-    <div class="service-list">
+    {{-- ── Filter bar ── --}}
+    <div class="filter-bar">
+        <div class="service-search-wrap">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#aaa" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+            </svg>
+            <input
+                type="text"
+                id="serviceSearch"
+                class="service-search"
+                placeholder="Search service name…"
+                oninput="applyFilters()"
+                autocomplete="off"
+            >
+        </div>
+        <span class="filter-count" id="serviceCount"></span>
+    </div>
+
+    {{-- ── Service grid ── --}}
+    <div class="service-list" id="serviceGrid">
         @forelse ($services as $row)
             @php $statusClass = $row->status === 'available' ? 'on' : 'off'; @endphp
-            <div class="service-card">
+            <div class="service-card"
+                 data-name="{{ strtolower($row->name) }}">
                 <img src="{{ $row->image }}" onerror="this.src='{{ asset('uploads/default.png') }}'"
-                 alt="{{ $row->name }}">
+                     alt="{{ $row->name }}">
                 <h3>{{ $row->name }}</h3>
                 <p>{{ $row->description }}</p>
                 <p><strong>₱{{ $row->price }}</strong></p>
@@ -60,8 +80,12 @@
                 </div>
             </div>
         @empty
-            <p style="text-align:center; color:#666;">No services added yet.</p>
+            <p style="text-align:center;color:#666;">No services added yet.</p>
         @endforelse
+
+        <p id="noServicesMsg" class="no-services-msg" style="display:none;">
+            No services match your search.
+        </p>
     </div>
 </main>
 
@@ -153,6 +177,26 @@
         if (e.target === modal)     closeModal();
         if (e.target === editModal) closeEditModal();
     };
+
+    /* ── Search filter ── */
+    function applyFilters() {
+        const query = document.getElementById('serviceSearch').value.toLowerCase().trim();
+        const cards = document.querySelectorAll('#serviceGrid .service-card');
+        let visible = 0;
+
+        cards.forEach(card => {
+            const name = card.getAttribute('data-name');
+            const show = !query || name.includes(query);
+            card.style.display = show ? '' : 'none';
+            if (show) visible++;
+        });
+
+        const noMsg = document.getElementById('noServicesMsg');
+        noMsg.style.display = visible === 0 ? 'block' : 'none';
+
+        const countEl = document.getElementById('serviceCount');
+        countEl.textContent = query ? `${visible} of ${cards.length} service(s)` : '';
+    }
 </script>
 
 </body>
