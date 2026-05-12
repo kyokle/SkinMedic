@@ -57,11 +57,21 @@
             {{-- Image --}}
             <div class="card-img-wrap">
                 @if($p->image)
-    <img src="{{ $p->image }}"
+    <img src="{{ asset('storage/' . $p->image) }}"
          alt="{{ $p->product_name }}"
-         onerror="this.src='{{ asset('uploads/default.png') }}'">
+         onerror="this.style.display='none'; this.parentElement.querySelector('.card-img-placeholder') && (this.parentElement.querySelector('.card-img-placeholder').style.display='flex')">
                 @else
                     <div class="card-img-placeholder">
+                        <svg viewBox="0 0 48 48" fill="none" width="40" height="40" opacity=".3">
+                            <rect x="4" y="4" width="40" height="40" rx="6" stroke="currentColor" stroke-width="2"/>
+                            <circle cx="17" cy="19" r="4" stroke="currentColor" stroke-width="2"/>
+                            <path d="M4 34l10-8 8 7 6-5 16 13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </div>
+                @endif
+                {{-- Hidden fallback placeholder shown by onerror when image fails to load --}}
+                @if($p->image)
+                    <div class="card-img-placeholder" style="display:none">
                         <svg viewBox="0 0 48 48" fill="none" width="40" height="40" opacity=".3">
                             <rect x="4" y="4" width="40" height="40" rx="6" stroke="currentColor" stroke-width="2"/>
                             <circle cx="17" cy="19" r="4" stroke="currentColor" stroke-width="2"/>
@@ -191,6 +201,44 @@
             </div>
         </div>
 
+        {{-- Pickup-only notice --}}
+        <div class="pickup-notice">
+            <svg viewBox="0 0 20 20" fill="none" width="16" height="16" style="flex-shrink:0;margin-top:1px">
+                <circle cx="10" cy="10" r="8" stroke="currentColor" stroke-width="1.6"/>
+                <path d="M10 6v4.5M10 13.5v.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+            </svg>
+            <span>Products are available for <strong>pick-up only</strong> at our clinic. We will contact you to confirm your order and schedule.</span>
+        </div>
+
+        {{-- Payment method --}}
+        <div class="payment-method-section">
+            <p class="payment-label">Payment Method</p>
+            <div class="payment-options">
+                <label class="payment-option">
+                    <input type="radio" name="payment_method" value="cash" checked>
+                    <span class="payment-option-box">
+                        <svg viewBox="0 0 24 24" fill="none" width="20" height="20">
+                            <rect x="2" y="6" width="20" height="13" rx="2" stroke="currentColor" stroke-width="1.6"/>
+                            <circle cx="12" cy="12.5" r="2.5" stroke="currentColor" stroke-width="1.6"/>
+                            <path d="M6 9.5h.01M18 9.5h.01" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                        </svg>
+                        Cash on Pick-up
+                    </span>
+                </label>
+                <label class="payment-option">
+                    <input type="radio" name="payment_method" value="gcash">
+                    <span class="payment-option-box">
+                        <svg viewBox="0 0 24 24" fill="none" width="20" height="20">
+                            <rect x="3" y="5" width="18" height="14" rx="2" stroke="currentColor" stroke-width="1.6"/>
+                            <path d="M3 9h18" stroke="currentColor" stroke-width="1.6"/>
+                            <path d="M7 14h4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+                        </svg>
+                        GCash
+                    </span>
+                </label>
+            </div>
+        </div>
+
         <div class="checkout-note">
             <label for="orderNote">Note (optional)</label>
             <textarea id="orderNote" rows="2" placeholder="Any special instructions…"></textarea>
@@ -198,9 +246,10 @@
 
         <form method="POST" action="{{ route('patient.order.place') }}" id="checkoutForm">
             @csrf
-            <input type="hidden" name="items" id="checkoutItemsInput">
-            <input type="hidden" name="note"  id="checkoutNoteInput">
-            <button type="submit" class="confirm-order-btn" onclick="prepareCheckout()">
+            <input type="hidden" name="items"          id="checkoutItemsInput">
+            <input type="hidden" name="note"           id="checkoutNoteInput">
+            <input type="hidden" name="payment_method" id="checkoutPaymentInput">
+            <button type="submit" class="confirm-order-btn">
                 Confirm Order
             </button>
         </form>
@@ -350,9 +399,17 @@ function closeCheckoutModal(e) {
 }
 
 function prepareCheckout() {
-    document.getElementById('checkoutItemsInput').value = JSON.stringify(cart);
-    document.getElementById('checkoutNoteInput').value  = document.getElementById('orderNote').value;
+    document.getElementById('checkoutItemsInput').value   = JSON.stringify(cart);
+    document.getElementById('checkoutNoteInput').value    = document.getElementById('orderNote').value;
+    const selectedPayment = document.querySelector('input[name="payment_method"]:checked');
+    document.getElementById('checkoutPaymentInput').value = selectedPayment ? selectedPayment.value : 'cash';
 }
+
+// Attach submit handler so hidden inputs are always populated before the form posts
+document.getElementById('checkoutForm').addEventListener('submit', function (e) {
+    prepareCheckout();
+    // Allow the form to continue submitting
+});
 
 /* ── SEARCH ──────────────────────────────────── */
 document.getElementById('searchInput').addEventListener('input', function () {

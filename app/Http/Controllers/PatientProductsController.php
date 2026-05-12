@@ -47,9 +47,10 @@ class PatientProductsController extends Controller
             'items' => 'required|string',
         ]);
 
-        $items  = json_decode($request->input('items'), true);
-        $note   = $request->input('note', '');
-        $userId = session('user_id'); // adjust to your auth method
+        $items         = json_decode($request->input('items'), true);
+        $note          = $request->input('note', '');
+        $paymentMethod = $request->input('payment_method', 'cash');
+        $userId        = session('user_id');
 
         if (empty($items) || !is_array($items)) {
             return back()->with('error', 'Your cart is empty.');
@@ -59,12 +60,13 @@ class PatientProductsController extends Controller
         $total = collect($items)->sum(fn($i) => $i['price'] * $i['qty']);
 
         $orderId = DB::table('orders')->insertGetId([
-            'user_id'    => $userId,
-            'total'      => $total,
-            'note'       => $note,
-            'status'     => 'pending',
-            'created_at' => now(),
-            'updated_at' => now(),
+            'user_id'        => $userId,
+            'total'          => $total,
+            'note'           => $note,
+            'payment_method' => $paymentMethod,
+            'status'         => 'pending',
+            'created_at'     => now(),
+            'updated_at'     => now(),
         ]);
 
         // ── Insert order items + deduct FIFO inventory ─────
@@ -147,10 +149,11 @@ class PatientProductsController extends Controller
 
         // ── Notify patient ─────────────────────────────────
         if ($userId) {
+            $paymentLabel = $paymentMethod === 'gcash' ? 'GCash' : 'Cash on Pick-up';
             NotificationHelper::send(
                 $userId,
                 '🛍 Order Placed',
-                'Your order #' . $orderId . ' has been placed successfully! Total: ₱' . number_format($total, 2) . '.'
+                'Your order #' . $orderId . ' has been placed! Total: ₱' . number_format($total, 2) . '. Payment: ' . $paymentLabel . '. Please pick up your order at the clinic. We will contact you to confirm your schedule.'
             );
         }
 
