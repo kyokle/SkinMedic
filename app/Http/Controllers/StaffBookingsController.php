@@ -37,72 +37,6 @@ class StaffBookingsController extends Controller
         }
     }
 
-    // ── Auto-cancel helper ───────────────────────────────────
-    private function autoCancel(): void
-    {
-        $nowManila = \Carbon\Carbon::now('Asia/Manila');
-
-        $expired = DB::table('appointments')
-            ->where('status', 'pending')
-            ->where(function ($query) use ($nowManila) {
-                $query->where('appointment_date', '<', $nowManila->toDateString())
-                      ->orWhere(function ($q) use ($nowManila) {
-                          $q->where('appointment_date', '=', $nowManila->toDateString())
-                            ->where('appointment_time', '<', $nowManila->format('H:i:s'));
-                      });
-            })
-            ->get();
-
-        foreach ($expired as $appt) {
-            DB::table('appointments')
-                ->where('appointment_id', $appt->appointment_id)
-                ->update([
-                    'status'        => 'cancelled',
-                    'cancel_reason' => 'expired_no_approval',
-                    'updated_at'    => now(),
-                ]);
-
-            // Notify patient
-            NotificationHelper::send(
-                $appt->user_id,
-                'Appointment Cancelled',
-                "Your appointment on {$appt->appointment_date} at {$appt->appointment_time} was automatically cancelled because it was not approved before the scheduled time.",
-                'cancelled',
-                $appt->appointment_id
-            );
-
-            // Notify doctor
-            $doctor = DB::table('doctor')->where('doctor_id', $appt->doctor_id)->first();
-            if ($doctor && $doctor->user_id) {
-                NotificationHelper::send(
-                    $doctor->user_id,
-                    'Appointment Auto-Cancelled',
-                    "Appointment #{$appt->appointment_id} on {$appt->appointment_date} at {$appt->appointment_time} was automatically cancelled (no approval before scheduled time).",
-                    'cancelled',
-                    $appt->appointment_id
-                );
-            }
-
-            // Notify admin/staff
-            $adminStaff = DB::table('users')->whereIn('role', ['admin', 'staff'])->get();
-            foreach ($adminStaff as $u) {
-                NotificationHelper::send(
-                    $u->user_id,
-                    'Appointment Auto-Cancelled',
-                    "Appointment #{$appt->appointment_id} on {$appt->appointment_date} at {$appt->appointment_time} was automatically cancelled (no approval before scheduled time).",
-                    'cancelled',
-                    $appt->appointment_id
-                );
-            }
-
-            // Free the slot for waitlisted patients
-            WaitlistController::notifyNext(
-                $appt->appointment_date,
-                $appt->appointment_time
-            );
-        }
-    }
-
     // ── FIFO deduction helper ─────────────────────────────────
     private function deductInventory(int $appointmentId, int $serviceId): void
     {
@@ -169,7 +103,6 @@ class StaffBookingsController extends Controller
         }
 
         $this->autoComplete();
-        $this->autoCancel();
 
         $bookings = DB::table('appointments as a')
             ->leftJoin('services as s', 'a.service_id', '=', 's.service_id')
@@ -216,68 +149,6 @@ class StaffBookingsController extends Controller
 
         if ($appt->status === 'cancelled') {
             return back()->with('error', 'This booking was already cancelled.');
-        }
-
-        // ── Guard: block approving/completing a past pending appointment ──
-        if ($appt->status === 'pending' && in_array($status, ['approved', 'completed'])) {
-            $apptDateTime = \Carbon\Carbon::parse(
-                $appt->appointment_date . ' ' . $appt->appointment_time,
-                'Asia/Manila'
-            );
-
-            if ($apptDateTime->isPast()) {
-                DB::table('appointments')
-                    ->where('appointment_id', $id)
-                    ->update([
-                        'status'        => 'cancelled',
-                        'cancel_reason' => 'expired_no_approval',
-                        'updated_at'    => now(),
-                    ]);
-
-                // Notify patient
-                $patient = DB::table('users')->where('user_id', $appt->user_id)->first();
-                if ($patient) {
-                    NotificationHelper::send(
-                        $patient->user_id,
-                        'Appointment Cancelled',
-                        "Your appointment on {$appt->appointment_date} at {$appt->appointment_time} was automatically cancelled because it was not approved before the scheduled time.",
-                        'cancelled',
-                        $id
-                    );
-                }
-
-                // Notify doctor
-                $doctor = DB::table('doctor')->where('doctor_id', $appt->doctor_id)->first();
-                if ($doctor && $doctor->user_id) {
-                    NotificationHelper::send(
-                        $doctor->user_id,
-                        'Appointment Auto-Cancelled',
-                        "Appointment #{$id} on {$appt->appointment_date} at {$appt->appointment_time} was automatically cancelled (no approval before scheduled time).",
-                        'cancelled',
-                        $id
-                    );
-                }
-
-                // Notify admin/staff
-                $adminStaff = DB::table('users')->whereIn('role', ['admin', 'staff'])->get();
-                foreach ($adminStaff as $u) {
-                    NotificationHelper::send(
-                        $u->user_id,
-                        'Appointment Auto-Cancelled',
-                        "Appointment #{$id} on {$appt->appointment_date} at {$appt->appointment_time} was automatically cancelled (no approval before scheduled time).",
-                        'cancelled',
-                        $id
-                    );
-                }
-
-                // Free up the slot for waitlisted patients
-                WaitlistController::notifyNext(
-                    $appt->appointment_date,
-                    $appt->appointment_time
-                );
-
-                return back()->with('error', 'This appointment already passed without approval and has been automatically cancelled.');
-            }
         }
 
         DB::table('appointments')
