@@ -57,8 +57,9 @@
     font-size: 0.9rem;
     font-weight: 500;
 }
-.flash.error   { background: #fff0f0; border-left: 4px solid #e53e3e; color: #7a0000; }
-.flash.success { background: #f0fff4; border-left: 4px solid #38a169; color: #1a5e34; }
+.flash.error        { background: #fff0f0; border-left: 4px solid #e53e3e; color: #7a0000; }
+.flash.success      { background: #f0fff4; border-left: 4px solid #38a169; color: #1a5e34; }
+.flash.from-booking { background: #f0f7e6; border-left: 4px solid #80a833; color: #3a5c00; font-weight: 600; }
 
 /* ── Two-column grid ── */
 .walkin-grid {

@@ -220,6 +220,15 @@ class StaffBookingsController extends Controller
             );
         }
 
+        // After completing an appointment, redirect to walk-in sale
+        // with patient and appointment pre-filled for billing
+        if ($status === 'completed') {
+            return redirect()->route('staff.walkin', [
+                'from_appointment' => $id,
+                'patient_id'       => $appt->user_id,
+            ])->with('from_booking', 'Appointment completed — patient details pre-filled for billing.');
+        }
+
         return redirect()->route('staff.bookings');
     }
 }

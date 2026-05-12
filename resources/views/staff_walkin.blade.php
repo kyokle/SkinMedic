@@ -44,6 +44,14 @@
     @if(session('success'))
         <div class="flash success">✓ {{ session('success') }}</div>
     @endif
+    @if(session('from_booking'))
+        <div class="flash from-booking">
+            ✅ {{ session('from_booking') }}
+            @if(request('from_appointment'))
+                &nbsp;·&nbsp; Appointment #{{ request('from_appointment') }}
+            @endif
+        </div>
+    @endif
 
     <form method="POST" action="{{ route('staff.walkin.store') }}" id="walkinForm">
         @csrf
@@ -297,6 +305,8 @@ const PRODUCTS = {!! json_encode($products->map(function($p) { return ['id' => $
 const SERVICES = {!! json_encode($services->map(function($s) { return ['id' => $s->service_id, 'name' => $s->name, 'price' => $s->price]; })->values()) !!};
 const DOCTORS  = {!! json_encode($doctors->map(function($d) { return ['id' => $d->user_id, 'name' => $d->firstName . ' ' . $d->lastName]; })->values()) !!};
 const TODAY    = "{{ now()->toDateString() }}";
+const PREFILL_PATIENT     = {{ request('patient_id', 'null') }};
+const FROM_APPOINTMENT_ID = {{ request('from_appointment', 'null') }};
 
 let productIndex = 1;
 let serviceIndex = 0;
@@ -583,6 +593,17 @@ document.addEventListener('DOMContentLoaded', () => {
     // Populate the first product line with JS-built options
     const firstSelect = document.querySelector('.prod-select');
     if (firstSelect) firstSelect.innerHTML = productOptionsHTML();
+
+    // Auto-select patient if redirected from a completed booking
+    if (PREFILL_PATIENT) {
+        const patientSel = document.getElementById('patientSelect');
+        if (patientSel) {
+            patientSel.value = PREFILL_PATIENT;
+            patientSel.style.borderColor = '#80a833';
+            patientSel.style.background  = '#f0f7e6';
+        }
+    }
+
     const defaultPay = document.querySelector('input[name="payment_method"]:checked');
     if (defaultPay) toggleTendered(defaultPay);
     recalcTotal();
