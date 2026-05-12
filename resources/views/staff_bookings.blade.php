@@ -57,6 +57,15 @@
         <span class="result-count" id="resultCount"></span>
     </div>
 
+    {{-- ── Period filter ── --}}
+    <div class="period-tabs">
+        <button class="period-btn active" id="periodAll"     onclick="setPeriod('all', this)">All Time</button>
+        <button class="period-btn"        id="periodDaily"   onclick="setPeriod('daily', this)">Daily</button>
+        <button class="period-btn"        id="periodWeekly"  onclick="setPeriod('weekly', this)">Weekly</button>
+        <button class="period-btn"        id="periodMonthly" onclick="setPeriod('monthly', this)">Monthly</button>
+        <button class="period-btn"        id="periodYearly"  onclick="setPeriod('yearly', this)">Yearly</button>
+    </div>
+
     <table class="data-table" id="bookingsTable">
         <thead>
             <tr>
@@ -131,7 +140,57 @@
 </div>
 
 <script>
-let activeTab = '{{ $activeFilter }}';
+let activeTab    = '{{ $activeFilter }}';
+let activePeriod = 'all';
+
+// ── Period helpers ────────────────────────────────────────
+function getToday() {
+    return new Date().toISOString().slice(0, 10);
+}
+
+function getPeriodRange(period) {
+    const now   = new Date();
+    const today = now.toISOString().slice(0, 10);
+
+    if (period === 'all')     return { from: '', to: '' };
+    if (period === 'daily')   return { from: today, to: today };
+
+    if (period === 'weekly') {
+        const day  = now.getDay(); // 0=Sun
+        const diff = now.getDate() - day + (day === 0 ? -6 : 1); // Monday
+        const mon  = new Date(now.setDate(diff));
+        const sun  = new Date(new Date(mon).setDate(mon.getDate() + 6));
+        return {
+            from: mon.toISOString().slice(0, 10),
+            to:   sun.toISOString().slice(0, 10),
+        };
+    }
+
+    if (period === 'monthly') {
+        const y = now.getFullYear(), m = now.getMonth();
+        const first = new Date(y, m, 1).toISOString().slice(0, 10);
+        const last  = new Date(y, m + 1, 0).toISOString().slice(0, 10);
+        return { from: first, to: last };
+    }
+
+    if (period === 'yearly') {
+        const y = now.getFullYear();
+        return { from: `${y}-01-01`, to: `${y}-12-31` };
+    }
+
+    return { from: '', to: '' };
+}
+
+function setPeriod(period, btn) {
+    activePeriod = period;
+    document.querySelectorAll('.period-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+
+    const range = getPeriodRange(period);
+    document.getElementById('dateFrom').value = range.from;
+    document.getElementById('dateTo').value   = range.to;
+    applyFilters();
+}
 
 function setTab(tab, btn) {
     activeTab = tab;
@@ -170,8 +229,11 @@ function resetFilters() {
     document.getElementById('doctorFilter').value = '';
     document.getElementById('dateFrom').value = '';
     document.getElementById('dateTo').value = '';
-    activeTab = 'all';
+    activeTab    = 'all';
+    activePeriod = 'all';
     document.querySelectorAll('.filter-tabs button')
+        .forEach((b, i) => b.classList.toggle('active', i === 0));
+    document.querySelectorAll('.period-btn')
         .forEach((b, i) => b.classList.toggle('active', i === 0));
     applyFilters();
 }
