@@ -33,7 +33,6 @@
                     @endif
                 </button>
             </div>
-            <a href="{{ route('staff.home') }}" class="back-btn">← Back to Dashboard</a>
             <div class="date-box">
                 <p>Today's Date</p>
                 <strong>{{ now()->toDateString() }}</strong>
