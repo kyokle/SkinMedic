@@ -21,7 +21,20 @@
             <h2>Walk-in Sale</h2>
             <p class="walkin-sub">{{ now()->format('l, F j Y') }}</p>
         </div>
-        <a href="{{ route('staff.home') }}" class="back-btn">← Back to Dashboard</a>
+        <div class="header-right">
+            <div class="toggle-tabs">
+                <button class="tab-btn active" id="tabSale" onclick="switchTab('sale')">
+                    🛒 Walk-in Sale
+                </button>
+                <button class="tab-btn" id="tabHistory" onclick="switchTab('history')">
+                    🕒 Recent Sales
+                    @if($recentSales->isNotEmpty())
+                        <span class="tab-badge">{{ $recentSales->count() }}</span>
+                    @endif
+                </button>
+            </div>
+            <a href="{{ route('staff.home') }}" class="back-btn">← Back to Dashboard</a>
+        </div>
     </div>
 
     {{-- ── Flash messages ── --}}
@@ -162,19 +175,6 @@
      TOGGLE PANEL (outside walkin-wrap so it spans full width)
 ══════════════════════════════════════════════════════ --}}
 <div class="toggle-wrap">
-
-    {{-- Tab buttons --}}
-    <div class="toggle-tabs">
-        <button class="tab-btn active" id="tabSale" onclick="switchTab('sale')">
-            🛒 Walk-in Sale
-        </button>
-        <button class="tab-btn" id="tabHistory" onclick="switchTab('history')">
-            🕒 Recent Sales
-            @if($recentSales->isNotEmpty())
-                <span class="tab-badge">{{ $recentSales->count() }}</span>
-            @endif
-        </button>
-    </div>
 
     {{-- Recent Sales Panel --}}
     <div id="historyPanel" class="history-panel" style="display:none;">
