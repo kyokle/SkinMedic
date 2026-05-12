@@ -351,14 +351,19 @@ class WalkinSaleController extends Controller
         $doctorRow = DB::table('doctor')->where('user_id', $request->doctor_id)->first();
         if (!$doctorRow) return response()->json(['available' => false]);
 
-        $taken = DB::table('appointments')
+        $query = DB::table('appointments')
             ->where('doctor_id',        $doctorRow->doctor_id)
             ->where('appointment_date', $request->date)
             ->where('appointment_time', $request->time)
-            ->whereNotIn('status', ['cancelled'])
-            ->exists();
+            ->whereNotIn('status', ['cancelled']);
 
-        return response()->json(['available' => !$taken]);
+        // Exclude the prefilled appointment's own slot so it doesn't
+        // falsely report itself as taken when the billing form loads.
+        if ($request->filled('exclude_appointment_id')) {
+            $query->where('appointment_id', '!=', (int) $request->exclude_appointment_id);
+        }
+
+        return response()->json(['available' => !$query->exists()]);
     }
 
     private function notifyStockLevel($product, int $newQty): void

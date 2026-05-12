@@ -415,15 +415,18 @@ function updateSvcPrice(sel) {
 
 // ── Slot checker ─────────────────────────────────────────
 function checkSlot(el) {
-    const line   = el.closest('.service-line');
-    const doctor = line.querySelector('.svc-doctor')?.value;
-    const date   = line.querySelector('.svc-date')?.value;
-    const time   = line.querySelector('.svc-time')?.value;
-    const status = line.querySelector('.svc-slot-status');
+    const line      = el.closest('.service-line');
+    const doctor    = line.querySelector('.svc-doctor')?.value;
+    const date      = line.querySelector('.svc-date')?.value;
+    const time      = line.querySelector('.svc-time')?.value;
+    const status    = line.querySelector('.svc-slot-status');
+    const existingId = line.querySelector('input[name*="existing_appointment_id"]')?.value || '';
     if (!doctor || !date || !time) { status.textContent = ''; return; }
     status.textContent = 'Checking...';
     status.className   = 'svc-slot-status checking';
-    fetch(`{{ route('staff.walkin.check-slot') }}?doctor_id=${doctor}&date=${date}&time=${time}`)
+    const url = `{{ route('staff.walkin.check-slot') }}?doctor_id=${doctor}&date=${date}&time=${time}`
+              + (existingId ? `&exclude_appointment_id=${existingId}` : '');
+    fetch(url)
         .then(r => r.json())
         .then(data => {
             status.textContent = data.available ? '✓ Slot available' : '✕ Slot taken';
@@ -450,19 +453,28 @@ function recalcTotal() {
     });
 
     document.querySelectorAll('.service-line').forEach(line => {
-        const sel   = line.querySelector('.svc-select');
-        const opt   = sel?.options[sel.selectedIndex];
-        const price = parseFloat(opt?.dataset?.price || 0);
+        const sel         = line.querySelector('.svc-select');
+        const opt         = sel?.options[sel.selectedIndex];
+        const price       = parseFloat(opt?.dataset?.price || 0);
+        const isPrefilled = !!line.querySelector('input[name*="existing_appointment_id"]');
         if (sel?.value) {
-            total += price;
-            lines.push({ name: '💆 ' + opt.text.split('(')[0].trim(), amount: price });
+            if (isPrefilled) {
+                // Prefilled (completed appointment) — show on summary but don't add to total
+                lines.push({ name: '💆 ' + opt.text.split('(')[0].trim(), amount: null, prefilled: true });
+            } else {
+                total += price;
+                lines.push({ name: '💆 ' + opt.text.split('(')[0].trim(), amount: price });
+            }
         }
     });
 
     grandTotal = total;
     document.getElementById('totalDisplay').textContent = '₱' + total.toFixed(2);
     document.getElementById('summaryLines').innerHTML = lines.length
-        ? lines.map(l => `<div class="summary-row"><span>${l.name}</span><span>₱${l.amount.toFixed(2)}</span></div>`).join('')
+        ? lines.map(l => l.prefilled
+            ? `<div class="summary-row"><span>${l.name}</span><span style="color:#888;font-style:italic;font-size:0.8rem;">Billed via appt.</span></div>`
+            : `<div class="summary-row"><span>${l.name}</span><span>₱${l.amount.toFixed(2)}</span></div>`
+          ).join('')
         : '<p class="empty-summary">No items added yet.</p>';
     calcChange();
 }
@@ -502,11 +514,17 @@ function confirmSale() {
             lines.push(`<div class="cm-row"><span>${opt.text.split('(')[0].trim()} ×${qty}</span><span>₱${(price*qty).toFixed(2)}</span></div>`);
     });
     document.querySelectorAll('.service-line').forEach(line => {
-        const sel = line.querySelector('.svc-select');
-        const opt = sel?.options[sel.selectedIndex];
-        const price = parseFloat(opt?.dataset?.price || 0);
-        if (sel?.value)
-            lines.push(`<div class="cm-row"><span>💆 ${opt.text.split('(')[0].trim()}</span><span>₱${price.toFixed(2)}</span></div>`);
+        const sel         = line.querySelector('.svc-select');
+        const opt         = sel?.options[sel.selectedIndex];
+        const price       = parseFloat(opt?.dataset?.price || 0);
+        const isPrefilled = !!line.querySelector('input[name*="existing_appointment_id"]');
+        if (sel?.value) {
+            if (isPrefilled) {
+                lines.push(`<div class="cm-row"><span>💆 ${opt.text.split('(')[0].trim()}</span><span style="color:#888;font-style:italic;">Billed via appt.</span></div>`);
+            } else {
+                lines.push(`<div class="cm-row"><span>💆 ${opt.text.split('(')[0].trim()}</span><span>₱${price.toFixed(2)}</span></div>`);
+            }
+        }
     });
 
     const patientSel = document.getElementById('patientSelect');
