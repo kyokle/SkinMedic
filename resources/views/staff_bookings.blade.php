@@ -29,11 +29,32 @@
     </div>
 
     <div class="filter-tabs">
-        <button class="{{ $activeFilter === 'all'       ? 'active' : '' }}" onclick="filterTable('all', this)">All</button>
-        <button class="{{ $activeFilter === 'pending'   ? 'active' : '' }}" onclick="filterTable('pending', this)">Pending</button>
-        <button class="{{ $activeFilter === 'approved'  ? 'active' : '' }}" onclick="filterTable('approved', this)">Approved</button>
-        <button class="{{ $activeFilter === 'completed' ? 'active' : '' }}" onclick="filterTable('completed', this)">Completed</button>
-        <button class="{{ $activeFilter === 'cancelled' ? 'active' : '' }}" onclick="filterTable('cancelled', this)">Cancelled</button>
+        <button class="{{ $activeFilter === 'all'       ? 'active' : '' }}" onclick="setTab('all', this)">All</button>
+        <button class="{{ $activeFilter === 'pending'   ? 'active' : '' }}" onclick="setTab('pending', this)">Pending</button>
+        <button class="{{ $activeFilter === 'approved'  ? 'active' : '' }}" onclick="setTab('approved', this)">Approved</button>
+        <button class="{{ $activeFilter === 'completed' ? 'active' : '' }}" onclick="setTab('completed', this)">Completed</button>
+        <button class="{{ $activeFilter === 'cancelled' ? 'active' : '' }}" onclick="setTab('cancelled', this)">Cancelled</button>
+    </div>
+
+    {{-- ── Search / filter bar ── --}}
+    <div class="search-bar">
+        <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#aaa" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex-shrink:0"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input type="text" id="q" placeholder="Search patient or service…" oninput="applyFilters()">
+        <label for="doctorFilter">Doctor</label>
+        <select id="doctorFilter" onchange="applyFilters()">
+            <option value="">All doctors</option>
+            @foreach($doctors as $doc)
+                <option value="Dr. {{ $doc->firstName }} {{ $doc->lastName }}">
+                    Dr. {{ $doc->firstName }} {{ $doc->lastName }}
+                </option>
+            @endforeach
+        </select>
+        <label for="dateFrom">From</label>
+        <input type="date" id="dateFrom" style="width:132px" onchange="applyFilters()">
+        <label for="dateTo">To</label>
+        <input type="date" id="dateTo" style="width:132px" onchange="applyFilters()">
+        <button class="reset-btn" onclick="resetFilters()">↺ Reset</button>
+        <span class="result-count" id="resultCount"></span>
     </div>
 
     <table class="data-table" id="bookingsTable">
@@ -53,6 +74,7 @@
                 @php $cls = strtolower($row->status); @endphp
                 <tr data-status="{{ $row->status }}"
                     data-id="{{ $row->appointment_id }}"
+                    data-date="{{ $row->appointment_date }}"
                     onclick="openModal(
                         {{ $row->appointment_id }},
                         '{{ addslashes($row->patient_name) }}',
@@ -109,12 +131,49 @@
 </div>
 
 <script>
-function filterTable(status, btn) {
+let activeTab = '{{ $activeFilter }}';
+
+function setTab(tab, btn) {
+    activeTab = tab;
     document.querySelectorAll('.filter-tabs button').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
-    document.querySelectorAll('#bookingsTable tbody tr[data-status]').forEach(row => {
-        row.style.display = (status === 'all' || row.dataset.status === status) ? '' : 'none';
+    applyFilters();
+}
+
+function applyFilters() {
+    const q      = document.getElementById('q').value.toLowerCase().trim();
+    const doc    = document.getElementById('doctorFilter').value;
+    const from   = document.getElementById('dateFrom').value;
+    const to     = document.getElementById('dateTo').value;
+    let visible  = 0;
+    const rows   = document.querySelectorAll('#bookingsTable tbody tr[data-status]');
+
+    rows.forEach(tr => {
+        const matchTab  = activeTab === 'all' || tr.dataset.status === activeTab;
+        const text      = tr.innerText.toLowerCase();
+        const matchQ    = !q || text.includes(q);
+        const matchDoc  = !doc || tr.querySelector('td:nth-child(4)').innerText.trim() === doc;
+        const matchFrom = !from || tr.dataset.date >= from;
+        const matchTo   = !to   || tr.dataset.date <= to;
+        const show      = matchTab && matchQ && matchDoc && matchFrom && matchTo;
+        tr.style.display = show ? '' : 'none';
+        if (show) visible++;
     });
+
+    const total = rows.length;
+    document.getElementById('resultCount').textContent =
+        visible === total ? `${total} appointments` : `${visible} of ${total}`;
+}
+
+function resetFilters() {
+    document.getElementById('q').value = '';
+    document.getElementById('doctorFilter').value = '';
+    document.getElementById('dateFrom').value = '';
+    document.getElementById('dateTo').value = '';
+    activeTab = 'all';
+    document.querySelectorAll('.filter-tabs button')
+        .forEach((b, i) => b.classList.toggle('active', i === 0));
+    applyFilters();
 }
 
 function openModal(id, patient, service, doctor, date, time, status) {
@@ -149,11 +208,7 @@ window.onclick = e => {
 };
 
 window.addEventListener('DOMContentLoaded', function () {
-    const filter = '{{ $activeFilter }}';
-    if (filter && filter !== 'all') {
-        const activeBtn = document.querySelector('.filter-tabs button.active');
-        if (activeBtn) filterTable(filter, activeBtn);
-    }
+    applyFilters();
 
     // Auto-open modal from notification click
     const params = new URLSearchParams(window.location.search);

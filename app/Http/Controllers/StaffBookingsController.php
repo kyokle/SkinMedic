@@ -124,9 +124,14 @@ class StaffBookingsController extends Controller
 
         $activeFilter = $request->query('filter', 'all');
 
+        $doctors = DB::table('users')
+            ->where('role', 'doctor')
+            ->orderBy('firstName')
+            ->get();
+
         return view('staff_bookings', array_merge(
     $this->sidebarData(),
-    compact('bookings', 'activeFilter')
+    compact('bookings', 'activeFilter', 'doctors')
     ));
     }
 
