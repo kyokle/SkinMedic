@@ -186,22 +186,38 @@ document.addEventListener("DOMContentLoaded", function () {
     const accent  = '#80a833';
     const accent2 = '#b5d45a';
 
+    // ── Bookings Last 7 Days — BAR chart ──────────────────────
     new Chart(document.getElementById('lineChart'), {
-        type: 'line',
+        type: 'bar',
         data: {
             labels: {!! json_encode($lineLabels) !!},
             datasets: [{
                 label: 'Bookings',
                 data: {!! json_encode($lineValues) !!},
-                borderColor: accent,
-                backgroundColor: 'rgba(128,168,51,0.1)',
-                fill: true,
-                tension: 0.4
+                backgroundColor: 'rgba(128,168,51,0.75)',
+                borderColor: '#80a833',
+                borderWidth: 1.5,
+                borderRadius: 6,
             }]
         },
-        options: { responsive: true, maintainAspectRatio: true }
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: ctx => ` ${ctx.parsed.y} booking${ctx.parsed.y !== 1 ? 's' : ''}`
+                    }
+                }
+            },
+            scales: {
+                y: { beginAtZero: true, ticks: { stepSize: 1 } }
+            }
+        }
     });
 
+    // ── Booking Status Breakdown — DONUT with % tooltip ───────
     new Chart(document.getElementById('donutChart'), {
         type: 'doughnut',
         data: {
@@ -209,12 +225,53 @@ document.addEventListener("DOMContentLoaded", function () {
             datasets: [{
                 label: 'Status',
                 data: {!! json_encode($donutData) !!},
-                backgroundColor: {!! json_encode($donutColors) !!}
+                backgroundColor: {!! json_encode($donutColors) !!},
+                borderWidth: 2,
+                borderColor: '#fff',
+                hoverOffset: 10,
             }]
         },
-        options: { responsive: true, maintainAspectRatio: true }
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: { padding: 16, font: { size: 12 } }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                            const pct   = total > 0 ? ((context.parsed / total) * 100).toFixed(1) : 0;
+                            return ` ${context.label}: ${context.parsed} (${pct}%)`;
+                        }
+                    }
+                }
+            }
+        },
+        plugins: [{
+            id: 'centerText',
+            afterDraw(chart) {
+                const { ctx, chartArea: { width, height, left, top } } = chart;
+                const total = chart.data.datasets[0].data.reduce((a, b) => a + b, 0);
+                const cx = left + width / 2;
+                const cy = top  + height / 2;
+                ctx.save();
+                ctx.textAlign    = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillStyle    = '#1a1f16';
+                ctx.font         = 'bold 22px DM Sans, sans-serif';
+                ctx.fillText(total, cx, cy - 10);
+                ctx.fillStyle = '#7a8070';
+                ctx.font      = '12px DM Sans, sans-serif';
+                ctx.fillText('total', cx, cy + 12);
+                ctx.restore();
+            }
+        }]
     });
 
+    // ── Most Popular Services ─────────────────────────────────
     new Chart(document.getElementById('barChart'), {
         type: 'bar',
         data: {
@@ -222,12 +279,14 @@ document.addEventListener("DOMContentLoaded", function () {
             datasets: [{
                 label: 'Bookings',
                 data: {!! json_encode($svcData) !!},
-                backgroundColor: accent2
+                backgroundColor: accent2,
+                borderRadius: 6,
             }]
         },
         options: { responsive: true, maintainAspectRatio: true }
     });
 
+    // ── Product Stock Levels ──────────────────────────────────
     new Chart(document.getElementById('stockChart'), {
         type: 'bar',
         data: {
@@ -235,7 +294,8 @@ document.addEventListener("DOMContentLoaded", function () {
             datasets: [{
                 label: 'Stock Qty',
                 data: {!! json_encode($stockQty) !!},
-                backgroundColor: '#3b82f6'
+                backgroundColor: '#3b82f6',
+                borderRadius: 6,
             }]
         },
         options: { responsive: true, maintainAspectRatio: true }

@@ -7,7 +7,7 @@ use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\SidebarDataController;
 use CloudinaryLabs\CloudinaryLaravel\Facades\Cloudinary;
 
-class StaffServicesController extends Controller
+class DoctorServicesController extends Controller
 {
     use SidebarDataController;
     public function index()
@@ -21,7 +21,7 @@ class StaffServicesController extends Controller
         ->groupBy('service_id')
         ->map(fn($rows) => $rows->pluck('quantity_used', 'product_id'));
 
-    return view('staff_services', array_merge(
+    return view('doctor_services', array_merge(
         $this->sidebarData(),
         compact('services', 'products', 'serviceProducts')
     ));
@@ -58,7 +58,7 @@ if ($request->hasFile('image') && $request->file('image')->isValid()) {
             }
         }
 
-        return redirect()->route('staff.services');
+        return redirect()->route('doctor.services');
     }
 
     public function update(Request $request)
@@ -98,7 +98,7 @@ if ($request->hasFile('image') && $request->file('image')->isValid()) {
     }
     // ─────────────────────────────────────────────────────
 
-    return redirect()->route('staff.services');
+    return redirect()->route('doctor.services');
 }
 
     public function delete(Request $request)
@@ -107,6 +107,6 @@ if ($request->hasFile('image') && $request->file('image')->isValid()) {
         DB::delete("DELETE FROM service_products WHERE service_id = ?", [$serviceId]);
         DB::delete("DELETE FROM services WHERE service_id = ?", [$serviceId]);
 
-        return redirect()->route('staff.services');
+        return redirect()->route('doctor.services');
     }
 }
