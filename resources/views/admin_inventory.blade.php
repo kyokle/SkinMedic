@@ -122,8 +122,7 @@
                     <th>Current Batch Expiry</th>
                     <th>Current Batch Qty</th>
                     <th>Next Batch Expiry</th>
-                    <th>Add Stock (Qty + Expiry)</th>
-                    <th>Edit Stock</th>
+                    <th>Actions</th>
                 </tr>
             </thead>
             <tbody id="inventoryTableBody">
@@ -172,91 +171,173 @@
                         <td>{{ $row->current_batch_qty ?? '—' }}</td>
                         <td class="exp-next">{{ $row->next_expiry ?: '—' }}</td>
                         <td>
-                            {{-- Add Stock inline form with per-row validation errors --}}
-                            <form method="POST"
-                                  action="{{ route('admin.inventory.add-stock') }}"
-                                  class="add-stock-form"
-                                  id="addForm{{ $row->product_id }}"
-                                  onsubmit="return validateAddStock({{ $row->product_id }})">
-                                @csrf
-                                <input type="hidden" name="product_id" value="{{ $row->product_id }}">
-                                <input type="number" name="quantity"
-                                       id="addQty{{ $row->product_id }}"
-                                       required min="1" max="99999"
-                                       placeholder="Qty"
-                                       class="input-qty">
-                                <input type="date" name="expiry_date"
-                                       id="addExpiry{{ $row->product_id }}"
-                                       required
-                                       min="{{ now()->toDateString() }}"
-                                       class="input-date">
-                                <button type="submit" class="add-btn">Add</button>
-                            </form>
-                            {{-- Inline validation error for this row --}}
-                            @if($errors->has('quantity') || $errors->has('expiry_date'))
-                                @php $errProductId = old('product_id'); @endphp
-                                @if($errProductId == $row->product_id)
-                                    <div class="inline-error">
-                                        @foreach($errors->get('quantity') as $e)
-                                            <span>{{ $e }}</span>
-                                        @endforeach
-                                        @foreach($errors->get('expiry_date') as $e)
-                                            <span>{{ $e }}</span>
-                                        @endforeach
-                                    </div>
-                                @endif
-                            @endif
-                        </td>
-                        <td>
-                            <button class="deduct-btn"
-                                    onclick="openDeductModal(
+                            <button class="manage-btn"
+                                    onclick="openManageModal(
                                         {{ $row->product_id }},
                                         '{{ addslashes($row->product_name) }}',
-                                        {{ $row->quantity }}
+                                        {{ $row->quantity }},
+                                        {{ $row->reorder_level }}
                                     )">
-                                ✏ Edit Stock
+                                ⚙ Manage Stock
                             </button>
                         </td>
                     </tr>
                 @endforeach
                 <tr id="noResultsRow" class="no-results-row" style="display:none;">
-                    <td colspan="11">No products match your search.</td>
+                    <td colspan="10">No products match your search.</td>
                 </tr>
             </tbody>
         </table>
     </div>
 </div>
 
-{{-- Deduct / Edit Stock Modal --}}
-<div id="deductModal" class="modal-overlay" onclick="closeDeductModal(event)">
+{{-- ══════════════════════════════════════
+     MANAGE STOCK MODAL
+══════════════════════════════════════ --}}
+<div id="manageModal" class="modal-overlay" onclick="closeManageModal(event)">
     <div class="modal-box">
-        <button class="modal-close" onclick="closeDeductModal()">×</button>
-        <h3 id="deductTitle">Edit Stock</h3>
-        <p id="deductCurrent" class="deduct-current"></p>
+        <button class="modal-close" onclick="closeManageModal()">×</button>
 
-        {{-- Mode toggle --}}
-        <div class="modal-toggle-row">
-            <button type="button" id="modeDeductBtn"
-                    class="modal-toggle-btn active"
-                    onclick="setDeductMode('deduct')">Deduct Units</button>
-            <button type="button" id="modeSetBtn"
-                    class="modal-toggle-btn"
-                    onclick="setDeductMode('set')">Set Exact Qty</button>
-        </div>
-        <p id="modeHint" class="mode-hint">Enter how many units to remove from stock.</p>
-
-        <form method="POST" action="{{ route('admin.inventory.deduct-stock') }}" id="deductForm">
-            @csrf
-            <input type="hidden" name="product_id" id="deductProductId">
-            <input type="hidden" name="action"     id="deductAction"    value="deduct">
-            <div class="deduct-row">
-                <label id="deductQtyLabel">Quantity to Deduct</label>
-                <input type="number" name="quantity" id="deductQty"
-                       min="1" required placeholder="Enter quantity">
-                <span id="deductQtyHint" class="qty-hint"></span>
+        <div class="modal-product-header">
+            <span class="modal-product-icon">📦</span>
+            <div>
+                <h3 id="manageTitle">Manage Stock</h3>
+                <p id="manageCurrent" class="deduct-current"></p>
             </div>
-            <button type="submit" class="save-deduct-btn" id="deductSubmitBtn">Save Changes</button>
-        </form>
+        </div>
+
+        {{-- Tab pills --}}
+        <div class="manage-tabs">
+            <button class="manage-tab active" id="tabAdd"    onclick="switchManageTab('add')">
+                ➕ Add Stock
+            </button>
+            <button class="manage-tab" id="tabDeduct" onclick="switchManageTab('deduct')">
+                ➖ Deduct
+            </button>
+            <button class="manage-tab" id="tabSet"    onclick="switchManageTab('set')">
+                ✏ Set Exact
+            </button>
+            <button class="manage-tab" id="tabReorder" onclick="switchManageTab('reorder')">
+                🔔 Reorder Level
+            </button>
+            <button class="manage-tab tab-danger" id="tabRemove" onclick="switchManageTab('remove')">
+                🗑 Remove
+            </button>
+        </div>
+
+        {{-- ── ADD STOCK panel ── --}}
+        <div id="panelAdd" class="manage-panel">
+            <div class="panel-hint panel-hint-add">
+                <strong>Adding new stock?</strong> Enter the quantity you received and its expiry date. This will be saved as a new batch and added to the total.
+            </div>
+            <form method="POST" action="{{ route('admin.inventory.add-stock') }}" id="addStockForm">
+                @csrf
+                <input type="hidden" name="product_id" id="addProductId">
+                <div class="modal-field-row">
+                    <div class="modal-field">
+                        <label>Quantity Received</label>
+                        <input type="number" name="quantity" id="addQtyModal"
+                               min="1" max="99999" placeholder="e.g. 50" required>
+                        <span class="field-hint">How many units are you adding?</span>
+                    </div>
+                    <div class="modal-field">
+                        <label>Expiry Date</label>
+                        <input type="date" name="expiry_date" id="addExpiryModal"
+                               min="{{ now()->toDateString() }}" required>
+                        <span class="field-hint">The expiry date printed on the batch.</span>
+                    </div>
+                </div>
+                <button type="submit" class="modal-action-btn btn-add"
+                        onclick="return validateModalAdd()">
+                    ➕ Add to Inventory
+                </button>
+            </form>
+        </div>
+
+        {{-- ── DEDUCT panel ── --}}
+        <div id="panelDeduct" class="manage-panel" style="display:none;">
+            <div class="panel-hint panel-hint-deduct">
+                <strong>Deducting stock?</strong> Use this when items were used, damaged, or sold without going through the system. Enter the number of units to remove.
+            </div>
+            <form method="POST" action="{{ route('admin.inventory.deduct-stock') }}" id="deductStockForm">
+                @csrf
+                <input type="hidden" name="product_id" id="deductProductId">
+                <input type="hidden" name="action" value="deduct">
+                <div class="modal-field">
+                    <label>Units to Remove</label>
+                    <input type="number" name="quantity" id="deductQtyModal"
+                           min="1" placeholder="e.g. 3" required>
+                    <span id="deductQtyHint" class="field-hint"></span>
+                </div>
+                <button type="submit" class="modal-action-btn btn-deduct">
+                    ➖ Deduct from Inventory
+                </button>
+            </form>
+        </div>
+
+        {{-- ── SET EXACT panel ── --}}
+        <div id="panelSet" class="manage-panel" style="display:none;">
+            <div class="panel-hint panel-hint-set">
+                <strong>Correcting the count?</strong> Use this after a physical stock count. Enter the exact number of units you physically counted — this will replace the current quantity.
+            </div>
+            <form method="POST" action="{{ route('admin.inventory.deduct-stock') }}" id="setStockForm">
+                @csrf
+                <input type="hidden" name="product_id" id="setProductId">
+                <input type="hidden" name="action" value="set">
+                <div class="modal-field">
+                    <label>Correct Quantity</label>
+                    <input type="number" name="quantity" id="setQtyModal"
+                           min="0" placeholder="e.g. 42" required>
+                    <span id="setQtyHint" class="field-hint"></span>
+                </div>
+                <button type="submit" class="modal-action-btn btn-set">
+                    ✏ Update to This Quantity
+                </button>
+            </form>
+        </div>
+
+        {{-- ── REORDER LEVEL panel ── --}}
+        <div id="panelReorder" class="manage-panel" style="display:none;">
+            <div class="panel-hint panel-hint-reorder">
+                <strong>Updating the reorder level?</strong> This is the minimum stock count that triggers a low-stock alert. When the total quantity drops to or below this number, the product will be flagged as <em>Reorder Needed</em>.
+            </div>
+            <form method="POST" action="{{ route('admin.inventory.update-reorder') }}" id="reorderForm">
+                @csrf
+                <input type="hidden" name="product_id" id="reorderProductId">
+                <div class="modal-field">
+                    <label>New Reorder Level</label>
+                    <input type="number" name="reorder_level" id="reorderLevelInput"
+                           min="0" max="99999" placeholder="e.g. 10" required>
+                    <span id="reorderHint" class="field-hint"></span>
+                </div>
+                <button type="submit" class="modal-action-btn btn-reorder">
+                    🔔 Update Reorder Level
+                </button>
+            </form>
+        </div>
+
+        {{-- ── REMOVE panel ── --}}
+        <div id="panelRemove" class="manage-panel" style="display:none;">
+            <div class="panel-hint panel-hint-remove">
+                <strong>⚠ Remove all stock?</strong> This will set the quantity to zero and clear all batch data for this product. Only use this if the product is being discontinued or fully written off.
+            </div>
+            <form method="POST" action="{{ route('admin.inventory.deduct-stock') }}" id="removeStockForm">
+                @csrf
+                <input type="hidden" name="product_id" id="removeProductId">
+                <input type="hidden" name="action" value="set">
+                <input type="hidden" name="quantity" value="0">
+                <div class="remove-confirm-block">
+                    <label class="remove-confirm-label">
+                        <input type="checkbox" id="removeConfirmCheck" onchange="toggleRemoveBtn()">
+                        I understand this will zero out all stock for <strong id="removeProductName"></strong>.
+                    </label>
+                </div>
+                <button type="submit" class="modal-action-btn btn-remove" id="removeSubmitBtn" disabled>
+                    🗑 Remove All Stock
+                </button>
+            </form>
+        </div>
+
     </div>
 </div>
 
@@ -285,87 +366,74 @@ function filterInventory() {
     countEl.textContent = (query || status) ? `${visible} of ${total} product(s)` : '';
 }
 
-/* ── Add-stock client-side validation ── */
-function validateAddStock(productId) {
-    const qty    = document.getElementById('addQty' + productId);
-    const expiry = document.getElementById('addExpiry' + productId);
-    const today  = new Date().toISOString().split('T')[0];
+/* ══════════════════════════════════════
+   MANAGE STOCK MODAL
+══════════════════════════════════════ */
+let _currentStock    = 0;
+let _currentProduct  = '';
 
+function openManageModal(id, name, qty, reorder) {
+    _currentStock   = qty;
+    _currentProduct = name;
+
+    document.getElementById('manageTitle').textContent   = name;
+    document.getElementById('manageCurrent').textContent = 'Current stock: ' + qty + ' units · Reorder at: ' + reorder;
+
+    // Populate hidden product_id fields in all forms
+    document.getElementById('addProductId').value     = id;
+    document.getElementById('deductProductId').value  = id;
+    document.getElementById('setProductId').value     = id;
+    document.getElementById('reorderProductId').value = id;
+    document.getElementById('removeProductId').value  = id;
+    document.getElementById('removeProductName').textContent = name;
+
+    // Reset hints
+    document.getElementById('deductQtyHint').textContent  = 'Max you can deduct: ' + qty + ' units';
+    document.getElementById('setQtyHint').textContent     = 'Current count is ' + qty + '. Enter the correct number.';
+    document.getElementById('reorderHint').textContent    = 'Current reorder level: ' + reorder + '. Enter the new threshold.';
+    document.getElementById('reorderLevelInput').value    = reorder;
+    document.getElementById('deductQtyModal').max = qty;
+
+    // Reset remove checkbox
+    document.getElementById('removeConfirmCheck').checked = false;
+    document.getElementById('removeSubmitBtn').disabled = true;
+
+    // Always open on Add tab
+    switchManageTab('add');
+
+    document.getElementById('manageModal').style.display = 'flex';
+}
+
+function closeManageModal(event) {
+    if (!event || event.target === document.getElementById('manageModal')) {
+        document.getElementById('manageModal').style.display = 'none';
+    }
+}
+
+function switchManageTab(tab) {
+    const tabs = ['add', 'deduct', 'set', 'reorder', 'remove'];
+    tabs.forEach(t => {
+        document.getElementById('tab' + t.charAt(0).toUpperCase() + t.slice(1)).classList.toggle('active', t === tab);
+        document.getElementById('panel' + t.charAt(0).toUpperCase() + t.slice(1)).style.display = t === tab ? 'block' : 'none';
+    });
+}
+
+function validateModalAdd() {
+    const qty    = document.getElementById('addQtyModal');
+    const expiry = document.getElementById('addExpiryModal');
+    const today  = new Date().toISOString().split('T')[0];
     if (!qty.value || parseInt(qty.value) < 1) {
-        alert('Quantity must be at least 1.');
-        qty.focus();
-        return false;
+        qty.focus(); return false;
     }
-    if (parseInt(qty.value) > 99999) {
-        alert('Quantity cannot exceed 99,999 per batch.');
-        qty.focus();
-        return false;
-    }
-    if (!expiry.value) {
-        alert('Please select an expiry date.');
-        expiry.focus();
-        return false;
-    }
-    if (expiry.value < today) {
-        alert('Expiry date must be today or a future date.');
-        expiry.focus();
-        return false;
+    if (!expiry.value || expiry.value < today) {
+        expiry.focus(); return false;
     }
     return true;
 }
 
-/* ── Edit Stock modal ── */
-let _currentStock = 0;
-
-function openDeductModal(id, name, qty) {
-    _currentStock = qty;
-    document.getElementById('deductModal').style.display = 'flex';
-    document.getElementById('deductProductId').value     = id;
-    document.getElementById('deductTitle').textContent   = 'Edit Stock — ' + name;
-    document.getElementById('deductCurrent').textContent = 'Current quantity: ' + qty + ' units';
-    document.getElementById('deductQty').value           = '';
-    setDeductMode('deduct'); // always open in deduct mode
-}
-
-function setDeductMode(mode) {
-    const action    = document.getElementById('deductAction');
-    const label     = document.getElementById('deductQtyLabel');
-    const hint      = document.getElementById('modeHint');
-    const qtyInput  = document.getElementById('deductQty');
-    const submitBtn = document.getElementById('deductSubmitBtn');
-    const qtyHint   = document.getElementById('deductQtyHint');
-    const btnDeduct = document.getElementById('modeDeductBtn');
-    const btnSet    = document.getElementById('modeSetBtn');
-
-    if (mode === 'deduct') {
-        action.value      = 'deduct';
-        label.textContent = 'Quantity to Deduct';
-        hint.textContent  = 'Enter how many units to remove from stock.';
-        qtyInput.max      = _currentStock;
-        qtyInput.placeholder = 'e.g. 5';
-        qtyHint.textContent  = 'Max: ' + _currentStock;
-        submitBtn.textContent = 'Deduct Stock';
-        btnDeduct.classList.add('active');
-        btnSet.classList.remove('active');
-    } else {
-        action.value      = 'set';
-        label.textContent = 'Set Stock To';
-        hint.textContent  = 'Enter the new total quantity. Must be less than current stock.';
-        qtyInput.max      = _currentStock - 1;
-        qtyInput.placeholder = 'e.g. ' + Math.max(0, _currentStock - 1);
-        qtyHint.textContent  = 'Current: ' + _currentStock + ' — enter new total (must be lower)';
-        submitBtn.textContent = 'Set Exact Qty';
-        btnDeduct.classList.remove('active');
-        btnSet.classList.add('active');
-    }
-
-    qtyInput.value = '';
-}
-
-function closeDeductModal(event) {
-    if (!event || event.target === document.getElementById('deductModal')) {
-        document.getElementById('deductModal').style.display = 'none';
-    }
+function toggleRemoveBtn() {
+    document.getElementById('removeSubmitBtn').disabled =
+        !document.getElementById('removeConfirmCheck').checked;
 }
 
 /* ── Notification helpers ── */

@@ -282,6 +282,7 @@ Route::post('/admin/inventory/add-stock', [AdminInventoryController::class, 'add
     ->name('admin.inventory.add-stock')
     ->middleware('check.staff.role');
 
+    Route::post('/admin/inventory/update-reorder', [AdminInventoryController::class, 'updateReorder'])->name('admin.inventory.update-reorder');
 // Admin Sales Report
 Route::get('/admin/reports/sales', [AdminSalesReportController::class, 'index']) ->name('admin.reports.sales');
 Route::get('/admin/reports/sales/export', [AdminSalesReportController::class, 'export']) ->name('admin.reports.sales.export');

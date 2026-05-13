@@ -14,7 +14,7 @@ class AdminInventoryController extends Controller
     public function index()
     {
         $this->autoRemoveExpiredStock();
-        $this->checkNearExpiry(); // ← expiry notifications
+        $this->checkNearExpiry();
         $this->syncProductQuantities();
 
         $lowStock   = collect(DB::select("SELECT * FROM products WHERE quantity > 0 AND quantity <= reorder_level"));
@@ -65,6 +65,18 @@ class AdminInventoryController extends Controller
 
     public function addStock(Request $request)
     {
+        // ── Validation ────────────────────────────────────────
+        $request->validate([
+            'product_id'  => 'required|integer|exists:products,product_id',
+            'quantity'    => 'required|integer|min:1|max:99999',
+            'expiry_date' => 'required|date|after_or_equal:today',
+        ], [
+            'quantity.min'             => 'Quantity must be at least 1.',
+            'quantity.max'             => 'Quantity cannot exceed 99,999 per batch.',
+            'expiry_date.after_or_equal' => 'Expiry date must be today or a future date.',
+        ]);
+        // ─────────────────────────────────────────────────────
+
         $productId  = (int) $request->input('product_id');
         $qty        = (int) $request->input('quantity');
         $expiryDate = $request->input('expiry_date');
@@ -81,7 +93,7 @@ class AdminInventoryController extends Controller
             ) WHERE product_id = ?
         ", [$productId, $productId]);
 
-        // ── Notifications ──────────────────────────────────────
+        // ── Notifications ─────────────────────────────────────
         $product    = DB::table('products')->where('product_id', $productId)->first();
         $newQty     = DB::table('inventory_logs')
                         ->where('product_id', $productId)
@@ -118,109 +130,161 @@ class AdminInventoryController extends Controller
                 );
             }
         }
-        // ──────────────────────────────────────────────────────
+        // ─────────────────────────────────────────────────────
 
-        return redirect()->route('admin.inventory');
+        return redirect()->route('admin.inventory')->with('success', $qty . ' units added successfully.');
     }
 
-  public function deductStock(Request $request)
+    public function deductStock(Request $request)
+    {
+        // ── Validation ────────────────────────────────────────
+        $request->validate([
+            'product_id' => 'required|integer|exists:products,product_id',
+            'quantity'   => 'required|integer|min:1',
+            'action'     => 'required|in:deduct,set',
+        ], [
+            'quantity.min' => 'Quantity must be at least 1.',
+        ]);
+        // ─────────────────────────────────────────────────────
+
+        $product = DB::table('products')->where('product_id', $request->product_id)->first();
+        if (!$product) return back()->with('error', 'Product not found.');
+
+        if ($request->action === 'set') {
+            // "Set exact qty" — the user types the new desired total.
+            // We deduct the difference between current and target.
+            $targetQty = $request->quantity;
+
+            if ($targetQty >= $product->quantity) {
+                return back()->with('error', 'Target quantity must be less than the current stock (' . $product->quantity . '). Use Add Stock to increase.');
+            }
+            if ($targetQty < 0) {
+                return back()->with('error', 'Target quantity cannot be negative.');
+            }
+
+            $deductQty = $product->quantity - $targetQty;
+        } else {
+            // "Deduct" mode — straightforward subtraction
+            if ($request->quantity > $product->quantity) {
+                return back()->with('error', 'Cannot deduct ' . $request->quantity . ' units; only ' . $product->quantity . ' in stock.');
+            }
+            $deductQty = $request->quantity;
+        }
+
+        // ── TRUE FIFO DEDUCTION ───────────────────────────────
+        $remaining = $deductQty;
+
+        $batches = DB::table('inventory_logs')
+            ->where('product_id', $request->product_id)
+            ->where('type', 'IN')
+            ->where('quantity', '>', 0)
+            ->orderBy('expiry_date')
+            ->orderBy('id')
+            ->get();
+
+        foreach ($batches as $batch) {
+            if ($remaining <= 0) break;
+
+            if ($batch->quantity >= $remaining) {
+                DB::table('inventory_logs')
+                    ->where('id', $batch->id)
+                    ->decrement('quantity', $remaining);
+                $remaining = 0;
+            } else {
+                DB::table('inventory_logs')
+                    ->where('id', $batch->id)
+                    ->update(['quantity' => 0]);
+                $remaining -= $batch->quantity;
+            }
+        }
+        // ─────────────────────────────────────────────────────
+
+        $newQty = DB::table('inventory_logs')
+            ->where('product_id', $request->product_id)
+            ->where('type', 'IN')
+            ->where('quantity', '>', 0)
+            ->sum('quantity');
+
+        DB::table('products')
+            ->where('product_id', $request->product_id)
+            ->update(['quantity' => $newQty]);
+
+        // ── Notifications ─────────────────────────────────────
+        $adminStaff = DB::table('users')->whereIn('role', ['admin', 'staff'])->get();
+
+        $actionLabel = $request->action === 'set'
+            ? 'adjusted to ' . $newQty . ' units (deducted ' . $deductQty . ')'
+            : $deductQty . ' units deducted. Remaining: ' . $newQty;
+
+        foreach ($adminStaff as $u) {
+            NotificationHelper::send(
+                $u->user_id,
+                'Stock Updated',
+                ($product->product_name ?? 'A product') . ' — ' . $actionLabel . '.',
+                'inventory'
+            );
+        }
+
+        if ($newQty > 0 && $newQty <= $product->reorder_level) {
+            foreach ($adminStaff as $u) {
+                NotificationHelper::send(
+                    $u->user_id,
+                    '⚠ Low Stock Warning',
+                    ($product->product_name ?? 'A product') . ' is low on stock (' . $newQty . ' units remaining).',
+                    'inventory'
+                );
+            }
+        }
+
+        if ($newQty == 0) {
+            foreach ($adminStaff as $u) {
+                NotificationHelper::send(
+                    $u->user_id,
+                    '❌ Out of Stock',
+                    ($product->product_name ?? 'A product') . ' is now out of stock.',
+                    'inventory'
+                );
+            }
+        }
+        // ─────────────────────────────────────────────────────
+
+        return back()->with('success', 'Stock updated successfully.');
+    }
+
+    public function updateReorder(Request $request)
 {
     $request->validate([
-        'product_id' => 'required|integer',
-        'quantity'   => 'required|integer|min:1',
-        'action'     => 'required|in:deduct,set',
+        'product_id'    => 'required|integer|exists:products,product_id',
+        'reorder_level' => 'required|integer|min:0|max:99999',
+    ], [
+        'reorder_level.min' => 'Reorder level cannot be negative.',
+        'reorder_level.max' => 'Reorder level cannot exceed 99,999.',
     ]);
 
-    $product = DB::table('products')->where('product_id', $request->product_id)->first();
+    $productId    = (int) $request->input('product_id');
+    $reorderLevel = (int) $request->input('reorder_level');
+
+    $product = DB::table('products')->where('product_id', $productId)->first();
     if (!$product) return back()->with('error', 'Product not found.');
 
-    if ($request->action === 'set') {
-        $diff = $product->quantity - $request->quantity;
-        if ($diff <= 0) return back()->with('error', 'Set quantity must be less than current stock.');
-        $deductQty = $diff;
-    } else {
-        if ($request->quantity > $product->quantity) {
-            return back()->with('error', 'Cannot deduct more than current stock.');
-        }
-        $deductQty = $request->quantity;
-    }
-
-    // ── TRUE FIFO DEDUCTION ───────────────────────────────────
-    // Deduct from oldest batches first (by expiry_date then id)
-    $remaining = $deductQty;
-
-    $batches = DB::table('inventory_logs')
-        ->where('product_id', $request->product_id)
-        ->where('type', 'IN')
-        ->where('quantity', '>', 0)
-        ->orderBy('expiry_date')
-        ->orderBy('id')
-        ->get();
-
-    foreach ($batches as $batch) {
-        if ($remaining <= 0) break;
-
-        if ($batch->quantity >= $remaining) {
-            DB::table('inventory_logs')
-                ->where('id', $batch->id)
-                ->decrement('quantity', $remaining);
-            $remaining = 0;
-        } else {
-            DB::table('inventory_logs')
-                ->where('id', $batch->id)
-                ->update(['quantity' => 0]);
-            $remaining -= $batch->quantity;
-        }
-    }
-    // ─────────────────────────────────────────────────────────
-
-    // Recalculate total product quantity from remaining IN batches
-    $newQty = DB::table('inventory_logs')
-        ->where('product_id', $request->product_id)
-        ->where('type', 'IN')
-        ->where('quantity', '>', 0)
-        ->sum('quantity');
-
     DB::table('products')
-        ->where('product_id', $request->product_id)
-        ->update(['quantity' => $newQty]);
+        ->where('product_id', $productId)
+        ->update(['reorder_level' => $reorderLevel]);
 
-    // ── Notifications ──────────────────────────────────────
+    // ── Notifications ─────────────────────────────────────
     $adminStaff = DB::table('users')->whereIn('role', ['admin', 'staff'])->get();
 
     foreach ($adminStaff as $u) {
         NotificationHelper::send(
             $u->user_id,
-            'Stock Deducted',
-            ($product->product_name ?? 'A product') . ' had ' . $deductQty . ' units deducted. Remaining stock: ' . $newQty . '.',
+            'Reorder Level Updated',
+            ($product->product_name ?? 'A product') . ' reorder level changed to ' . $reorderLevel . ' units.',
             'inventory'
         );
     }
+    // ─────────────────────────────────────────────────────
 
-    if ($newQty > 0 && $newQty <= $product->reorder_level) {
-        foreach ($adminStaff as $u) {
-            NotificationHelper::send(
-                $u->user_id,
-                '⚠ Low Stock Warning',
-                ($product->product_name ?? 'A product') . ' is low on stock (' . $newQty . ' units remaining).',
-                'inventory'
-            );
-        }
-    }
-
-    if ($newQty == 0) {
-        foreach ($adminStaff as $u) {
-            NotificationHelper::send(
-                $u->user_id,
-                '❌ Out of Stock',
-                ($product->product_name ?? 'A product') . ' is now out of stock.',
-                'inventory'
-            );
-        }
-    }
-    // ──────────────────────────────────────────────────────
-
-    return back()->with('success', 'Stock updated successfully.');
+    return back()->with('success', 'Reorder level updated successfully.');
 }
 
     private function checkNearExpiry(): void
@@ -268,16 +332,16 @@ class AdminInventoryController extends Controller
         ");
     }
 
-   private function syncProductQuantities(): void
-{
-    DB::update("
-        UPDATE products p SET quantity = (
-            SELECT IFNULL(SUM(quantity), 0)
-            FROM inventory_logs
-            WHERE product_id = p.product_id
-              AND type = 'IN'
-              AND quantity > 0
-        )
-    ");
-}
+    private function syncProductQuantities(): void
+    {
+        DB::update("
+            UPDATE products p SET quantity = (
+                SELECT IFNULL(SUM(quantity), 0)
+                FROM inventory_logs
+                WHERE product_id = p.product_id
+                  AND type = 'IN'
+                  AND quantity > 0
+            )
+        ");
+    }
 }
