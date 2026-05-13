@@ -81,7 +81,7 @@
 <a href="#" class="create-link" onclick="openSignupPopup()">Create an Account</a>
 <div style="display:flex; justify-content:space-between; align-items:center; margin-top:10px;">
     <a href="#" style="color:#888;font-size:12px;text-decoration:none;" onclick="closePopup();openForgotPopup();">Forgot Password?</a>
-    <button class="admin-btn" onclick="openAdminPopup()" style="position:static;">Are you an admin?</button>
+    <button type="button" class="admin-btn" onclick="openAdminPopup()">Are you an admin?</button>
 </div>
 </form>
         </div>
