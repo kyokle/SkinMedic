@@ -86,6 +86,13 @@ class IndexController extends Controller
         return response()->json(['success' => false, 'error' => 'Invalid email or password.']);
     }
 
+    if (in_array($user->role, ['doctor', 'staff', 'admin'])) {
+    return response()->json([
+        'success' => false,
+        'error'   => 'Invalid email or password.',
+    ]);
+}
+
     // Block login if email not verified
     if (is_null($user->email_verified_at)) {
         return response()->json(['success' => false, 'error' => 'Please verify your email before logging in.']);
