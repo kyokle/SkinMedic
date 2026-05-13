@@ -135,7 +135,8 @@ $allServices = DB::table('services as sv')
                 'productRows', 'productTotals',
                 'serviceRows', 'serviceTotals',
                 'grandTotal', 'paymentBreakdown', 'dailyRevenue',
-                'activeDays', 'avgDailyRevenue', 'totalTransactions'
+                'activeDays', 'avgDailyRevenue', 'totalTransactions',
+                'allProducts', 'allServices'
             )
         ));
     }
