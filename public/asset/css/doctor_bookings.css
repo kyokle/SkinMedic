@@ -72,6 +72,69 @@ body {
     color: #fff;
 }
 
+/* ── Search Bar ── */
+.search-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: #fff;
+    border: 1px solid #e2e6ea;
+    border-radius: 10px;
+    padding: 10px 14px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+}
+
+.search-bar input[type="text"] {
+    border: 1px solid #ddd;
+    border-radius: 7px;
+    padding: 7px 12px;
+    font-family: inherit;
+    font-size: 13px;
+    outline: none;
+    width: 220px;
+    transition: border-color .2s;
+}
+
+.search-bar input[type="text"]:focus { border-color: #80a833; }
+
+.search-bar input[type="date"] {
+    border: 1px solid #ddd;
+    border-radius: 7px;
+    padding: 7px 10px;
+    font-family: inherit;
+    font-size: 13px;
+    outline: none;
+    transition: border-color .2s;
+}
+
+.search-bar input[type="date"]:focus { border-color: #80a833; }
+
+.search-bar label {
+    font-size: 13px;
+    color: #666;
+    white-space: nowrap;
+}
+
+.reset-btn {
+    padding: 7px 14px;
+    border: 1px solid #ddd;
+    border-radius: 7px;
+    background: #f5f5f5;
+    cursor: pointer;
+    font-size: 13px;
+    font-family: inherit;
+    transition: background .2s;
+}
+
+.reset-btn:hover { background: #e8e8e8; }
+
+.result-count {
+    font-size: 12px;
+    color: #999;
+    margin-left: 4px;
+}
+
 /* ── Table ── */
 table {
     width: 100%;
@@ -113,7 +176,12 @@ tr:last-child td { border-bottom: none; }
     color: #fff;
 }
 
-/* Modal */
+.badge.pending   { background: #f59e0b; }
+.badge.approved  { background: #80a833; }
+.badge.completed { background: #3b82f6; }
+.badge.cancelled { background: #ef4444; }
+
+/* ── Modal ── */
 .bk-modal {
     display: none;
     position: fixed;
@@ -123,6 +191,7 @@ tr:last-child td { border-bottom: none; }
     justify-content: center;
     align-items: center;
 }
+
 .bk-modal-content {
     background: #fff;
     border-radius: 16px;
@@ -134,6 +203,7 @@ tr:last-child td { border-bottom: none; }
     position: relative;
     box-shadow: 0 10px 30px rgba(0,0,0,0.2);
 }
+
 .bk-close {
     position: absolute;
     top: 14px; right: 18px;
@@ -141,13 +211,16 @@ tr:last-child td { border-bottom: none; }
     font-size: 22px; color: #999;
     cursor: pointer;
 }
+
 .bk-close:hover { color: #333; }
+
 .bk-modal-title {
     font-size: 1rem;
     font-weight: 700;
     color: #1a1f16;
     margin: 0 0 16px;
 }
+
 .bk-row {
     display: flex;
     justify-content: space-between;
@@ -155,6 +228,7 @@ tr:last-child td { border-bottom: none; }
     border-bottom: 1px solid #f3f3f3;
     font-size: 0.86rem;
 }
+
 .bk-row span:first-child { color: #888; font-weight: 500; }
 .bk-row span:last-child  { color: #333; font-weight: 600; }
 
@@ -163,18 +237,21 @@ tr:last-child td { border-bottom: none; }
     border-top: 1px solid #eee;
     margin: 18px 0 14px;
 }
+
 .bk-reschedule-label {
     font-size: 0.85rem;
     font-weight: 600;
     color: #444;
     margin: 0 0 12px;
 }
+
 .bk-form-row {
     display: flex;
     flex-direction: column;
     gap: 5px;
     margin-bottom: 13px;
 }
+
 .bk-form-row label {
     font-size: 0.75rem;
     font-weight: 600;
@@ -182,6 +259,7 @@ tr:last-child td { border-bottom: none; }
     text-transform: uppercase;
     letter-spacing: .5px;
 }
+
 .bk-form-row input {
     padding: 9px 12px;
     border: 1.5px solid #ddd;
@@ -190,6 +268,7 @@ tr:last-child td { border-bottom: none; }
     outline: none;
     transition: border-color .2s;
 }
+
 .bk-form-row input:focus { border-color: #80a833; }
 
 .bk-reschedule-btn {
@@ -205,7 +284,9 @@ tr:last-child td { border-bottom: none; }
     margin-top: 4px;
     transition: background .2s;
 }
+
 .bk-reschedule-btn:hover { background: #6b9228; }
+
 .bk-no-action {
     font-size: 0.8rem;
     color: #aaa;
@@ -224,16 +305,5 @@ tr:last-child td { border-bottom: none; }
     cursor: pointer;
     font-family: inherit;
 }
-.bk-cancel-btn:hover {
-    background: #fca5a5;
-}
 
-.bk-modal-content {
-    position: relative; /* add this */
-    /* rest of your existing styles stay the same */
-}
-
-.badge.pending   { background: #f59e0b; }
-.badge.approved  { background: #80a833; }
-.badge.completed { background: #3b82f6; }
-.badge.cancelled { background: #ef4444; }
+.bk-cancel-btn:hover { background: #fca5a5; }

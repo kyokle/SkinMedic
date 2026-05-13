@@ -32,6 +32,24 @@
     </div>
 </header>
 
+{{-- ── Filter bar ── --}}
+    <div class="filter-bar">
+        <div class="service-search-wrap">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#aaa" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+            </svg>
+            <input
+                type="text"
+                id="serviceSearch"
+                class="service-search"
+                placeholder="Search service name…"
+                oninput="applyFilters()"
+                autocomplete="off"
+            >
+        </div>
+        <span class="filter-count" id="serviceCount"></span>
+    </div>
+
     <div class="service-list">
       @forelse ($services as $row)
         @php $statusClass = $row->status === 'available' ? 'on' : 'off'; @endphp
@@ -134,23 +152,66 @@
   </div>
 
   <script>
-  const modal     = document.getElementById('addServiceModal');
-  const editModal = document.getElementById('editServiceModal');
-  function openModal()      { modal.style.display     = 'flex'; }
-  function closeModal()     { modal.style.display     = 'none'; }
-  function closeEditModal() { editModal.style.display = 'none'; }
-  function openEditModal(id, name, desc, price, status) {
-    document.getElementById('edit_id').value          = id;
-    document.getElementById('edit_name').value        = name;
-    document.getElementById('edit_description').value = desc;
-    document.getElementById('edit_price').value       = price;
-    document.getElementById('edit_status').value      = status;
-    editModal.style.display = 'flex';
-  }
-  window.onclick = function(e) {
-    if (e.target === modal)     closeModal();
-    if (e.target === editModal) closeEditModal();
-  };
-  </script>
+    // Service → products map from PHP
+    const serviceProductsMap = @json($serviceProducts);
+
+    const modal     = document.getElementById('addServiceModal');
+    const editModal = document.getElementById('editServiceModal');
+
+    function openModal()      { modal.style.display     = 'flex'; }
+    function closeModal()     { modal.style.display     = 'none'; }
+    function closeEditModal() { editModal.style.display = 'none'; }
+
+    function openEditModal(id, name, desc, price, status) {
+        document.getElementById('edit_id').value          = id;
+        document.getElementById('edit_name').value        = name;
+        document.getElementById('edit_description').value = desc;
+        document.getElementById('edit_price').value       = price;
+        document.getElementById('edit_status').value      = status;
+
+        // ── Pre-check products and fill quantities ──
+        const linked = serviceProductsMap[id] || {};
+
+        document.querySelectorAll('#editServiceModal .product-check').forEach(row => {
+            const prodId   = row.getAttribute('data-product-id');
+            const checkbox = row.querySelector('input[type="checkbox"]');
+            const qtyInput = row.querySelector('input[type="number"]');
+
+            if (linked[prodId] !== undefined) {
+                checkbox.checked  = true;
+                qtyInput.value    = linked[prodId];
+            } else {
+                checkbox.checked  = false;
+                qtyInput.value    = 1;
+            }
+        });
+        // ───────────────────────────────────────────
+
+        editModal.style.display = 'flex';
+    }
+
+    window.onclick = function (e) {
+        if (e.target === modal)     closeModal();
+        if (e.target === editModal) closeEditModal();
+    };
+
+    /* ── Search filter ── */
+    function applyFilters() {
+        const query = document.getElementById('serviceSearch').value.toLowerCase().trim();
+        const cards = document.querySelectorAll('#serviceGrid .service-card');
+        let visible = 0;
+
+        cards.forEach(card => {
+            const name = card.getAttribute('data-name');
+            const show = !query || name.includes(query);
+            card.style.display = show ? '' : 'none';
+            if (show) visible++;
+        });
+
+        document.getElementById('noServicesMsg').style.display = visible === 0 ? 'block' : 'none';
+        const countEl = document.getElementById('serviceCount');
+        countEl.textContent = query ? `${visible} of ${cards.length} service(s)` : '';
+    }
+</script>
 </body>
 </html>

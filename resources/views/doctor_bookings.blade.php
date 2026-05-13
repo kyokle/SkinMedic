@@ -42,6 +42,22 @@
         @endforeach
     </div>
 
+    {{-- ── Search / filter bar ── --}}
+    <div class="search-bar">
+        <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none"
+             stroke="#aaa" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+             style="flex-shrink:0">
+            <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+        <input type="text" id="q" placeholder="Search patient or service…" oninput="applyFilters()">
+        <label for="dateFrom">From</label>
+        <input type="date" id="dateFrom" style="width:132px" onchange="applyFilters()">
+        <label for="dateTo">To</label>
+        <input type="date" id="dateTo" style="width:132px" onchange="applyFilters()">
+        <button class="reset-btn" onclick="resetFilters()">↺ Reset</button>
+        <span class="result-count" id="resultCount"></span>
+    </div>
+
     <table id="bookingsTable">
         <thead>
             <tr>
@@ -58,6 +74,7 @@
             @php $cls = strtolower($row->status); @endphp
             <tr data-status="{{ $row->status }}"
                 data-id="{{ $row->appointment_id }}"
+                data-date="{{ $row->appointment_date }}"
                 onclick="openModal(
                     '{{ $row->appointment_id }}',
                     '{{ addslashes($row->patient_name) }}',
@@ -126,60 +143,58 @@
         <p id="noRescheduleMsg" class="bk-no-action"></p>
 
         <div id="cancelConfirm"
-     style="display:none; position:absolute; inset:0; background:rgba(0,0,0,0.45);
-            border-radius:14px; z-index:10; align-items:center; justify-content:center;">
-    <div style="background:#fff; border-radius:12px; padding:28px 24px;
-                max-width:300px; text-align:center; box-shadow:0 8px 32px rgba(0,0,0,0.18);">
-        <div style="font-size:2rem; margin-bottom:10px;">⚠️</div>
-        <p style="font-weight:700; font-size:15px; margin-bottom:6px;">Cancel Appointment?</p>
-        <p style="font-size:13px; color:#666; margin-bottom:16px;">
-            Please select a reason. This determines whether the slot will be offered to waiting patients.
-        </p>
+             style="display:none; position:absolute; inset:0; background:rgba(0,0,0,0.45);
+                    border-radius:14px; z-index:10; align-items:center; justify-content:center;">
+            <div style="background:#fff; border-radius:12px; padding:28px 24px;
+                        max-width:300px; text-align:center; box-shadow:0 8px 32px rgba(0,0,0,0.18);">
+                <div style="font-size:2rem; margin-bottom:10px;">⚠️</div>
+                <p style="font-weight:700; font-size:15px; margin-bottom:6px;">Cancel Appointment?</p>
+                <p style="font-size:13px; color:#666; margin-bottom:16px;">
+                    Please select a reason. This determines whether the slot will be offered to waiting patients.
+                </p>
 
-        {{-- Reason selector --}}
-        <select id="cancelReasonSelect"
-                style="width:100%;padding:9px 12px;border:1.5px solid #ddd;border-radius:8px;
-                       font-size:13px;margin-bottom:6px;outline:none;font-family:inherit;">
-            <option value="">— Select reason —</option>
-            <optgroup label="Doctor Side (slot removed)">
-                <option value="doctor_unavailable">Doctor unavailable that day</option>
-                <option value="doctor_emergency">Doctor emergency</option>
-            </optgroup>
-            <optgroup label="Patient Side (slot re-opens)">
-                <option value="patient_request">Patient requested cancellation</option>
-                <option value="patient_noshow">Patient no-show</option>
-                <option value="other">Other</option>
-            </optgroup>
-        </select>
+                <select id="cancelReasonSelect"
+                        style="width:100%;padding:9px 12px;border:1.5px solid #ddd;border-radius:8px;
+                               font-size:13px;margin-bottom:6px;outline:none;font-family:inherit;">
+                    <option value="">— Select reason —</option>
+                    <optgroup label="Doctor Side (slot removed)">
+                        <option value="doctor_unavailable">Doctor unavailable that day</option>
+                        <option value="doctor_emergency">Doctor emergency</option>
+                    </optgroup>
+                    <optgroup label="Patient Side (slot re-opens)">
+                        <option value="patient_request">Patient requested cancellation</option>
+                        <option value="patient_noshow">Patient no-show</option>
+                        <option value="other">Other</option>
+                    </optgroup>
+                </select>
 
-        {{-- Hint text that changes based on selection --}}
-        <p id="cancelReasonHint"
-           style="font-size:11.5px;color:#aaa;margin-bottom:16px;min-height:32px;
-                  text-align:left;padding:0 2px;">
-            Select a reason above to continue.
-        </p>
+                <p id="cancelReasonHint"
+                   style="font-size:11.5px;color:#aaa;margin-bottom:16px;min-height:32px;
+                          text-align:left;padding:0 2px;">
+                    Select a reason above to continue.
+                </p>
 
-        <div style="display:flex; gap:10px; justify-content:center;">
-            <button onclick="closeCancelConfirm()"
-                    style="padding:8px 20px; border-radius:8px; border:1px solid #ddd;
-                           background:#f5f5f5; cursor:pointer; font-family:inherit; font-size:13px;">
-                Go Back
-            </button>
-            <form method="POST" action="{{ route('doctor.bookings.cancel') }}" style="margin:0;" id="cancelForm">
-                @csrf
-                <input type="hidden" name="appointment_id" id="cancel_appt_id">
-                <input type="hidden" name="cancel_reason"  id="cancel_reason_input">
-                <button type="button"
-                        onclick="submitCancel()"
-                        style="padding:8px 20px; border-radius:8px; border:none;
-                               background:#dc2626; color:#fff; cursor:pointer;
-                               font-family:inherit; font-size:13px; font-weight:600;">
-                    Yes, Cancel
-                </button>
-            </form>
+                <div style="display:flex; gap:10px; justify-content:center;">
+                    <button onclick="closeCancelConfirm()"
+                            style="padding:8px 20px; border-radius:8px; border:1px solid #ddd;
+                                   background:#f5f5f5; cursor:pointer; font-family:inherit; font-size:13px;">
+                        Go Back
+                    </button>
+                    <form method="POST" action="{{ route('doctor.bookings.cancel') }}" style="margin:0;" id="cancelForm">
+                        @csrf
+                        <input type="hidden" name="appointment_id" id="cancel_appt_id">
+                        <input type="hidden" name="cancel_reason"  id="cancel_reason_input">
+                        <button type="button"
+                                onclick="submitCancel()"
+                                style="padding:8px 20px; border-radius:8px; border:none;
+                                       background:#dc2626; color:#fff; cursor:pointer;
+                                       font-family:inherit; font-size:13px; font-weight:600;">
+                            Yes, Cancel
+                        </button>
+                    </form>
+                </div>
+            </div>
         </div>
-    </div>
-</div>
 
     </div>
 </div>
@@ -188,12 +203,46 @@
 
 @push('scripts')
 <script>
+let activeTab = '{{ $activeFilter }}';
+
 function filterTable(status, btn) {
+    activeTab = status;
     document.querySelectorAll('.filter-tabs button').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
-    document.querySelectorAll('#bookingsTable tbody tr[data-status]').forEach(row => {
-        row.style.display = (status === 'all' || row.dataset.status === status) ? '' : 'none';
+    applyFilters();
+}
+
+function applyFilters() {
+    const q      = document.getElementById('q').value.toLowerCase().trim();
+    const from   = document.getElementById('dateFrom').value;
+    const to     = document.getElementById('dateTo').value;
+    let visible  = 0;
+    const rows   = document.querySelectorAll('#bookingsTable tbody tr[data-status]');
+
+    rows.forEach(tr => {
+        const matchTab  = activeTab === 'all' || tr.dataset.status === activeTab;
+        const text      = tr.innerText.toLowerCase();
+        const matchQ    = !q    || text.includes(q);
+        const matchFrom = !from || tr.dataset.date >= from;
+        const matchTo   = !to   || tr.dataset.date <= to;
+        const show      = matchTab && matchQ && matchFrom && matchTo;
+        tr.style.display = show ? '' : 'none';
+        if (show) visible++;
     });
+
+    const total = rows.length;
+    document.getElementById('resultCount').textContent =
+        visible === total ? `${total} appointments` : `${visible} of ${total}`;
+}
+
+function resetFilters() {
+    document.getElementById('q').value        = '';
+    document.getElementById('dateFrom').value = '';
+    document.getElementById('dateTo').value   = '';
+    activeTab = 'all';
+    document.querySelectorAll('.filter-tabs button')
+        .forEach((b, i) => b.classList.toggle('active', i === 0));
+    applyFilters();
 }
 
 function openModal(id, patient, service, date, time, status) {
@@ -227,7 +276,10 @@ function openCancelConfirm() {
 }
 
 function closeCancelConfirm() {
-    document.getElementById('cancelConfirm').style.display = 'none';
+    document.getElementById('cancelReasonSelect').value     = '';
+    document.getElementById('cancelReasonHint').textContent = 'Select a reason above to continue.';
+    document.getElementById('cancelReasonHint').style.color = '#aaa';
+    document.getElementById('cancelConfirm').style.display  = 'none';
 }
 
 function formatTime(t) {
@@ -237,29 +289,18 @@ function formatTime(t) {
     return (hr % 12 || 12) + ':' + m + ' ' + (hr < 12 ? 'AM' : 'PM');
 }
 
-window.onclick = e => {
-    if (e.target === document.getElementById('bookingModal')) closeModal();
-};
-
-window.addEventListener('DOMContentLoaded', function () {
-    const filter = '{{ $activeFilter }}';
-    if (filter && filter !== 'all') {
-        const btn = document.querySelector('.filter-tabs button.active');
-        if (btn) filterTable(filter, btn);
+function submitCancel() {
+    const reason = document.getElementById('cancelReasonSelect').value;
+    if (!reason) {
+        alert('Please select a cancellation reason before continuing.');
+        return;
     }
+    document.getElementById('cancel_reason_input').value = reason;
+    document.getElementById('cancelForm').submit();
+}
 
-    // Auto-open modal from notification click
-    const params = new URLSearchParams(window.location.search);
-    const openId = params.get('open');
-    if (openId) {
-        const row = document.querySelector(`#bookingsTable tbody tr[data-id="${openId}"]`);
-        if (row) row.click();
-    }
-});
-
-// Hint text that updates when doctor picks a reason
 document.getElementById('cancelReasonSelect').addEventListener('change', function () {
-    const hint = document.getElementById('cancelReasonHint');
+    const hint       = document.getElementById('cancelReasonHint');
     const doctorSide = ['doctor_unavailable', 'doctor_emergency'];
     if (!this.value) {
         hint.style.color = '#aaa';
@@ -273,22 +314,19 @@ document.getElementById('cancelReasonSelect').addEventListener('change', functio
     }
 });
 
-function submitCancel() {
-    const reason = document.getElementById('cancelReasonSelect').value;
-    if (!reason) {
-        alert('Please select a cancellation reason before continuing.');
-        return;
-    }
-    document.getElementById('cancel_reason_input').value = reason;
-    document.getElementById('cancelForm').submit();
-}
+window.onclick = e => {
+    if (e.target === document.getElementById('bookingModal')) closeModal();
+};
 
-// Reset reason dropdown when modal closes
-function closeCancelConfirm() {
-    document.getElementById('cancelReasonSelect').value = '';
-    document.getElementById('cancelReasonHint').textContent = 'Select a reason above to continue.';
-    document.getElementById('cancelReasonHint').style.color = '#aaa';
-    document.getElementById('cancelConfirm').style.display = 'none';
-}
+window.addEventListener('DOMContentLoaded', function () {
+    applyFilters();
+
+    const params = new URLSearchParams(window.location.search);
+    const openId = params.get('open');
+    if (openId) {
+        const row = document.querySelector(`#bookingsTable tbody tr[data-id="${openId}"]`);
+        if (row) row.click();
+    }
+});
 </script>
 @endpush

@@ -32,6 +32,37 @@
     </div>
 </header>
 
+{{-- ── Filter bar ── --}}
+    <div class="filter-bar">
+      <div class="product-search-wrap">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#aaa" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+        </svg>
+        <input
+          type="text"
+          id="productSearch"
+          class="product-search"
+          placeholder="Search product name…"
+          oninput="applyFilters()"
+          autocomplete="off"
+        >
+      </div>
+
+      <div class="category-tabs" id="categoryTabs">
+        <button class="cat-tab active" data-cat="all" onclick="selectCat(this)">All</button>
+        @php
+          $categories = $products->pluck('category')->filter()->unique()->sort()->values();
+        @endphp
+        @foreach($categories as $cat)
+          <button class="cat-tab" data-cat="{{ strtolower($cat) }}" onclick="selectCat(this)">
+            {{ $cat }}
+          </button>
+        @endforeach
+      </div>
+
+      <span class="filter-count" id="productCount"></span>
+    </div>
+
     <div class="product-list">
       @forelse ($products as $row)
         @php $statusClass = strtolower($row->status) === 'available' ? 'on' : 'off'; @endphp
@@ -162,6 +193,7 @@
   </div>
 
   <script>
+  /* ── Modal helpers ── */
   const addModal  = document.getElementById('addProductModal');
   const editModal = document.getElementById('editProductModal');
   function openModal()      { addModal.style.display  = 'flex'; }
@@ -185,6 +217,41 @@
     if (e.target === addModal)  closeModal();
     if (e.target === editModal) closeEditModal();
   };
+
+  /* ── Filter logic ── */
+  let activeCat = 'all';
+
+  function selectCat(btn) {
+    document.querySelectorAll('.cat-tab').forEach(t => t.classList.remove('active'));
+    btn.classList.add('active');
+    activeCat = btn.getAttribute('data-cat');
+    applyFilters();
+  }
+
+  function applyFilters() {
+    const query = document.getElementById('productSearch').value.toLowerCase().trim();
+    const cards = document.querySelectorAll('#productGrid .product-card');
+    let visible = 0;
+
+    cards.forEach(card => {
+      const name = card.getAttribute('data-name');
+      const cat  = card.getAttribute('data-category');
+
+      const matchesSearch = !query || name.includes(query);
+      const matchesCat    = activeCat === 'all' || cat === activeCat;
+
+      const show = matchesSearch && matchesCat;
+      card.style.display = show ? '' : 'none';
+      if (show) visible++;
+    });
+
+    const noMsg = document.getElementById('noProductsMsg');
+    noMsg.style.display = visible === 0 ? 'block' : 'none';
+
+    const countEl = document.getElementById('productCount');
+    const isFiltering = query || activeCat !== 'all';
+    countEl.textContent = isFiltering ? `${visible} of ${cards.length} product(s)` : '';
+  }
   </script>
 </body>
 </html>

@@ -80,31 +80,30 @@
         @endforeach
 
         {{-- Month picker toggle --}}
-        <div style="position:relative;display:inline-flex;">
-            <button class="quick-btn {{ str_starts_with($activePreset ?? '', 'm') ? 'active' : '' }}"
-                    onclick="this.parentElement.querySelector('.sub-menu').classList.toggle('open')"
-                    type="button">Monthly ▾</button>
-            <div class="sub-menu" style="position:absolute;top:38px;left:0;background:#fff;border:1px solid #ddd;border-radius:10px;box-shadow:0 4px 16px rgba(0,0,0,.1);z-index:200;padding:8px;display:grid;grid-template-columns:repeat(4,1fr);gap:4px;min-width:200px;">
-                @foreach($monthPresets as $key => [$label, $from, $to])
-                <a href="{{ route('admin.reports.sales', ['date_from' => $from, 'date_to' => $to]) }}"
-                   class="quick-btn {{ $activePreset === $key ? 'active' : '' }}" style="height:28px;font-size:0.75rem;justify-content:center;">{{ $label }}</a>
-                @endforeach
-            </div>
-        </div>
-
-        {{-- Quarter picker toggle --}}
-        <div style="position:relative;display:inline-flex;">
-            <button class="quick-btn {{ str_starts_with($activePreset ?? '', 'q') ? 'active' : '' }}"
-                    onclick="this.parentElement.querySelector('.sub-menu').classList.toggle('open')"
-                    type="button">Quarterly ▾</button>
-            <div class="sub-menu" style="position:absolute;top:38px;left:0;background:#fff;border:1px solid #ddd;border-radius:10px;box-shadow:0 4px 16px rgba(0,0,0,.1);z-index:200;padding:8px;display:flex;gap:4px;min-width:180px;">
-                @foreach($quarterPresets as $key => [$label, $from, $to])
-                <a href="{{ route('admin.reports.sales', ['date_from' => $from, 'date_to' => $to]) }}"
-                   class="quick-btn {{ $activePreset === $key ? 'active' : '' }}" style="height:28px;font-size:0.75rem;flex:1;justify-content:center;">{{ $label }}</a>
-                @endforeach
-            </div>
-        </div>
+<div style="position:relative;display:inline-flex;">
+    <button class="quick-btn {{ str_starts_with($activePreset ?? '', 'm') ? 'active' : '' }}"
+            onclick="toggleSubMenu(this)"
+            type="button">Monthly ▾</button>
+    <div class="sub-menu" style="display:none;position:absolute;top:38px;left:0;background:#fff;border:1px solid #ddd;border-radius:10px;box-shadow:0 4px 16px rgba(0,0,0,.1);z-index:200;padding:8px;grid-template-columns:repeat(4,1fr);gap:4px;min-width:200px;">
+        @foreach($monthPresets as $key => [$label, $from, $to])
+        <a href="{{ route('admin.reports.sales', ['date_from' => $from, 'date_to' => $to]) }}"
+           class="quick-btn {{ $activePreset === $key ? 'active' : '' }}" style="height:28px;font-size:0.75rem;justify-content:center;">{{ $label }}</a>
+        @endforeach
     </div>
+</div>
+
+{{-- Quarter picker toggle --}}
+<div style="position:relative;display:inline-flex;">
+    <button class="quick-btn {{ str_starts_with($activePreset ?? '', 'q') ? 'active' : '' }}"
+            onclick="toggleSubMenu(this)"
+            type="button">Quarterly ▾</button>
+    <div class="sub-menu" style="display:none;position:absolute;top:38px;left:0;background:#fff;border:1px solid #ddd;border-radius:10px;box-shadow:0 4px 16px rgba(0,0,0,.1);z-index:200;padding:8px;display:flex;gap:4px;min-width:180px;">
+        @foreach($quarterPresets as $key => [$label, $from, $to])
+        <a href="{{ route('admin.reports.sales', ['date_from' => $from, 'date_to' => $to]) }}"
+           class="quick-btn {{ $activePreset === $key ? 'active' : '' }}" style="height:28px;font-size:0.75rem;flex:1;justify-content:center;">{{ $label }}</a>
+        @endforeach
+    </div>
+</div>
 
     {{-- ── Date range filter ── --}}
     <form method="GET" action="{{ route('admin.reports.sales') }}" class="filter-bar">
@@ -526,10 +525,26 @@ if (container && entries.length) {
 }
 
 // ── Sub-menu dropdowns ──────────────────────────────────
+function toggleSubMenu(btn) {
+    const menu    = btn.nextElementSibling;
+    const isOpen  = menu.style.display !== 'none';
+
+    // Close all open menus first
+    document.querySelectorAll('.sub-menu').forEach(m => m.style.display = 'none');
+
+    // Toggle the clicked one
+    if (!isOpen) {
+        // Use grid for monthly (has grid-template-columns), flex for quarterly
+        const isGrid = menu.style.gridTemplateColumns || menu.getAttribute('style').includes('grid-template-columns');
+        menu.style.display = isGrid ? 'grid' : 'flex';
+    }
+}
+
+// Close when clicking outside
 document.addEventListener('click', function(e) {
-    document.querySelectorAll('.sub-menu.open').forEach(m => {
-        if (!m.closest('div').contains(e.target)) m.classList.remove('open');
-    });
+    if (!e.target.closest('.quick-filters > div')) {
+        document.querySelectorAll('.sub-menu').forEach(m => m.style.display = 'none');
+    }
 });
 
 // ── Modal helpers ───────────────────────────────────────
