@@ -350,6 +350,17 @@ body {
 .mi-name em { font-style: normal; color: #6b7260; margin-left: 4px; }
 .mi-price   { font-weight: 700; color: #5a7a1f; }
 
+/* ── PROOF MISSING NOTICE ────────────────────── */
+.proof-missing-notice {
+    background: #fffbea;
+    border: 1.5px solid #f5d87a;
+    border-radius: 8px;
+    padding: 12px 14px;
+    font-size: 13px;
+    color: #7a5800;
+    line-height: 1.5;
+}
+
 /* ── PROOF IMAGE ─────────────────────────────── */
 .proof-img-wrap {
     border-radius: 10px;

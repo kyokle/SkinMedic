@@ -33,6 +33,7 @@ class StaffOrdersController extends Controller
                 'orders.payment_proof',
                 'orders.reference',
                 'orders.created_at',
+                'orders.updated_at',
                 DB::raw("CONCAT(users.firstName, ' ', users.lastName) as patient_name")
             )
             ->orderByDesc('orders.created_at')

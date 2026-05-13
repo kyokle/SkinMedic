@@ -178,6 +178,14 @@
                 </div>
             </div>
 
+            {{-- GCash proof missing notice --}}
+            <div id="proofMissingSection" class="modal-section" style="display:none">
+                <p class="section-label">Payment Proof</p>
+                <div class="proof-missing-notice">
+                    ⚠ No proof uploaded yet. This order may have been placed before the GCash upload feature was added, or the patient did not upload a screenshot.
+                </div>
+            </div>
+
             {{-- Order status --}}
             <div class="modal-section">
                 <p class="section-label">Order Status</p>
@@ -277,11 +285,21 @@ function openModal(id) {
     }
 
     // GCash proof image
-    if (order.payment_proof) {
-        document.getElementById('proofSection').style.display = '';
-        document.getElementById('m_proof_img').src = order.payment_proof;
+    const proofSection        = document.getElementById('proofSection');
+    const proofMissingSection = document.getElementById('proofMissingSection');
+
+    if (order.payment_method === 'gcash') {
+        if (order.payment_proof) {
+            proofSection.style.display        = '';
+            proofMissingSection.style.display = 'none';
+            document.getElementById('m_proof_img').src = order.payment_proof;
+        } else {
+            proofSection.style.display        = 'none';
+            proofMissingSection.style.display = '';
+        }
     } else {
-        document.getElementById('proofSection').style.display = 'none';
+        proofSection.style.display        = 'none';
+        proofMissingSection.style.display = 'none';
     }
 
     // Items
