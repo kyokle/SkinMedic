@@ -13,27 +13,8 @@
         .header h1 { font-size: 22px; color: #80a833; }
         .header p  { color: #666; font-size: 11px; margin-top: 4px; }
 
-        /* Summary cards row */
-        .summary-row { display: flex; gap: 10px; margin-bottom: 20px; }
-        .s-card { flex: 1; border-radius: 8px; padding: 10px 14px; }
-        .s-card.green  { background: #f0f7e6; border: 1px solid #c5e09b; }
-        .s-card.blue   { background: #eff6ff; border: 1px solid #93c5fd; }
-        .s-card.dark   { background: #1a1f16; border: 1px solid #1a1f16; }
-        .s-card.amber  { background: #fffbeb; border: 1px solid #fcd34d; }
-        .s-card.rose   { background: #fff1f2; border: 1px solid #fda4af; }
-        .s-label { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; opacity: 0.65; margin-bottom: 4px; }
-        .s-val   { font-size: 14px; font-weight: 700; }
-        .s-card.green .s-val  { color: #4a7c10; }
-        .s-card.blue  .s-val  { color: #1d4ed8; }
-        .s-card.dark  .s-val  { color: #fff; }
-        .s-card.dark  .s-label { color: #fff; }
-        .s-card.amber .s-val  { color: #b45309; }
-        .s-card.rose  .s-val  { color: #be123c; }
-        .s-sub { font-size: 9px; opacity: 0.6; margin-top: 2px; }
-        .s-card.dark .s-sub   { color: #fff; }
-
         /* Section title */
-        .section-title { font-size: 13px; font-weight: 700; color: #80a833; margin: 20px 0 8px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .section-title { font-size: 13px; font-weight: 700; color: #80a833; margin: 22px 0 8px; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid #e2e6ea; padding-bottom: 4px; }
 
         /* Tables */
         table { width: 100%; border-collapse: collapse; margin-bottom: 8px; }
@@ -59,6 +40,12 @@
         .grand { margin-top: 20px; border-top: 2px solid #1a1f16; padding-top: 12px; text-align: right; font-size: 15px; font-weight: 700; }
         .grand span { color: #80a833; }
 
+        /* Period breakdown tables */
+        .period-section { margin-bottom: 4px; }
+        .period-note { font-size: 10px; color: #999; margin-bottom: 6px; font-style: italic; }
+        .trend-up   { color: #4a7c10; }
+        .trend-down { color: #be123c; }
+
         /* Footer */
         .footer { margin-top: 32px; text-align: center; font-size: 10px; color: #aaa; }
 
@@ -80,43 +67,18 @@
         <p>Period: {{ $dateFrom }} to {{ $dateTo }} &nbsp;·&nbsp; Generated: {{ now()->format('F j, Y g:i A') }}</p>
     </div>
 
-    {{-- Summary cards --}}
-    <div class="summary-row">
-        <div class="s-card green">
-            <p class="s-label">Product Revenue</p>
-            <p class="s-val">₱{{ number_format($productRows->sum('total_revenue'), 2) }}</p>
-            <p class="s-sub">{{ number_format($productRows->sum('total_qty')) }} units</p>
-        </div>
-        <div class="s-card blue">
-            <p class="s-label">Service Revenue</p>
-            <p class="s-val">₱{{ number_format($serviceRows->sum('total_revenue'), 2) }}</p>
-            <p class="s-sub">{{ number_format($serviceRows->sum('total_count')) }} sessions</p>
-        </div>
-        <div class="s-card dark">
-            <p class="s-label">Grand Total</p>
-            <p class="s-val">₱{{ number_format($productRows->sum('total_revenue') + $serviceRows->sum('total_revenue'), 2) }}</p>
-            <p class="s-sub">{{ $dateFrom }} → {{ $dateTo }}</p>
-        </div>
-        @foreach($paymentBreakdown as $pm)
-        <div class="s-card amber">
-            <p class="s-label">{{ strtoupper($pm->payment_method) }}</p>
-            <p class="s-val">₱{{ number_format($pm->total, 2) }}</p>
-            <p class="s-sub">{{ $pm->count }} txns</p>
-        </div>
-        @endforeach
-    </div>
-
     {{-- Product Sales --}}
     <p class="section-title">🛍 Product Sales</p>
     <table>
         <thead>
-            <tr><th>#</th><th>Product</th><th class="r">Qty Sold</th><th class="r">Revenue (₱)</th></tr>
+            <tr><th>#</th><th>Product</th><th class="r">Unit Price (₱)</th><th class="r">Qty Sold</th><th class="r">Revenue (₱)</th></tr>
         </thead>
         <tbody>
             @foreach($productRows as $i => $row)
             <tr>
                 <td>{{ $i + 1 }}</td>
                 <td>{{ $row->name }}</td>
+                <td class="r">{{ $row->total_qty > 0 ? number_format($row->total_revenue / $row->total_qty, 2) : '—' }}</td>
                 <td class="r">{{ number_format($row->total_qty) }}</td>
                 <td class="r">₱{{ number_format($row->total_revenue, 2) }}</td>
             </tr>
@@ -124,7 +86,7 @@
         </tbody>
         <tfoot>
             <tr>
-                <td colspan="2">Total</td>
+                <td colspan="3">Total</td>
                 <td class="r">{{ number_format($productRows->sum('total_qty')) }}</td>
                 <td class="r">₱{{ number_format($productRows->sum('total_revenue'), 2) }}</td>
             </tr>
@@ -135,13 +97,14 @@
     <p class="section-title">💆 Service Sales</p>
     <table>
         <thead>
-            <tr><th>#</th><th>Service</th><th class="r">Sessions</th><th class="r">Revenue (₱)</th></tr>
+            <tr><th>#</th><th>Service</th><th class="r">Unit Price (₱)</th><th class="r">Sessions</th><th class="r">Revenue (₱)</th></tr>
         </thead>
         <tbody>
             @foreach($serviceRows as $i => $row)
             <tr>
                 <td>{{ $i + 1 }}</td>
                 <td>{{ $row->service_name }}</td>
+                <td class="r">{{ $row->total_count > 0 ? number_format($row->total_revenue / $row->total_count, 2) : '—' }}</td>
                 <td class="r">{{ number_format($row->total_count) }}</td>
                 <td class="r">₱{{ number_format($row->total_revenue, 2) }}</td>
             </tr>
@@ -149,7 +112,7 @@
         </tbody>
         <tfoot>
             <tr>
-                <td colspan="2">Total</td>
+                <td colspan="3">Total</td>
                 <td class="r">{{ number_format($serviceRows->sum('total_count')) }}</td>
                 <td class="r">₱{{ number_format($serviceRows->sum('total_revenue'), 2) }}</td>
             </tr>
@@ -215,6 +178,110 @@
             </tr>
         </tfoot>
     </table>
+
+    {{-- Daily Breakdown --}}
+    @if($dailyBreakdown->isNotEmpty())
+    <p class="section-title">📅 Daily Breakdown</p>
+    <p class="period-note">Walk-in sales only · {{ $dailyBreakdown->count() }} active day(s)</p>
+    <table>
+        <thead>
+            <tr><th>Date</th><th>Day</th><th class="r">Transactions</th><th class="r">Revenue (₱)</th><th class="r">Avg per Txn</th></tr>
+        </thead>
+        <tbody>
+            @foreach($dailyBreakdown as $day)
+            <tr>
+                <td>{{ $day->date }}</td>
+                <td>{{ \Carbon\Carbon::parse($day->date)->format('D') }}</td>
+                <td class="r">{{ number_format($day->transactions) }}</td>
+                <td class="r">₱{{ number_format($day->revenue, 2) }}</td>
+                <td class="r">₱{{ $day->transactions > 0 ? number_format($day->revenue / $day->transactions, 2) : '0.00' }}</td>
+            </tr>
+            @endforeach
+        </tbody>
+        <tfoot>
+            <tr>
+                <td colspan="2">Total</td>
+                <td class="r">{{ number_format($dailyBreakdown->sum('transactions')) }}</td>
+                <td class="r">₱{{ number_format($dailyBreakdown->sum('revenue'), 2) }}</td>
+                <td class="r"></td>
+            </tr>
+        </tfoot>
+    </table>
+    @endif
+
+    {{-- Weekly Breakdown --}}
+    @if($weeklyBreakdown->isNotEmpty())
+    <p class="section-title">📆 Weekly Breakdown</p>
+    <p class="period-note">Walk-in sales grouped by calendar week (Mon–Sun)</p>
+    <table>
+        <thead>
+            <tr><th>Week</th><th>Date Range</th><th class="r">Transactions</th><th class="r">Revenue (₱)</th><th class="r">Avg per Txn</th></tr>
+        </thead>
+        <tbody>
+            @foreach($weeklyBreakdown as $i => $week)
+            <tr>
+                <td>Week {{ $i + 1 }}</td>
+                <td>{{ $week->week_start }} → {{ $week->week_end }}</td>
+                <td class="r">{{ number_format($week->transactions) }}</td>
+                <td class="r">₱{{ number_format($week->revenue, 2) }}</td>
+                <td class="r">₱{{ $week->transactions > 0 ? number_format($week->revenue / $week->transactions, 2) : '0.00' }}</td>
+            </tr>
+            @endforeach
+        </tbody>
+        <tfoot>
+            <tr>
+                <td colspan="2">Total</td>
+                <td class="r">{{ number_format($weeklyBreakdown->sum('transactions')) }}</td>
+                <td class="r">₱{{ number_format($weeklyBreakdown->sum('revenue'), 2) }}</td>
+                <td class="r"></td>
+            </tr>
+        </tfoot>
+    </table>
+    @endif
+
+    {{-- Monthly Breakdown --}}
+    @if($monthlyBreakdown->isNotEmpty())
+    <p class="section-title">🗓 Monthly Breakdown</p>
+    <p class="period-note">Walk-in sales grouped by month</p>
+    <table>
+        <thead>
+            <tr><th>Month</th><th class="r">Transactions</th><th class="r">Revenue (₱)</th><th class="r">Avg per Txn</th><th class="r">vs Prior Month</th></tr>
+        </thead>
+        <tbody>
+            @foreach($monthlyBreakdown as $i => $month)
+            @php
+                $prior = $i > 0 ? $monthlyBreakdown[$i - 1]->revenue : null;
+                $diff  = $prior ? $month->revenue - $prior : null;
+                $pct   = ($prior && $prior > 0) ? ($diff / $prior * 100) : null;
+            @endphp
+            <tr>
+                <td>{{ $month->month_label }}</td>
+                <td class="r">{{ number_format($month->transactions) }}</td>
+                <td class="r">₱{{ number_format($month->revenue, 2) }}</td>
+                <td class="r">₱{{ $month->transactions > 0 ? number_format($month->revenue / $month->transactions, 2) : '0.00' }}</td>
+                <td class="r">
+                    @if($pct !== null)
+                        <span class="{{ $pct >= 0 ? 'trend-up' : 'trend-down' }}">
+                            {{ $pct >= 0 ? '▲' : '▼' }} {{ abs(round($pct, 1)) }}%
+                        </span>
+                    @else
+                        <span style="color:#ccc;">—</span>
+                    @endif
+                </td>
+            </tr>
+            @endforeach
+        </tbody>
+        <tfoot>
+            <tr>
+                <td>Total</td>
+                <td class="r">{{ number_format($monthlyBreakdown->sum('transactions')) }}</td>
+                <td class="r">₱{{ number_format($monthlyBreakdown->sum('revenue'), 2) }}</td>
+                <td class="r"></td>
+                <td class="r"></td>
+            </tr>
+        </tfoot>
+    </table>
+    @endif
 
     {{-- Grand Total --}}
     <div class="grand">

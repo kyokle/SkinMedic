@@ -98,7 +98,11 @@ class AdminSalesReportController extends Controller
                 'Content-Disposition' => "attachment; filename=\"{$filename}.csv\"",
             ];
 
-            $callback = function () use ($productRows, $serviceRows, $dateFrom, $dateTo) {
+            // Need unit price — fetch from products table
+            $productPrices = DB::table('products')
+                ->pluck('price', 'product_name');
+
+            $callback = function () use ($productRows, $serviceRows, $dateFrom, $dateTo, $productPrices) {
                 $out = fopen('php://output', 'w');
 
                 fputcsv($out, ["SkinMedic — Sales Report"]);
@@ -108,25 +112,27 @@ class AdminSalesReportController extends Controller
 
                 // Products
                 fputcsv($out, ["PRODUCT SALES"]);
-                fputcsv($out, ["#", "Product", "Qty Sold", "Revenue (₱)"]);
+                fputcsv($out, ["#", "Product", "Unit Price (₱)", "Qty Sold", "Revenue (₱)"]);
                 foreach ($productRows as $i => $r) {
-                    fputcsv($out, [$i + 1, $r->name, $r->total_qty, number_format($r->total_revenue, 2)]);
+                    $unitPrice = $productPrices[$r->name] ?? ($r->total_qty > 0 ? round($r->total_revenue / $r->total_qty, 2) : 0);
+                    fputcsv($out, [$i + 1, $r->name, number_format($unitPrice, 2), $r->total_qty, number_format($r->total_revenue, 2)]);
                 }
-                fputcsv($out, ["", "TOTAL", $productRows->sum('total_qty'), number_format($productRows->sum('total_revenue'), 2)]);
+                fputcsv($out, ["", "TOTAL", "", $productRows->sum('total_qty'), number_format($productRows->sum('total_revenue'), 2)]);
                 fputcsv($out, []);
 
                 // Services
                 fputcsv($out, ["SERVICE SALES"]);
-                fputcsv($out, ["#", "Service", "Sessions", "Revenue (₱)"]);
+                fputcsv($out, ["#", "Service", "Unit Price (₱)", "Sessions", "Revenue (₱)"]);
                 foreach ($serviceRows as $i => $r) {
-                    fputcsv($out, [$i + 1, $r->service_name, $r->total_count, number_format($r->total_revenue, 2)]);
+                    $unitPrice = $r->total_count > 0 ? round($r->total_revenue / $r->total_count, 2) : 0;
+                    fputcsv($out, [$i + 1, $r->service_name, number_format($unitPrice, 2), $r->total_count, number_format($r->total_revenue, 2)]);
                 }
-                fputcsv($out, ["", "TOTAL", $serviceRows->sum('total_count'), number_format($serviceRows->sum('total_revenue'), 2)]);
+                fputcsv($out, ["", "TOTAL", "", $serviceRows->sum('total_count'), number_format($serviceRows->sum('total_revenue'), 2)]);
                 fputcsv($out, []);
 
                 // Grand total
                 $grand = $productRows->sum('total_revenue') + $serviceRows->sum('total_revenue');
-                fputcsv($out, ["GRAND TOTAL", "", "", number_format($grand, 2)]);
+                fputcsv($out, ["GRAND TOTAL", "", "", "", number_format($grand, 2)]);
 
                 fclose($out);
             };
@@ -134,7 +140,7 @@ class AdminSalesReportController extends Controller
             return response()->stream($callback, 200, $headers);
         }
 
-        // PDF export — pass paymentBreakdown too for the enhanced PDF view
+        // PDF export — pass paymentBreakdown and period breakdowns for the enhanced PDF view
         $paymentBreakdown = DB::table('walkin_sales')
             ->select('payment_method', DB::raw('COUNT(*) as count'), DB::raw('SUM(total_amount) as total'))
             ->whereBetween(DB::raw('DATE(created_at)'), [$dateFrom, $dateTo])
@@ -142,8 +148,47 @@ class AdminSalesReportController extends Controller
             ->groupBy('payment_method')
             ->get();
 
+        // Daily breakdown
+        $dailyBreakdown = DB::table('walkin_sales')
+            ->select(DB::raw('DATE(created_at) as date'), DB::raw('COUNT(*) as transactions'), DB::raw('SUM(total_amount) as revenue'))
+            ->whereBetween(DB::raw('DATE(created_at)'), [$dateFrom, $dateTo])
+            ->where('status', 'completed')
+            ->groupBy(DB::raw('DATE(created_at)'))
+            ->orderBy('date')
+            ->get();
+
+        // Weekly breakdown (week number grouping)
+        $weeklyBreakdown = DB::table('walkin_sales')
+            ->select(
+                DB::raw('YEARWEEK(created_at, 1) as week_key'),
+                DB::raw('MIN(DATE(created_at)) as week_start'),
+                DB::raw('MAX(DATE(created_at)) as week_end'),
+                DB::raw('COUNT(*) as transactions'),
+                DB::raw('SUM(total_amount) as revenue')
+            )
+            ->whereBetween(DB::raw('DATE(created_at)'), [$dateFrom, $dateTo])
+            ->where('status', 'completed')
+            ->groupBy(DB::raw('YEARWEEK(created_at, 1)'))
+            ->orderBy('week_key')
+            ->get();
+
+        // Monthly breakdown
+        $monthlyBreakdown = DB::table('walkin_sales')
+            ->select(
+                DB::raw('DATE_FORMAT(created_at, "%Y-%m") as month_key'),
+                DB::raw('DATE_FORMAT(created_at, "%M %Y") as month_label'),
+                DB::raw('COUNT(*) as transactions'),
+                DB::raw('SUM(total_amount) as revenue')
+            )
+            ->whereBetween(DB::raw('DATE(created_at)'), [$dateFrom, $dateTo])
+            ->where('status', 'completed')
+            ->groupBy(DB::raw('DATE_FORMAT(created_at, "%Y-%m")'), DB::raw('DATE_FORMAT(created_at, "%M %Y")'))
+            ->orderBy('month_key')
+            ->get();
+
         return view('admin_sales_report_pdf', compact(
-            'dateFrom', 'dateTo', 'productRows', 'serviceRows', 'paymentBreakdown'
+            'dateFrom', 'dateTo', 'productRows', 'serviceRows', 'paymentBreakdown',
+            'dailyBreakdown', 'weeklyBreakdown', 'monthlyBreakdown'
         ));
     }
 

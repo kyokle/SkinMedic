@@ -29,32 +29,81 @@
 
     {{-- ── Quick filter tabs ── --}}
     @php
+        $today     = now()->toDateString();
+        $yw        = now()->startOfWeek()->toDateString();
+        $ym        = now()->startOfMonth()->toDateString();
+        $yy        = now()->startOfYear()->toDateString();
+        $lmStart   = now()->subMonthNoOverflow()->startOfMonth()->toDateString();
+        $lmEnd     = now()->subMonthNoOverflow()->endOfMonth()->toDateString();
+        $q1s = now()->year.'-01-01'; $q1e = now()->year.'-03-31';
+        $q2s = now()->year.'-04-01'; $q2e = now()->year.'-06-30';
+        $q3s = now()->year.'-07-01'; $q3e = now()->year.'-09-30';
+        $q4s = now()->year.'-10-01'; $q4e = now()->year.'-12-31';
+        $currentMonth = now()->month;
+        $currentQ = ceil($currentMonth / 3);
+
         $quickPresets = [
-            'today'   => ['Today',     now()->toDateString(),                     now()->toDateString()],
-            'week'    => ['This Week',  now()->startOfWeek()->toDateString(),       now()->toDateString()],
-            'month'   => ['This Month', now()->startOfMonth()->toDateString(),      now()->toDateString()],
-            'year'    => ['This Year',  now()->startOfYear()->toDateString(),       now()->toDateString()],
-            'lmonth'  => ['Last Month', now()->subMonthNoOverflow()->startOfMonth()->toDateString(),
-                                         now()->subMonthNoOverflow()->endOfMonth()->toDateString()],
+            'today'   => ['Today',         $today,  $today],
+            'week'    => ['This Week',      $yw,     $today],
+            'month'   => ['This Month',     $ym,     $today],
+            'lmonth'  => ['Last Month',     $lmStart, $lmEnd],
+            'year'    => ['This Year',      $yy,     $today],
+        ];
+
+        // Month sub-presets (Jan–Dec of current year)
+        $monthPresets = [];
+        for ($m = 1; $m <= 12; $m++) {
+            $ms = now()->setMonth($m)->startOfMonth()->toDateString();
+            $me = now()->setMonth($m)->endOfMonth()->toDateString();
+            $monthPresets["m{$m}"] = [now()->setMonth($m)->format('M'), $ms, $me];
+        }
+
+        // Quarter sub-presets
+        $quarterPresets = [
+            'q1' => ['Q1', $q1s, $q1e],
+            'q2' => ['Q2', $q2s, $q2e],
+            'q3' => ['Q3', $q3s, $q3e],
+            'q4' => ['Q4', $q4s, $q4e],
         ];
 
         // Detect active preset
         $activePreset = null;
-        foreach ($quickPresets as $key => [$label, $from, $to]) {
-            if ($dateFrom === $from && $dateTo === $to) {
-                $activePreset = $key;
-                break;
-            }
+        foreach (array_merge($quickPresets, $monthPresets, $quarterPresets) as $key => [$label, $from, $to]) {
+            if ($dateFrom === $from && $dateTo === $to) { $activePreset = $key; break; }
         }
     @endphp
 
     <div class="quick-filters">
         @foreach($quickPresets as $key => [$label, $from, $to])
         <a href="{{ route('admin.reports.sales', ['date_from' => $from, 'date_to' => $to]) }}"
-           class="quick-btn {{ $activePreset === $key ? 'active' : '' }}">
-            {{ $label }}
-        </a>
+           class="quick-btn {{ $activePreset === $key ? 'active' : '' }}">{{ $label }}</a>
         @endforeach
+
+        {{-- Month picker toggle --}}
+        <div style="position:relative;display:inline-flex;">
+            <button class="quick-btn {{ str_starts_with($activePreset ?? '', 'm') ? 'active' : '' }}"
+                    onclick="this.parentElement.querySelector('.sub-menu').classList.toggle('open')"
+                    type="button">Monthly ▾</button>
+            <div class="sub-menu" style="display:none;position:absolute;top:38px;left:0;background:#fff;border:1px solid #ddd;border-radius:10px;box-shadow:0 4px 16px rgba(0,0,0,.1);z-index:200;padding:8px;display:grid;grid-template-columns:repeat(4,1fr);gap:4px;min-width:200px;">
+                @foreach($monthPresets as $key => [$label, $from, $to])
+                <a href="{{ route('admin.reports.sales', ['date_from' => $from, 'date_to' => $to]) }}"
+                   class="quick-btn {{ $activePreset === $key ? 'active' : '' }}" style="height:28px;font-size:0.75rem;justify-content:center;">{{ $label }}</a>
+                @endforeach
+            </div>
+        </div>
+
+        {{-- Quarter picker toggle --}}
+        <div style="position:relative;display:inline-flex;">
+            <button class="quick-btn {{ str_starts_with($activePreset ?? '', 'q') ? 'active' : '' }}"
+                    onclick="this.parentElement.querySelector('.sub-menu').classList.toggle('open')"
+                    type="button">Quarterly ▾</button>
+            <div class="sub-menu" style="display:none;position:absolute;top:38px;left:0;background:#fff;border:1px solid #ddd;border-radius:10px;box-shadow:0 4px 16px rgba(0,0,0,.1);z-index:200;padding:8px;display:flex;gap:4px;min-width:180px;">
+                @foreach($quarterPresets as $key => [$label, $from, $to])
+                <a href="{{ route('admin.reports.sales', ['date_from' => $from, 'date_to' => $to]) }}"
+                   class="quick-btn {{ $activePreset === $key ? 'active' : '' }}" style="height:28px;font-size:0.75rem;flex:1;justify-content:center;">{{ $label }}</a>
+                @endforeach
+            </div>
+        </div>
     </div>
 
     {{-- ── Date range filter ── --}}
@@ -78,7 +127,7 @@
         </div>
     </form>
 
-    {{-- ── Summary cards ── --}}
+    {{-- ── Summary cards — Row 1: main metrics ── --}}
     <div class="summary-cards">
         <div class="summary-card green">
             <p class="card-label">Product Revenue</p>
@@ -100,20 +149,26 @@
             <p class="card-value">₱{{ number_format($avgDailyRevenue, 2) }}</p>
             <p class="card-sub">{{ $activeDays }} active day{{ $activeDays !== 1 ? 's' : '' }}</p>
         </div>
+    </div>
+
+    {{-- ── Summary cards — Row 2: transactions + payment breakdown ── --}}
+    <div class="summary-cards" style="margin-top: -8px;">
         <div class="summary-card teal">
             <p class="card-label">Total Transactions</p>
             <p class="card-value">{{ number_format($totalTransactions) }}</p>
             <p class="card-sub">Walk-in sales</p>
         </div>
-
-        {{-- Payment method breakdown --}}
         @foreach($paymentBreakdown as $pm)
-        <div class="summary-card {{ $pm->payment_method === 'cash' ? 'amber' : 'purple' }}">
+        <div class="summary-card {{ $pm->payment_method === 'cash' ? 'amber' : ($pm->payment_method === 'gcash' ? 'purple' : 'blue') }}">
             <p class="card-label">{{ strtoupper($pm->payment_method) }}</p>
             <p class="card-value">₱{{ number_format($pm->total, 2) }}</p>
             <p class="card-sub">{{ $pm->count }} transaction{{ $pm->count !== 1 ? 's' : '' }}</p>
         </div>
         @endforeach
+        {{-- Pad remaining slots so the row doesn't stretch oddly --}}
+        @for($i = $paymentBreakdown->count(); $i < 3; $i++)
+        <div style="flex:1;min-width:160px;"></div>
+        @endfor
     </div>
 
     {{-- ── Daily revenue mini-chart ── --}}
@@ -215,7 +270,12 @@
         <div class="report-card">
             <div class="report-card-header">
                 <p class="section-label">🏆 Top Products</p>
-                <span class="section-meta">by revenue</span>
+                <div style="display:flex;align-items:center;gap:10px;">
+                    <span class="section-meta">by revenue</span>
+                    @if($productRows->count() > 5)
+                    <button class="view-all-btn" onclick="openModal('modal-top-products')">View All ({{ $productRows->count() }})</button>
+                    @endif
+                </div>
             </div>
             @php $topProducts = $productRows->take(5); $maxPRev = $topProducts->max('total_revenue') ?: 1; @endphp
             @if($topProducts->isEmpty())
@@ -239,7 +299,12 @@
         <div class="report-card">
             <div class="report-card-header">
                 <p class="section-label">🏆 Top Services</p>
-                <span class="section-meta">by revenue</span>
+                <div style="display:flex;align-items:center;gap:10px;">
+                    <span class="section-meta">by revenue</span>
+                    @if($serviceRows->count() > 5)
+                    <button class="view-all-btn" onclick="openModal('modal-top-services')">View All ({{ $serviceRows->count() }})</button>
+                    @endif
+                </div>
             </div>
             @php $topServices = $serviceRows->take(5); $maxSRev = $topServices->max('total_revenue') ?: 1; @endphp
             @if($topServices->isEmpty())
@@ -309,6 +374,65 @@
         </div>
     </div>
 
+{{-- ── View-All Modals ── --}}
+<div class="modal-overlay" id="modal-top-products">
+    <div class="modal-box">
+        <div class="modal-head">
+            <h3>🏆 All Products — by Revenue</h3>
+            <button class="modal-close" onclick="closeModal('modal-top-products')">✕</button>
+        </div>
+        <div class="modal-body">
+            <table class="report-table">
+                <thead><tr><th>#</th><th>Product</th><th class="text-right">Qty</th><th class="text-right">Revenue</th></tr></thead>
+                <tbody>
+                    @foreach($productRows as $i => $row)
+                    <tr>
+                        <td class="row-num">{{ $i + 1 }}</td>
+                        <td>{{ $row->name }}</td>
+                        <td class="text-right">{{ number_format($row->total_qty) }}</td>
+                        <td class="text-right fw-bold">₱{{ number_format($row->total_revenue, 2) }}</td>
+                    </tr>
+                    @endforeach
+                </tbody>
+                <tfoot><tr>
+                    <td colspan="2">Total</td>
+                    <td class="text-right">{{ number_format($productTotals['qty']) }}</td>
+                    <td class="text-right">₱{{ number_format($productTotals['revenue'], 2) }}</td>
+                </tr></tfoot>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="modal-top-services">
+    <div class="modal-box">
+        <div class="modal-head">
+            <h3>🏆 All Services — by Revenue</h3>
+            <button class="modal-close" onclick="closeModal('modal-top-services')">✕</button>
+        </div>
+        <div class="modal-body">
+            <table class="report-table">
+                <thead><tr><th>#</th><th>Service</th><th class="text-right">Sessions</th><th class="text-right">Revenue</th></tr></thead>
+                <tbody>
+                    @foreach($serviceRows as $i => $row)
+                    <tr>
+                        <td class="row-num">{{ $i + 1 }}</td>
+                        <td>{{ $row->service_name }}</td>
+                        <td class="text-right">{{ number_format($row->total_count) }}</td>
+                        <td class="text-right fw-bold">₱{{ number_format($row->total_revenue, 2) }}</td>
+                    </tr>
+                    @endforeach
+                </tbody>
+                <tfoot><tr>
+                    <td colspan="2">Total</td>
+                    <td class="text-right">{{ number_format($serviceTotals['count']) }}</td>
+                    <td class="text-right">₱{{ number_format($serviceTotals['revenue'], 2) }}</td>
+                </tr></tfoot>
+            </table>
+        </div>
+    </div>
+</div>
+
 </div>{{-- /main --}}
 
 @push('scripts')
@@ -332,6 +456,28 @@ if (container && entries.length) {
             </div>`;
     }).join('');
 }
+
+// ── Sub-menu dropdowns ──────────────────────────────────
+document.addEventListener('click', function(e) {
+    document.querySelectorAll('.sub-menu.open').forEach(m => {
+        if (!m.closest('div').contains(e.target)) m.classList.remove('open');
+    });
+});
+
+// ── Modal helpers ───────────────────────────────────────
+function openModal(id) {
+    document.getElementById(id).classList.add('open');
+    document.body.style.overflow = 'hidden';
+}
+function closeModal(id) {
+    document.getElementById(id).classList.remove('open');
+    document.body.style.overflow = '';
+}
+document.querySelectorAll('.modal-overlay').forEach(overlay => {
+    overlay.addEventListener('click', e => {
+        if (e.target === overlay) closeModal(overlay.id);
+    });
+});
 </script>
 @endpush
 
