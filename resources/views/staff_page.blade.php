@@ -57,7 +57,7 @@
             <div class="stat-label">Pending Bookings</div>
             <div class="stat-sub">Awaiting approval</div>
         </a>
-        <a href="{{ route('staff.bookings', ['filter' => 'all']) }}" class="stat-card warn" style="animation-delay:.1s;text-decoration:none;color:inherit;">
+        <a href="{{ route('staff.bookings', ['filter' => 'approved']) }}" class="stat-card warn" style="animation-delay:.1s;text-decoration:none;color:inherit;">
             <div class="stat-icon">📋</div>
             <div class="stat-value">{{ $todaySessions }}</div>
             <div class="stat-label">Today's Sessions</div>
