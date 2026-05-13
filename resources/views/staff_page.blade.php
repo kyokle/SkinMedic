@@ -61,7 +61,7 @@
             <div class="stat-icon">📋</div>
             <div class="stat-value">{{ $todaySessions }}</div>
             <div class="stat-label">Today's Sessions</div>
-            <div class="stat-sub">Approved + Completed today</div>
+            <div class="stat-sub">Approved Bookings</div>
         </a>
         <a href="{{ route('staff.bookings', ['filter' => 'completed']) }}" class="stat-card blue" style="animation-delay:.15s;text-decoration:none;color:inherit;">
             <div class="stat-icon">✅</div>
@@ -120,7 +120,7 @@
         @endif
     </div>
 
-</div>{{-- /main --}}
+</div>
 
 @endsection
 
