@@ -175,7 +175,8 @@
                                     onclick="openManageModal(
                                         {{ $row->product_id }},
                                         '{{ addslashes($row->product_name) }}',
-                                        {{ $row->quantity }}
+                                        {{ $row->quantity }},
+                                        {{ $row->reorder_level }}
                                     )">
                                 ⚙ Manage Stock
                             </button>
@@ -215,6 +216,9 @@
             </button>
             <button class="manage-tab" id="tabSet"    onclick="switchManageTab('set')">
                 ✏ Set Exact
+            </button>
+            <button class="manage-tab" id="tabReorder" onclick="switchManageTab('reorder')">
+                🔔 Reorder Level
             </button>
             <button class="manage-tab tab-danger" id="tabRemove" onclick="switchManageTab('remove')">
                 🗑 Remove
@@ -292,6 +296,26 @@
             </form>
         </div>
 
+        {{-- ── REORDER LEVEL panel ── --}}
+        <div id="panelReorder" class="manage-panel" style="display:none;">
+            <div class="panel-hint panel-hint-reorder">
+                <strong>Updating the reorder level?</strong> This is the minimum stock count that triggers a low-stock alert. When the total quantity drops to or below this number, the product will be flagged as <em>Reorder Needed</em>.
+            </div>
+            <form method="POST" action="{{ route('staff.inventory.update-reorder') }}" id="reorderForm">
+                @csrf
+                <input type="hidden" name="product_id" id="reorderProductId">
+                <div class="modal-field">
+                    <label>New Reorder Level</label>
+                    <input type="number" name="reorder_level" id="reorderLevelInput"
+                           min="0" max="99999" placeholder="e.g. 10" required>
+                    <span id="reorderHint" class="field-hint"></span>
+                </div>
+                <button type="submit" class="modal-action-btn btn-reorder">
+                    🔔 Update Reorder Level
+                </button>
+            </form>
+        </div>
+
         {{-- ── REMOVE panel ── --}}
         <div id="panelRemove" class="manage-panel" style="display:none;">
             <div class="panel-hint panel-hint-remove">
@@ -348,23 +372,26 @@ function filterInventory() {
 let _currentStock    = 0;
 let _currentProduct  = '';
 
-function openManageModal(id, name, qty) {
+function openManageModal(id, name, qty, reorder) {
     _currentStock   = qty;
     _currentProduct = name;
 
     document.getElementById('manageTitle').textContent   = name;
-    document.getElementById('manageCurrent').textContent = 'Current stock: ' + qty + ' units';
+    document.getElementById('manageCurrent').textContent = 'Current stock: ' + qty + ' units · Reorder at: ' + reorder;
 
     // Populate hidden product_id fields in all forms
-    document.getElementById('addProductId').value    = id;
-    document.getElementById('deductProductId').value = id;
-    document.getElementById('setProductId').value    = id;
-    document.getElementById('removeProductId').value = id;
+    document.getElementById('addProductId').value     = id;
+    document.getElementById('deductProductId').value  = id;
+    document.getElementById('setProductId').value     = id;
+    document.getElementById('reorderProductId').value = id;
+    document.getElementById('removeProductId').value  = id;
     document.getElementById('removeProductName').textContent = name;
 
     // Reset hints
-    document.getElementById('deductQtyHint').textContent = 'Max you can deduct: ' + qty + ' units';
-    document.getElementById('setQtyHint').textContent    = 'Current count is ' + qty + '. Enter the correct number.';
+    document.getElementById('deductQtyHint').textContent  = 'Max you can deduct: ' + qty + ' units';
+    document.getElementById('setQtyHint').textContent     = 'Current count is ' + qty + '. Enter the correct number.';
+    document.getElementById('reorderHint').textContent    = 'Current reorder level: ' + reorder + '. Enter the new threshold.';
+    document.getElementById('reorderLevelInput').value    = reorder;
     document.getElementById('deductQtyModal').max = qty;
 
     // Reset remove checkbox
@@ -384,7 +411,7 @@ function closeManageModal(event) {
 }
 
 function switchManageTab(tab) {
-    const tabs   = ['add', 'deduct', 'set', 'remove'];
+    const tabs = ['add', 'deduct', 'set', 'reorder', 'remove'];
     tabs.forEach(t => {
         document.getElementById('tab' + t.charAt(0).toUpperCase() + t.slice(1)).classList.toggle('active', t === tab);
         document.getElementById('panel' + t.charAt(0).toUpperCase() + t.slice(1)).style.display = t === tab ? 'block' : 'none';

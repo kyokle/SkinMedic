@@ -400,6 +400,7 @@
 .panel-hint-add    { background: #f0f7e6; border-left: 3px solid #80a833; color: #3a5c10; }
 .panel-hint-deduct { background: #fff8e6; border-left: 3px solid #f0c040; color: #7a5c00; }
 .panel-hint-set    { background: #eef5ff; border-left: 3px solid #4a90d9; color: #1a3c6e; }
+.panel-hint-reorder{ background: #f5f0ff; border-left: 3px solid #8b5cf6; color: #4c1d95; }
 .panel-hint-remove { background: #fff0f0; border-left: 3px solid #e53e3e; color: #7a0000; }
 
 /* ── Form fields ── */
@@ -464,6 +465,9 @@
 
 .btn-set    { background: #4a90d9; color: #fff; }
 .btn-set:hover    { background: #3478c0; }
+
+.btn-reorder { background: #8b5cf6; color: #fff; }
+.btn-reorder:hover { background: #7c3aed; }
 
 .btn-remove { background: #c0392b; color: #fff; }
 .btn-remove:hover:not(:disabled) { background: #a93226; }
