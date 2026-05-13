@@ -127,7 +127,7 @@
                    placeholder="Enter 6-digit code" required
                    style="letter-spacing:4px;font-size:1.2rem;text-align:center;">
           </div>
-          <button type="submit" class="login-btn">Verify &amp; Login</button>
+          <button type="button" class="login-btn" onclick="submitAdminOtp()">Verify &amp; Login</button>
         </form>
         <button class="back-btn" onclick="showAdminLoginStep();">← Back to Login</button>
       </div>

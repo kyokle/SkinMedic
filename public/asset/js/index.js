@@ -213,24 +213,24 @@ function buildAdminOtp() {
     wrap.appendChild(inp);
   }
 }
- 
+
 function submitAdminOtp() {
-  const otp    = [...document.querySelectorAll('#adminOtpBoxes input')].map(i => i.value).join('');
-  const errEl  = document.getElementById('adminOtpError');
-  errEl.style.color   = 'red';
-  errEl.textContent   = '';
- 
+  const otp   = [...document.querySelectorAll('#adminOtpBoxes input')].map(i => i.value).join('');
+  const errEl = document.getElementById('adminOtpError');
+  errEl.style.color = 'red';
+  errEl.textContent = '';
+
   if (otp.length < 6) { errEl.textContent = 'Please enter all 6 digits.'; return; }
- 
+
   const fd = new FormData();
   fd.append('otp', otp);
- 
+
   fetch('/verify-email-otp', {
     method:  'POST',
     body:    fd,
     headers: {
       'X-Requested-With': 'XMLHttpRequest',
-      'X-CSRF-TOKEN': getCsrf(),
+      'X-CSRF-TOKEN':     getCsrf(),
     },
   })
     .then(r => r.json())
@@ -238,20 +238,17 @@ function submitAdminOtp() {
       if (data.success) {
         errEl.style.color = '#80a833';
         errEl.textContent = '✅ Email verified! Logging you in…';
- 
-        // Auto re-submit the login form — user gets redirected without retyping password
         setTimeout(() => {
           showAdminLoginStep();
           document.getElementById('adminForm').dispatchEvent(new Event('submit'));
         }, 1200);
- 
       } else {
         errEl.textContent = data.error;
       }
     })
     .catch(() => { errEl.textContent = 'Network error. Please try again.'; });
 }
- 
+
 function showAdminLoginStep() {
   document.getElementById('adminOtpStep').style.display   = 'none';
   document.getElementById('adminLoginStep').style.display = 'block';
@@ -259,6 +256,8 @@ function showAdminLoginStep() {
   const wrap = document.getElementById('adminOtpBoxes');
   if (wrap) wrap.innerHTML = '';
 }
+
+
 
 /* ═══════════════════════════════════════════════════
    SIGNUP
