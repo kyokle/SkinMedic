@@ -49,19 +49,35 @@
         </div>
     @endif
 
-    {{-- ── FILTER TABS ── --}}
-    <div class="order-tabs">
-        <button class="order-tab active" data-filter="all" onclick="filterOrders(this, 'all')">All</button>
-        <button class="order-tab" data-filter="pending"    onclick="filterOrders(this, 'pending')">Pending</button>
-        <button class="order-tab" data-filter="confirmed"  onclick="filterOrders(this, 'confirmed')">Confirmed</button>
-        <button class="order-tab" data-filter="ready"      onclick="filterOrders(this, 'ready')">Ready for Pick-up</button>
-        <button class="order-tab" data-filter="completed"  onclick="filterOrders(this, 'completed')">Completed</button>
-        <button class="order-tab" data-filter="cancelled"  onclick="filterOrders(this, 'cancelled')">Cancelled</button>
+    {{-- ── FILTER TABS + SEARCH ROW ── --}}
+    <div class="orders-controls">
+        <div class="order-tabs">
+            <button class="order-tab active" data-filter="all" onclick="filterOrders(this, 'all')">All</button>
+            <button class="order-tab" data-filter="pending"    onclick="filterOrders(this, 'pending')">Pending</button>
+            <button class="order-tab" data-filter="confirmed"  onclick="filterOrders(this, 'confirmed')">Confirmed</button>
+            <button class="order-tab" data-filter="ready"      onclick="filterOrders(this, 'ready')">Ready for Pick-up</button>
+            <button class="order-tab" data-filter="completed"  onclick="filterOrders(this, 'completed')">Completed</button>
+            <button class="order-tab" data-filter="cancelled"  onclick="filterOrders(this, 'cancelled')">Cancelled</button>
+        </div>
+        <div class="orders-search-wrap">
+            <svg class="orders-search-icon" viewBox="0 0 20 20" fill="none" width="15" height="15">
+                <circle cx="9" cy="9" r="6" stroke="currentColor" stroke-width="1.6"/>
+                <path d="M14 14l3 3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+            </svg>
+            <input type="text" id="orderSearch" class="orders-search-input"
+                   placeholder="Search by product or order #…"
+                   oninput="applyOrderFilters()">
+            <button class="orders-search-clear" id="searchClear" onclick="clearSearch()" style="display:none">✕</button>
+        </div>
     </div>
+
+    {{-- ── RESULTS COUNT ── --}}
+    <div class="orders-result-count" id="ordersResultCount" style="display:none"></div>
 
     {{-- ── ORDERS LIST ── --}}
     @forelse($orders as $order)
-    <div class="order-card" data-status="{{ $order->status }}">
+    <div class="order-card" data-status="{{ $order->status }}"
+         data-search="{{ strtolower('#' . $order->id . ' ' . $order->items->pluck('product_name')->implode(' ')) }}">
 
         {{-- Order Header --}}
         <div class="order-card-header">
@@ -225,14 +241,50 @@
 
 @push('scripts')
 <script>
-/* ── FILTER TABS ── */
+let activeFilter = 'all';
+
+/* ── TAB FILTER ── */
 function filterOrders(btn, filter) {
     document.querySelectorAll('.order-tab').forEach(t => t.classList.remove('active'));
     btn.classList.add('active');
-    document.querySelectorAll('.order-card').forEach(card => {
-        const show = filter === 'all' || card.dataset.status === filter;
+    activeFilter = filter;
+    applyOrderFilters();
+}
+
+/* ── SEARCH + FILTER COMBINED ── */
+function applyOrderFilters() {
+    const query      = document.getElementById('orderSearch').value.toLowerCase().trim();
+    const clearBtn   = document.getElementById('searchClear');
+    const countEl    = document.getElementById('ordersResultCount');
+    const cards      = document.querySelectorAll('.order-card');
+
+    clearBtn.style.display = query ? 'flex' : 'none';
+
+    let visible = 0;
+    cards.forEach(card => {
+        const statusMatch = activeFilter === 'all' || card.dataset.status === activeFilter;
+        const searchMatch = !query || card.dataset.search.includes(query);
+        const show = statusMatch && searchMatch;
         card.style.display = show ? '' : 'none';
+        if (show) visible++;
     });
+
+    const isFiltering = query || activeFilter !== 'all';
+    if (isFiltering) {
+        countEl.style.display = 'block';
+        countEl.textContent   = visible === 0
+            ? 'No orders match your search.'
+            : visible + ' order' + (visible !== 1 ? 's' : '') + ' found';
+    } else {
+        countEl.style.display = 'none';
+    }
+}
+
+/* ── CLEAR SEARCH ── */
+function clearSearch() {
+    document.getElementById('orderSearch').value = '';
+    applyOrderFilters();
+    document.getElementById('orderSearch').focus();
 }
 
 /* ── PROOF LIGHTBOX ── */

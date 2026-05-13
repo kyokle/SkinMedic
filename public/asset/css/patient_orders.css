@@ -94,12 +94,21 @@ body { background: var(--cream); font-family: 'DM Sans', sans-serif; color: var(
     color: #c0392b;
 }
 
+/* ── CONTROLS ROW (tabs + search) ────────────── */
+.orders-controls {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
 /* ── FILTER TABS ─────────────────────────────── */
 .order-tabs {
     display: flex;
     gap: 8px;
     flex-wrap: wrap;
-    margin-bottom: 22px;
 }
 
 .order-tab {
@@ -121,6 +130,61 @@ body { background: var(--cream); font-family: 'DM Sans', sans-serif; color: var(
     background: var(--green);
     border-color: var(--green);
     color: #fff;
+}
+
+/* ── SEARCH BAR ──────────────────────────────── */
+.orders-search-wrap {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: #fff;
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 8px 13px;
+    transition: border var(--transition);
+}
+
+.orders-search-wrap:focus-within {
+    border-color: var(--green);
+    box-shadow: 0 0 0 3px var(--green-light);
+}
+
+.orders-search-icon { color: var(--muted); flex-shrink: 0; }
+
+.orders-search-input {
+    border: none;
+    outline: none;
+    font-family: inherit;
+    font-size: 13.5px;
+    color: var(--text);
+    background: transparent;
+    width: 220px;
+}
+
+.orders-search-input::placeholder { color: #b0b8a0; }
+
+.orders-search-clear {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: none;
+    border: none;
+    font-size: 13px;
+    color: var(--muted);
+    cursor: pointer;
+    padding: 0 2px;
+    line-height: 1;
+    transition: color var(--transition);
+}
+
+.orders-search-clear:hover { color: var(--text); }
+
+/* ── RESULT COUNT ────────────────────────────── */
+.orders-result-count {
+    font-size: 13px;
+    color: var(--muted);
+    margin-bottom: 14px;
+    font-weight: 500;
 }
 
 /* ── ORDER CARD ──────────────────────────────── */
@@ -475,6 +539,9 @@ body { background: var(--cream); font-family: 'DM Sans', sans-serif; color: var(
         width: 100%;
     }
 
+    .orders-controls   { flex-direction: column; align-items: stretch; }
+    .orders-search-wrap { width: 100%; box-sizing: border-box; }
+    .orders-search-input { width: 100%; }
     .order-card-header  { flex-direction: column; align-items: flex-start; }
     .order-card-footer  { flex-direction: column; }
     .order-footer-right { justify-content: space-between; width: 100%; }
