@@ -43,6 +43,13 @@ class PatientProductsController extends Controller
     // ─────────────────────────────────────────
     public function placeOrder(Request $request)
     {
+        //added for testing
+        \Log::info('Order request data', [
+    'has_file'       => $request->hasFile('payment_proof'),
+    'all_files'      => array_keys($request->allFiles()),
+    'payment_method' => $request->input('payment_method'),
+    'reference'      => $request->input('reference'),
+]);
         $request->validate([
             'items' => 'required|string',
         ]);
