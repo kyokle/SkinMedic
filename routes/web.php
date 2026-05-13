@@ -38,6 +38,7 @@ use App\Http\Controllers\AdminServicesController;
 use App\Http\Controllers\AdminInventoryController;
 use App\Http\Controllers\AdminProductsController;
 use App\Http\Controllers\AdminReviewsController;
+use App\Http\Controllers\AdminSalesReportController;
 
 use App\Http\Controllers\StaffPageController;
 use App\Http\Controllers\StaffProfileController;
@@ -273,6 +274,10 @@ Route::post('/admin/inventory/deduct-stock', [AdminInventoryController::class, '
 Route::post('/admin/inventory/add-stock', [AdminInventoryController::class, 'addStock'])
     ->name('admin.inventory.add-stock')
     ->middleware('check.staff.role');
+
+// Admin Sales Report
+Route::get('/admin/reports/sales', [AdminSalesReportController::class, 'index']) ->name('admin.reports.sales');
+Route::get('/admin/reports/sales/export', [AdminSalesReportController::class, 'export']) ->name('admin.reports.sales.export');
 
 // ── Admin Manage Users ──────────────────────────────────
 Route::get('/admin/users',                       [AdminManageUsersController::class, 'index'])->name('admin.users');

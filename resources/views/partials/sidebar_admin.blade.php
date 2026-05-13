@@ -76,6 +76,9 @@
            class="{{ request()->routeIs('admin.orders*') ? 'active' : '' }}">
             <span class="ni">🛍</span> Online Orders
         </a>
+        <a href="{{ route('admin.reports.sales') }}" class="nav-link">
+        📊 Sales Report
+        </a>
 
         <span class="sb-label">People</span>
         <a href="{{ route('admin.manage-users') }}"
