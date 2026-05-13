@@ -309,7 +309,7 @@
     background: #fff;
     border-radius: 16px;
     padding: 28px 28px 24px;
-    width: 500px;
+    width: 680px;
     max-width: 95vw;
     position: relative;
     box-shadow: 0 12px 40px rgba(0,0,0,0.18);
@@ -364,12 +364,12 @@
 .manage-tab {
     flex: 1;
     min-width: 80px;
-    padding: 8px 10px;
+    padding: 8px 14px;
     border: 1.5px solid #e0e8cc;
     border-radius: 8px;
     background: #f9fff2;
     color: #6b7260;
-    font-size: 0.8rem;
+    font-size: 0.88rem;
     font-weight: 600;
     font-family: inherit;
     cursor: pointer;
