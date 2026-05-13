@@ -100,7 +100,7 @@ class AdminSalesReportController extends Controller
 
             // Need unit price — fetch from products table
             $productPrices = DB::table('products')
-                ->pluck('price', 'product_name');
+                ->pluck('selling_price', 'product_name');
 
             $callback = function () use ($productRows, $serviceRows, $dateFrom, $dateTo, $productPrices) {
                 $out = fopen('php://output', 'w');
