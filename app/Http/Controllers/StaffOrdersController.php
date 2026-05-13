@@ -1,5 +1,4 @@
 <?php
-// app/Http/Controllers/StaffOrdersController.php
 namespace App\Http\Controllers;
 
 use App\Http\Controllers\SidebarDataController;
@@ -67,7 +66,7 @@ class StaffOrdersController extends Controller
     {
         $request->validate([
             'order_id'   => 'required|integer',
-            'status'     => 'required|in:confirmed,packing,ready,completed,cancelled',
+            'status'     => 'required|in:confirmed,processing,ready_for_pickup,completed,cancelled',
             'pay_status' => 'nullable|in:paid,unpaid',
         ]);
 
@@ -92,11 +91,11 @@ class StaffOrdersController extends Controller
 
         // ── Notify patient of status change ───────────────
         $messages = [
-            'confirmed' => '✅ Your order #' . $orderId . ' has been confirmed! We are preparing your items.',
-            'packing'   => '📦 Your order #' . $orderId . ' is now being packed.',
-            'ready'     => '🏪 Your order #' . $orderId . ' is ready for pick-up at the clinic!',
-            'completed' => '✔ Your order #' . $orderId . ' has been completed. Thank you!',
-            'cancelled' => '✕ Your order #' . $orderId . ' has been cancelled. Please contact us for assistance.',
+            'confirmed'        => '✅ Your order #' . $orderId . ' has been confirmed! We are preparing your items.',
+            'processing'       => '📦 Your order #' . $orderId . ' is now being packed.',
+            'ready_for_pickup' => '🏪 Your order #' . $orderId . ' is ready for pick-up at the clinic!',
+            'completed'        => '✔ Your order #' . $orderId . ' has been completed. Thank you!',
+            'cancelled'        => '✕ Your order #' . $orderId . ' has been cancelled. Please contact us for assistance.',
         ];
 
         if (isset($messages[$status]) && $order->user_id) {
@@ -114,12 +113,12 @@ class StaffOrdersController extends Controller
     private function notifTitle(string $status): string
     {
         return match($status) {
-            'confirmed' => '✅ Order Confirmed',
-            'packing'   => '📦 Order Being Packed',
-            'ready'     => '🏪 Ready for Pick-up',
-            'completed' => '✔ Order Completed',
-            'cancelled' => '✕ Order Cancelled',
-            default     => '🛍 Order Update',
+            'confirmed'        => '✅ Order Confirmed',
+            'processing'       => '📦 Order Being Packed',
+            'ready_for_pickup' => '🏪 Ready for Pick-up',
+            'completed'        => '✔ Order Completed',
+            'cancelled'        => '✕ Order Cancelled',
+            default            => '🛍 Order Update',
         };
     }
 }
