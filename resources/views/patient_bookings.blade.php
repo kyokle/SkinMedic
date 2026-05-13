@@ -42,6 +42,24 @@
     </button>
     </div>
 
+    {{-- Search & Date Range Row --}}
+    <div class="search-range-bar">
+        <div class="search-box">
+            <span class="search-icon">🔍</span>
+            <input type="text" id="searchInput" placeholder="Search by service, doctor, or appointment #…"
+                   oninput="applyFilters()">
+        </div>
+        <div class="range-tabs">
+            @foreach(['daily', 'weekly', 'monthly', 'yearly'] as $range)
+            <button class="range-btn" data-range="{{ $range }}"
+                    onclick="setRange('{{ $range }}', this)">
+                {{ ucfirst($range) }}
+            </button>
+            @endforeach
+            <button class="range-btn" data-range="all" onclick="setRange('all', this)">All Time</button>
+        </div>
+    </div>
+
     <table id="bookingsTable">
         <thead>
             <tr>
@@ -225,11 +243,69 @@
 
 @push('scripts')
 <script>
+// ── Unified filter state ────────────────────────────────────
+let activeStatus = '{{ $activeFilter }}' || 'all';
+let activeRange  = 'all';
+
 function filterTable(status, btn) {
     document.querySelectorAll('.filter-tabs button').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
+    activeStatus = status;
+    applyFilters();
+}
+
+function setRange(range, btn) {
+    document.querySelectorAll('.range-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    activeRange = range;
+    applyFilters();
+}
+
+function applyFilters() {
+    const query   = (document.getElementById('searchInput').value || '').toLowerCase().trim();
+    const now     = new Date();
+    const today   = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
     document.querySelectorAll('#bookingsTable tbody tr[data-status]').forEach(row => {
-        row.style.display = (status === 'all' || row.dataset.status === status) ? '' : 'none';
+        // 1. Status filter
+        if (activeStatus !== 'all' && row.dataset.status !== activeStatus) {
+            row.style.display = 'none'; return;
+        }
+
+        // 2. Date range filter
+        if (activeRange !== 'all') {
+            const rawDate = row.querySelector('td:nth-child(4)')?.textContent?.trim();
+            const rowDate = rawDate ? new Date(rawDate) : null;
+            if (!rowDate || isNaN(rowDate)) { row.style.display = 'none'; return; }
+
+            const rowDay = new Date(rowDate.getFullYear(), rowDate.getMonth(), rowDate.getDate());
+            let inRange  = false;
+
+            if (activeRange === 'daily') {
+                inRange = rowDay.getTime() === today.getTime();
+            } else if (activeRange === 'weekly') {
+                const weekStart = new Date(today);
+                weekStart.setDate(today.getDate() - today.getDay());
+                const weekEnd = new Date(weekStart);
+                weekEnd.setDate(weekStart.getDate() + 6);
+                inRange = rowDay >= weekStart && rowDay <= weekEnd;
+            } else if (activeRange === 'monthly') {
+                inRange = rowDate.getFullYear() === now.getFullYear()
+                       && rowDate.getMonth()    === now.getMonth();
+            } else if (activeRange === 'yearly') {
+                inRange = rowDate.getFullYear() === now.getFullYear();
+            }
+
+            if (!inRange) { row.style.display = 'none'; return; }
+        }
+
+        // 3. Search filter
+        if (query) {
+            const text = row.textContent.toLowerCase();
+            if (!text.includes(query)) { row.style.display = 'none'; return; }
+        }
+
+        row.style.display = '';
     });
 }
 
@@ -385,11 +461,11 @@ window.onclick = e => {
 };
 
 window.addEventListener('DOMContentLoaded', function () {
-    const filter = '{{ $activeFilter }}';
-    if (filter && filter !== 'all') {
-        const btn = document.querySelector('.filter-tabs button.active');
-        if (btn) filterTable(filter, btn);
-    }
+    // Initialise "All Time" range button as active
+    const allTimeBtn = document.querySelector('.range-btn[data-range="all"]');
+    if (allTimeBtn) allTimeBtn.classList.add('active');
+
+    applyFilters();
 
     const params = new URLSearchParams(window.location.search);
     const openId = params.get('open');

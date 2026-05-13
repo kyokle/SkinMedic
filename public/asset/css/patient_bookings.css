@@ -103,6 +103,78 @@ td {
 
 tr:last-child td { border-bottom: none; }
 
+/* ── Search & Range Bar ── */
+.search-range-bar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+}
+
+.search-box {
+    display: flex;
+    align-items: center;
+    background: #fff;
+    border: 1.5px solid #d1d5db;
+    border-radius: 8px;
+    padding: 7px 12px;
+    gap: 8px;
+    flex: 1;
+    min-width: 220px;
+    max-width: 380px;
+    transition: border-color 0.18s;
+}
+
+.search-box:focus-within {
+    border-color: #80a833;
+}
+
+.search-icon {
+    font-size: 0.9rem;
+    color: #999;
+    flex-shrink: 0;
+}
+
+.search-box input {
+    border: none;
+    outline: none;
+    width: 100%;
+    font-size: 0.86rem;
+    color: #333;
+    background: transparent;
+    font-family: inherit;
+}
+
+.search-box input::placeholder {
+    color: #bbb;
+}
+
+.range-tabs {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.range-btn {
+    padding: 7px 15px;
+    border: 2px solid #6b7280;
+    border-radius: 20px;
+    background: #fff;
+    color: #6b7280;
+    cursor: pointer;
+    font-size: 0.82rem;
+    font-family: inherit;
+    font-weight: 500;
+    transition: 0.18s;
+}
+
+.range-btn.active,
+.range-btn:hover {
+    background: #6b7280;
+    color: #fff;
+}
+
 /* ── Badges ── */
 .badge {
     display: inline-block;
