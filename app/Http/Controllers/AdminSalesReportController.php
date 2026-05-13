@@ -22,95 +22,14 @@ class AdminSalesReportController extends Controller
         $dateFrom = $request->query('date_from', now()->startOfMonth()->toDateString());
         $dateTo   = $request->query('date_to',   now()->toDateString());
 
-        // ── Product Sales ─────────────────────────────────────
-        // Walk-in product sales (walkin_sale_items)
-        $walkinProducts = DB::table('walkin_sale_items as wi')
-            ->join('walkin_sales as ws',  'ws.sale_id',    '=', 'wi.sale_id')
-            ->join('products as p',       'p.product_id',  '=', 'wi.product_id')
-            ->join('users as pt',         'pt.user_id',    '=', 'ws.user_id')
-            ->select(
-                'p.product_name as name',
-                DB::raw('SUM(wi.quantity) as total_qty'),
-                DB::raw('SUM(wi.subtotal) as total_revenue'),
-                DB::raw('"walk-in" as source')
-            )
-            ->whereBetween(DB::raw('DATE(ws.created_at)'), [$dateFrom, $dateTo])
-            ->where('ws.status', 'completed')
-            ->groupBy('p.product_id', 'p.product_name');
-
-        // Online order product sales (order_items)
-        $onlineProducts = DB::table('order_items as oi')
-            ->join('orders as o',    'o.id',         '=', 'oi.order_id')
-            ->join('products as p',  'p.product_id', '=', 'oi.product_id')
-            ->select(
-                'p.product_name as name',
-                DB::raw('SUM(oi.quantity) as total_qty'),
-                DB::raw('SUM(oi.subtotal) as total_revenue'),
-                DB::raw('"online" as source')
-            )
-            ->whereBetween(DB::raw('DATE(o.created_at)'), [$dateFrom, $dateTo])
-            ->where('o.status', 'completed')
-            ->groupBy('p.product_id', 'p.product_name');
-
-        // Merge and group by product name
-        $productRows = collect(
-            DB::table(DB::raw("({$walkinProducts->toSql()} UNION ALL {$onlineProducts->toSql()}) as combined"))
-                ->mergeBindings($walkinProducts)
-                ->mergeBindings($onlineProducts)
-                ->select('name', DB::raw('SUM(total_qty) as total_qty'), DB::raw('SUM(total_revenue) as total_revenue'))
-                ->groupBy('name')
-                ->orderByDesc('total_revenue')
-                ->get()
-        );
+        // ── Product & Service rows ─────────────────────────────
+        $productRows = $this->getProductRows($dateFrom, $dateTo);
+        $serviceRows = $this->getServiceRows($dateFrom, $dateTo);
 
         $productTotals = [
             'qty'     => $productRows->sum('total_qty'),
             'revenue' => $productRows->sum('total_revenue'),
         ];
-
-        // ── Service Sales ─────────────────────────────────────
-        // Walk-in service sales (walkin_sale_services, is_prefilled=1 means billed)
-        $walkinServices = DB::table('walkin_sale_services as wss')
-            ->join('walkin_sales as ws',   'ws.sale_id',       '=', 'wss.sale_id')
-            ->join('appointments as a',    'a.appointment_id', '=', 'wss.appointment_id')
-            ->join('services as sv',       'sv.service_id',    '=', 'a.service_id')
-            ->select(
-                'sv.name as service_name',
-                DB::raw('COUNT(wss.id) as total_count'),
-                DB::raw('SUM(wss.service_price) as total_revenue'),
-                DB::raw('"walk-in" as source')
-            )
-            ->whereBetween(DB::raw('DATE(ws.created_at)'), [$dateFrom, $dateTo])
-            ->where('ws.status', 'completed')
-            ->where('wss.is_prefilled', 1)   // only billed services
-            ->groupBy('sv.service_id', 'sv.name');
-
-        // Completed appointment service sales (direct appointment billing)
-        $apptServices = DB::table('appointments as a')
-            ->join('services as sv',  'sv.service_id', '=', 'a.service_id')
-            ->select(
-                'sv.name as service_name',
-                DB::raw('COUNT(a.appointment_id) as total_count'),
-                DB::raw('SUM(sv.price) as total_revenue'),
-                DB::raw('"appointment" as source')
-            )
-            ->whereBetween('a.appointment_date', [$dateFrom, $dateTo])
-            ->where('a.status', 'completed')
-            // Exclude appointments already counted via walkin_sale_services
-            ->whereNotIn('a.appointment_id', function ($q) {
-                $q->select('appointment_id')->from('walkin_sale_services')->where('is_prefilled', 1);
-            })
-            ->groupBy('sv.service_id', 'sv.name');
-
-        $serviceRows = collect(
-            DB::table(DB::raw("({$walkinServices->toSql()} UNION ALL {$apptServices->toSql()}) as combined"))
-                ->mergeBindings($walkinServices)
-                ->mergeBindings($apptServices)
-                ->select('service_name', DB::raw('SUM(total_count) as total_count'), DB::raw('SUM(total_revenue) as total_revenue'))
-                ->groupBy('service_name')
-                ->orderByDesc('total_revenue')
-                ->get()
-        );
 
         $serviceTotals = [
             'count'   => $serviceRows->sum('total_count'),
@@ -138,13 +57,19 @@ class AdminSalesReportController extends Controller
             ->get()
             ->pluck('total', 'date');
 
+        // ── Extra computed stats ──────────────────────────────
+        $activeDays       = $dailyRevenue->count();
+        $avgDailyRevenue  = $activeDays > 0 ? $dailyRevenue->sum() / $activeDays : 0;
+        $totalTransactions = $paymentBreakdown->sum('count');
+
         return view('admin_sales_report', array_merge(
             $this->sidebarData(),
             compact(
                 'dateFrom', 'dateTo',
                 'productRows', 'productTotals',
                 'serviceRows', 'serviceTotals',
-                'grandTotal', 'paymentBreakdown', 'dailyRevenue'
+                'grandTotal', 'paymentBreakdown', 'dailyRevenue',
+                'activeDays', 'avgDailyRevenue', 'totalTransactions'
             )
         ));
     }
@@ -162,7 +87,6 @@ class AdminSalesReportController extends Controller
         $dateFrom = $request->query('date_from', now()->startOfMonth()->toDateString());
         $dateTo   = $request->query('date_to',   now()->toDateString());
 
-        // Re-run same queries (extracted to avoid duplication in real app — use a private method)
         $productRows = $this->getProductRows($dateFrom, $dateTo);
         $serviceRows = $this->getServiceRows($dateFrom, $dateTo);
 
@@ -184,25 +108,25 @@ class AdminSalesReportController extends Controller
 
                 // Products
                 fputcsv($out, ["PRODUCT SALES"]);
-                fputcsv($out, ["Product", "Qty Sold", "Revenue (₱)"]);
-                foreach ($productRows as $r) {
-                    fputcsv($out, [$r->name, $r->total_qty, number_format($r->total_revenue, 2)]);
+                fputcsv($out, ["#", "Product", "Qty Sold", "Revenue (₱)"]);
+                foreach ($productRows as $i => $r) {
+                    fputcsv($out, [$i + 1, $r->name, $r->total_qty, number_format($r->total_revenue, 2)]);
                 }
-                fputcsv($out, ["TOTAL", $productRows->sum('total_qty'), number_format($productRows->sum('total_revenue'), 2)]);
+                fputcsv($out, ["", "TOTAL", $productRows->sum('total_qty'), number_format($productRows->sum('total_revenue'), 2)]);
                 fputcsv($out, []);
 
                 // Services
                 fputcsv($out, ["SERVICE SALES"]);
-                fputcsv($out, ["Service", "Sessions", "Revenue (₱)"]);
-                foreach ($serviceRows as $r) {
-                    fputcsv($out, [$r->service_name, $r->total_count, number_format($r->total_revenue, 2)]);
+                fputcsv($out, ["#", "Service", "Sessions", "Revenue (₱)"]);
+                foreach ($serviceRows as $i => $r) {
+                    fputcsv($out, [$i + 1, $r->service_name, $r->total_count, number_format($r->total_revenue, 2)]);
                 }
-                fputcsv($out, ["TOTAL", $serviceRows->sum('total_count'), number_format($serviceRows->sum('total_revenue'), 2)]);
+                fputcsv($out, ["", "TOTAL", $serviceRows->sum('total_count'), number_format($serviceRows->sum('total_revenue'), 2)]);
                 fputcsv($out, []);
 
                 // Grand total
                 $grand = $productRows->sum('total_revenue') + $serviceRows->sum('total_revenue');
-                fputcsv($out, ["GRAND TOTAL", "", number_format($grand, 2)]);
+                fputcsv($out, ["GRAND TOTAL", "", "", number_format($grand, 2)]);
 
                 fclose($out);
             };
@@ -210,9 +134,16 @@ class AdminSalesReportController extends Controller
             return response()->stream($callback, 200, $headers);
         }
 
-        // PDF export via simple HTML → blade print
+        // PDF export — pass paymentBreakdown too for the enhanced PDF view
+        $paymentBreakdown = DB::table('walkin_sales')
+            ->select('payment_method', DB::raw('COUNT(*) as count'), DB::raw('SUM(total_amount) as total'))
+            ->whereBetween(DB::raw('DATE(created_at)'), [$dateFrom, $dateTo])
+            ->where('status', 'completed')
+            ->groupBy('payment_method')
+            ->get();
+
         return view('admin_sales_report_pdf', compact(
-            'dateFrom', 'dateTo', 'productRows', 'serviceRows'
+            'dateFrom', 'dateTo', 'productRows', 'serviceRows', 'paymentBreakdown'
         ));
     }
 
@@ -223,24 +154,35 @@ class AdminSalesReportController extends Controller
         $walkin = DB::table('walkin_sale_items as wi')
             ->join('walkin_sales as ws', 'ws.sale_id',   '=', 'wi.sale_id')
             ->join('products as p',      'p.product_id', '=', 'wi.product_id')
-            ->select('p.product_name as name', DB::raw('SUM(wi.quantity) as total_qty'), DB::raw('SUM(wi.subtotal) as total_revenue'))
+            ->select(
+                'p.product_name as name',
+                DB::raw('SUM(wi.quantity) as total_qty'),
+                DB::raw('SUM(wi.subtotal) as total_revenue')
+            )
             ->whereBetween(DB::raw('DATE(ws.created_at)'), [$from, $to])
             ->where('ws.status', 'completed')
             ->groupBy('p.product_id', 'p.product_name');
 
         $online = DB::table('order_items as oi')
-            ->join('orders as o',   'o.id',         '=', 'oi.order_id')
+            ->join('orders as o',   'o.order_id',   '=', 'oi.order_id')
             ->join('products as p', 'p.product_id', '=', 'oi.product_id')
-            ->select('p.product_name as name', DB::raw('SUM(oi.quantity) as total_qty'), DB::raw('SUM(oi.subtotal) as total_revenue'))
+            ->select(
+                'p.product_name as name',
+                DB::raw('SUM(oi.quantity) as total_qty'),
+                DB::raw('SUM(oi.subtotal) as total_revenue')
+            )
             ->whereBetween(DB::raw('DATE(o.created_at)'), [$from, $to])
             ->where('o.status', 'completed')
             ->groupBy('p.product_id', 'p.product_name');
 
         return collect(
             DB::table(DB::raw("({$walkin->toSql()} UNION ALL {$online->toSql()}) as combined"))
-                ->mergeBindings($walkin)->mergeBindings($online)
+                ->mergeBindings($walkin)
+                ->mergeBindings($online)
                 ->select('name', DB::raw('SUM(total_qty) as total_qty'), DB::raw('SUM(total_revenue) as total_revenue'))
-                ->groupBy('name')->orderByDesc('total_revenue')->get()
+                ->groupBy('name')
+                ->orderByDesc('total_revenue')
+                ->get()
         );
     }
 
@@ -250,7 +192,11 @@ class AdminSalesReportController extends Controller
             ->join('walkin_sales as ws',  'ws.sale_id',       '=', 'wss.sale_id')
             ->join('appointments as a',   'a.appointment_id', '=', 'wss.appointment_id')
             ->join('services as sv',      'sv.service_id',    '=', 'a.service_id')
-            ->select('sv.name as service_name', DB::raw('COUNT(wss.id) as total_count'), DB::raw('SUM(wss.service_price) as total_revenue'))
+            ->select(
+                'sv.name as service_name',
+                DB::raw('COUNT(wss.id) as total_count'),
+                DB::raw('SUM(wss.service_price) as total_revenue')
+            )
             ->whereBetween(DB::raw('DATE(ws.created_at)'), [$from, $to])
             ->where('ws.status', 'completed')
             ->where('wss.is_prefilled', 1)
@@ -258,7 +204,11 @@ class AdminSalesReportController extends Controller
 
         $appt = DB::table('appointments as a')
             ->join('services as sv', 'sv.service_id', '=', 'a.service_id')
-            ->select('sv.name as service_name', DB::raw('COUNT(a.appointment_id) as total_count'), DB::raw('SUM(sv.price) as total_revenue'))
+            ->select(
+                'sv.name as service_name',
+                DB::raw('COUNT(a.appointment_id) as total_count'),
+                DB::raw('SUM(sv.price) as total_revenue')
+            )
             ->whereBetween('a.appointment_date', [$from, $to])
             ->where('a.status', 'completed')
             ->whereNotIn('a.appointment_id', function ($q) {
@@ -268,9 +218,12 @@ class AdminSalesReportController extends Controller
 
         return collect(
             DB::table(DB::raw("({$walkin->toSql()} UNION ALL {$appt->toSql()}) as combined"))
-                ->mergeBindings($walkin)->mergeBindings($appt)
+                ->mergeBindings($walkin)
+                ->mergeBindings($appt)
                 ->select('service_name', DB::raw('SUM(total_count) as total_count'), DB::raw('SUM(total_revenue) as total_revenue'))
-                ->groupBy('service_name')->orderByDesc('total_revenue')->get()
+                ->groupBy('service_name')
+                ->orderByDesc('total_revenue')
+                ->get()
         );
     }
 }

@@ -27,6 +27,36 @@
         </div>
     </div>
 
+    {{-- ── Quick filter tabs ── --}}
+    @php
+        $quickPresets = [
+            'today'   => ['Today',     now()->toDateString(),                     now()->toDateString()],
+            'week'    => ['This Week',  now()->startOfWeek()->toDateString(),       now()->toDateString()],
+            'month'   => ['This Month', now()->startOfMonth()->toDateString(),      now()->toDateString()],
+            'year'    => ['This Year',  now()->startOfYear()->toDateString(),       now()->toDateString()],
+            'lmonth'  => ['Last Month', now()->subMonthNoOverflow()->startOfMonth()->toDateString(),
+                                         now()->subMonthNoOverflow()->endOfMonth()->toDateString()],
+        ];
+
+        // Detect active preset
+        $activePreset = null;
+        foreach ($quickPresets as $key => [$label, $from, $to]) {
+            if ($dateFrom === $from && $dateTo === $to) {
+                $activePreset = $key;
+                break;
+            }
+        }
+    @endphp
+
+    <div class="quick-filters">
+        @foreach($quickPresets as $key => [$label, $from, $to])
+        <a href="{{ route('admin.reports.sales', ['date_from' => $from, 'date_to' => $to]) }}"
+           class="quick-btn {{ $activePreset === $key ? 'active' : '' }}">
+            {{ $label }}
+        </a>
+        @endforeach
+    </div>
+
     {{-- ── Date range filter ── --}}
     <form method="GET" action="{{ route('admin.reports.sales') }}" class="filter-bar">
         <div class="filter-group">
@@ -53,17 +83,27 @@
         <div class="summary-card green">
             <p class="card-label">Product Revenue</p>
             <p class="card-value">₱{{ number_format($productTotals['revenue'], 2) }}</p>
-            <p class="card-sub">{{ $productTotals['qty'] }} units sold</p>
+            <p class="card-sub">{{ number_format($productTotals['qty']) }} units sold</p>
         </div>
         <div class="summary-card blue">
             <p class="card-label">Service Revenue</p>
             <p class="card-value">₱{{ number_format($serviceTotals['revenue'], 2) }}</p>
-            <p class="card-sub">{{ $serviceTotals['count'] }} sessions</p>
+            <p class="card-sub">{{ number_format($serviceTotals['count']) }} sessions</p>
         </div>
         <div class="summary-card dark">
             <p class="card-label">Grand Total</p>
             <p class="card-value">₱{{ number_format($grandTotal, 2) }}</p>
             <p class="card-sub">{{ $dateFrom }} → {{ $dateTo }}</p>
+        </div>
+        <div class="summary-card rose">
+            <p class="card-label">Avg Daily Revenue</p>
+            <p class="card-value">₱{{ number_format($avgDailyRevenue, 2) }}</p>
+            <p class="card-sub">{{ $activeDays }} active day{{ $activeDays !== 1 ? 's' : '' }}</p>
+        </div>
+        <div class="summary-card teal">
+            <p class="card-label">Total Transactions</p>
+            <p class="card-value">{{ number_format($totalTransactions) }}</p>
+            <p class="card-sub">Walk-in sales</p>
         </div>
 
         {{-- Payment method breakdown --}}
@@ -71,7 +111,7 @@
         <div class="summary-card {{ $pm->payment_method === 'cash' ? 'amber' : 'purple' }}">
             <p class="card-label">{{ strtoupper($pm->payment_method) }}</p>
             <p class="card-value">₱{{ number_format($pm->total, 2) }}</p>
-            <p class="card-sub">{{ $pm->count }} transactions</p>
+            <p class="card-sub">{{ $pm->count }} transaction{{ $pm->count !== 1 ? 's' : '' }}</p>
         </div>
         @endforeach
     </div>
@@ -79,11 +119,13 @@
     {{-- ── Daily revenue mini-chart ── --}}
     @if($dailyRevenue->isNotEmpty())
     <div class="chart-card">
-        <p class="section-label">📈 Daily Walk-in Revenue</p>
+        <p class="section-label">📈 Revenue Over Period</p>
+        <p style="font-size:0.78rem;color:#aaa;margin-top:2px;">Walk-in sales · hover bars for amount</p>
         <div class="bar-chart" id="barChart"></div>
     </div>
     @endif
 
+    {{-- ── Product & Service tables ── --}}
     <div class="tables-grid">
 
         {{-- ── Product Sales table ── --}}
@@ -156,7 +198,7 @@
                 <tfoot>
                     <tr class="total-row">
                         <td colspan="2">Total</td>
-                        <td class="text-right">{{ $serviceTotals['count'] }}</td>
+                        <td class="text-right">{{ number_format($serviceTotals['count']) }}</td>
                         <td class="text-right">₱{{ number_format($serviceTotals['revenue'], 2) }}</td>
                     </tr>
                 </tfoot>
@@ -165,6 +207,107 @@
         </div>
 
     </div>{{-- /tables-grid --}}
+
+    {{-- ── Top performers ── --}}
+    <div class="tables-grid">
+
+        {{-- Top Products by Revenue (visual bars) --}}
+        <div class="report-card">
+            <div class="report-card-header">
+                <p class="section-label">🏆 Top Products</p>
+                <span class="section-meta">by revenue</span>
+            </div>
+            @php $topProducts = $productRows->take(5); $maxPRev = $topProducts->max('total_revenue') ?: 1; @endphp
+            @if($topProducts->isEmpty())
+                <p class="empty-state">No data.</p>
+            @else
+                <div style="padding: 10px 0 6px;">
+                    @foreach($topProducts as $row)
+                    <div class="top-bar-row">
+                        <span class="top-bar-name">{{ Str::limit($row->name, 28) }}</span>
+                        <div class="top-bar-track">
+                            <div class="top-bar-fill" style="width:{{ round($row->total_revenue / $maxPRev * 100) }}%"></div>
+                        </div>
+                        <span class="top-bar-val">₱{{ number_format($row->total_revenue, 0) }}</span>
+                    </div>
+                    @endforeach
+                </div>
+            @endif
+        </div>
+
+        {{-- Top Services by Revenue (visual bars) --}}
+        <div class="report-card">
+            <div class="report-card-header">
+                <p class="section-label">🏆 Top Services</p>
+                <span class="section-meta">by revenue</span>
+            </div>
+            @php $topServices = $serviceRows->take(5); $maxSRev = $topServices->max('total_revenue') ?: 1; @endphp
+            @if($topServices->isEmpty())
+                <p class="empty-state">No data.</p>
+            @else
+                <div style="padding: 10px 0 6px;">
+                    @foreach($topServices as $row)
+                    <div class="top-bar-row">
+                        <span class="top-bar-name">{{ Str::limit($row->service_name, 28) }}</span>
+                        <div class="top-bar-track">
+                            <div class="top-bar-fill" style="width:{{ round($row->total_revenue / $maxSRev * 100) }}%"></div>
+                        </div>
+                        <span class="top-bar-val">₱{{ number_format($row->total_revenue, 0) }}</span>
+                    </div>
+                    @endforeach
+                </div>
+            @endif
+        </div>
+
+    </div>
+
+    {{-- ── Payment Transactions table ── --}}
+    <div class="tables-grid full">
+        <div class="report-card">
+            <div class="report-card-header">
+                <p class="section-label">💳 Payment Breakdown</p>
+                <span class="section-meta">Walk-in transactions only</span>
+            </div>
+            @if($paymentBreakdown->isEmpty())
+                <p class="empty-state">No payment data for this period.</p>
+            @else
+            <table class="report-table">
+                <thead>
+                    <tr>
+                        <th>Method</th>
+                        <th class="text-right">Transactions</th>
+                        <th class="text-right">Total Revenue</th>
+                        <th class="text-right">Avg per Txn</th>
+                        <th class="text-right">% of Sales</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach($paymentBreakdown as $pm)
+                    <tr>
+                        <td><span class="badge {{ strtolower($pm->payment_method) }}">{{ $pm->payment_method }}</span></td>
+                        <td class="text-right">{{ number_format($pm->count) }}</td>
+                        <td class="text-right fw-bold">₱{{ number_format($pm->total, 2) }}</td>
+                        <td class="text-right">₱{{ $pm->count > 0 ? number_format($pm->total / $pm->count, 2) : '0.00' }}</td>
+                        <td class="text-right">
+                            @php $walkinTotal = $paymentBreakdown->sum('total'); @endphp
+                            {{ $walkinTotal > 0 ? number_format($pm->total / $walkinTotal * 100, 1) : 0 }}%
+                        </td>
+                    </tr>
+                    @endforeach
+                </tbody>
+                <tfoot>
+                    <tr>
+                        <td>Total</td>
+                        <td class="text-right">{{ number_format($paymentBreakdown->sum('count')) }}</td>
+                        <td class="text-right">₱{{ number_format($paymentBreakdown->sum('total'), 2) }}</td>
+                        <td class="text-right"></td>
+                        <td class="text-right">100%</td>
+                    </tr>
+                </tfoot>
+            </table>
+            @endif
+        </div>
+    </div>
 
 </div>{{-- /main --}}
 
@@ -179,11 +322,11 @@ const container = document.getElementById('barChart');
 if (container && entries.length) {
     container.innerHTML = entries.map(([date, val]) => {
         const pct   = (parseFloat(val) / maxVal * 100).toFixed(1);
-        const label = new Date(date).toLocaleDateString('en-PH', { month:'short', day:'numeric' });
+        const label = new Date(date + 'T00:00:00').toLocaleDateString('en-PH', { month:'short', day:'numeric' });
         return `
             <div class="bar-group">
                 <div class="bar-wrap">
-                    <div class="bar" style="height:${pct}%" title="₱${parseFloat(val).toLocaleString()}"></div>
+                    <div class="bar" style="height:${pct}%" title="₱${parseFloat(val).toLocaleString('en-PH', {minimumFractionDigits:2})}"></div>
                 </div>
                 <span class="bar-label">${label}</span>
             </div>`;
