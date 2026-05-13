@@ -186,25 +186,6 @@
                 </div>
             </div>
 
-            {{-- ── Payment Proof Lightbox ── --}}
-<div id="imgLightbox" onclick="closeLightbox()" style="
-    display:none; position:fixed; inset:0; z-index:9999;
-    background:rgba(0,0,0,0.88); cursor:zoom-out;
-    align-items:center; justify-content:center;
-">
-    <img id="imgLightboxSrc" src="" style="
-        max-width:92vw; max-height:92vh;
-        border-radius:12px;
-        box-shadow:0 8px 48px rgba(0,0,0,0.6);
-        object-fit:contain;
-    ">
-    <span style="
-        position:absolute; top:18px; right:24px;
-        color:#fff; font-size:28px; cursor:pointer;
-        line-height:1; opacity:0.8;
-    " onclick="closeLightbox()">×</span>
-</div>
-
             {{-- Order status --}}
             <div class="modal-section">
                 <p class="section-label">Order Status</p>
@@ -227,6 +208,25 @@
 
         </div>
     </div>
+</div>
+
+{{-- ── Payment Proof Lightbox — OUTSIDE the modal ── --}}
+<div id="imgLightbox" onclick="closeLightbox()" style="
+    display:none; position:fixed; inset:0; z-index:9999;
+    background:rgba(0,0,0,0.88); cursor:zoom-out;
+    align-items:center; justify-content:center;
+">
+    <img id="imgLightboxSrc" src="" style="
+        max-width:92vw; max-height:92vh;
+        border-radius:12px;
+        box-shadow:0 8px 48px rgba(0,0,0,0.6);
+        object-fit:contain;
+    " onclick="event.stopPropagation()">
+    <span style="
+        position:absolute; top:18px; right:24px;
+        color:#fff; font-size:32px; cursor:pointer;
+        line-height:1; opacity:0.85; font-weight:300;
+    " onclick="event.stopPropagation(); closeLightbox()">×</span>
 </div>
 
 {{-- Inline order data for JS --}}
@@ -285,15 +285,15 @@ function openModal(id) {
     const order = ORDERS[id];
     if (!order) return;
 
-    document.getElementById('modalTitle').textContent  = 'Order #' + order.id;
-    document.getElementById('m_id').textContent        = '#' + order.id;
-    document.getElementById('m_patient').textContent   = order.patient_name;
-    document.getElementById('m_date').textContent      = new Date(order.created_at).toLocaleString('en-PH', {dateStyle:'medium', timeStyle:'short'});
-    document.getElementById('m_note').textContent      = order.note || '—';
-    document.getElementById('m_total').textContent     = '₱' + parseFloat(order.total).toLocaleString('en-PH', {minimumFractionDigits:2});
-    document.getElementById('m_payment').textContent   = order.payment_method === 'gcash' ? 'GCash' : 'Cash on Pick-up';
+    document.getElementById('modalTitle').textContent   = 'Order #' + order.id;
+    document.getElementById('m_id').textContent         = '#' + order.id;
+    document.getElementById('m_patient').textContent    = order.patient_name;
+    document.getElementById('m_date').textContent       = new Date(order.created_at).toLocaleString('en-PH', {dateStyle:'medium', timeStyle:'short'});
+    document.getElementById('m_note').textContent       = order.note || '—';
+    document.getElementById('m_total').textContent      = '₱' + parseFloat(order.total).toLocaleString('en-PH', {minimumFractionDigits:2});
+    document.getElementById('m_payment').textContent    = order.payment_method === 'gcash' ? 'GCash' : 'Cash on Pick-up';
     document.getElementById('m_pay_status').textContent = ucFirst(order.payment_status || 'unpaid');
-    document.getElementById('form_order_id').value     = order.id;
+    document.getElementById('form_order_id').value      = order.id;
 
     // Reference #
     if (order.reference) {
@@ -304,25 +304,25 @@ function openModal(id) {
     }
 
     // GCash proof image
-const proofSection        = document.getElementById('proofSection');
-const proofMissingSection = document.getElementById('proofMissingSection');
+    const proofSection        = document.getElementById('proofSection');
+    const proofMissingSection = document.getElementById('proofMissingSection');
 
-if (order.payment_method === 'gcash') {
-    if (order.payment_proof) {
-        proofSection.style.display        = '';
-        proofMissingSection.style.display = 'none';
-        const proofImg = document.getElementById('m_proof_img');  // ← changed
-        proofImg.src = order.payment_proof;                        // ← changed
-        proofImg.style.cursor = 'zoom-in';                        // ← changed
-        proofImg.onclick = () => openLightbox(order.payment_proof); // ← changed
+    if (order.payment_method === 'gcash') {
+        if (order.payment_proof) {
+            proofSection.style.display        = '';
+            proofMissingSection.style.display = 'none';
+            const proofImg = document.getElementById('m_proof_img');
+            proofImg.src          = order.payment_proof;
+            proofImg.style.cursor = 'zoom-in';
+            proofImg.onclick      = () => openLightbox(order.payment_proof);
+        } else {
+            proofSection.style.display        = 'none';
+            proofMissingSection.style.display = '';
+        }
     } else {
         proofSection.style.display        = 'none';
-        proofMissingSection.style.display = '';
+        proofMissingSection.style.display = 'none';
     }
-} else {
-    proofSection.style.display        = 'none';
-    proofMissingSection.style.display = 'none';
-}
 
     // Items
     document.getElementById('m_items').innerHTML = order.items.map(item => `
@@ -340,33 +340,35 @@ if (order.payment_method === 'gcash') {
 
     document.getElementById('orderModal').style.display = 'flex';
 }
-function openLightbox(src) {
-    document.getElementById('imgLightboxSrc').src = src;
-    document.getElementById('imgLightbox').classList.add('open');
-    document.body.style.overflow = 'hidden'; // prevent background scroll
-}
 
-function closeLightbox() {
-    document.getElementById('imgLightbox').classList.remove('open');
-    document.body.style.overflow = '';
-}
-
-// Also close lightbox with Escape key
-document.addEventListener('keydown', e => {
-    if (e.key === 'Escape') closeLightbox();
-});
 function closeModal() {
     document.getElementById('orderModal').style.display = 'none';
 }
 
+/* ── LIGHTBOX ── */
+function openLightbox(src) {
+    document.getElementById('imgLightboxSrc').src    = src;
+    document.getElementById('imgLightbox').style.display = 'flex'; // ← use style.display, not classList
+    document.body.style.overflow = 'hidden';
+}
+
+function closeLightbox() {
+    document.getElementById('imgLightbox').style.display = 'none';
+    document.body.style.overflow = '';
+}
+
+document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') closeLightbox();
+});
+
 /* ── TIMELINE ── */
 function renderTimeline(currentStatus) {
     const steps = [
-        { key: 'pending',   icon: '🕐', label: 'Order Placed' },
-        { key: 'confirmed', icon: '✅', label: 'Confirmed' },
-        { key: 'processing',   icon: '📦', label: 'Packing' },
-        { key: 'ready_for_pickup',     icon: '🏪', label: 'Ready for Pick-up' },
-        { key: 'completed', icon: '✔',  label: 'Completed' },
+        { key: 'pending',          icon: '🕐', label: 'Order Placed' },
+        { key: 'confirmed',        icon: '✅', label: 'Confirmed' },
+        { key: 'processing',       icon: '📦', label: 'Packing' },
+        { key: 'ready_for_pickup', icon: '🏪', label: 'Ready for Pick-up' },
+        { key: 'completed',        icon: '✔',  label: 'Completed' },
     ];
 
     if (currentStatus === 'cancelled') {
@@ -395,18 +397,9 @@ function renderTimeline(currentStatus) {
 /* ── ACTION BUTTONS ── */
 function renderActions(status, paymentMethod, paymentStatus) {
     const area = document.getElementById('actionArea');
-
-    // Workflow:
-    // pending   → [Verify & Confirm] (gcash: check proof first) + [Cancel]
-    // confirmed → [Start Packing] + [Cancel]
-    // packing   → [Ready for Pick-up] + [Cancel]
-    // ready     → [Mark Completed]
-    // completed / cancelled → no actions
-
     let html = '';
 
     if (status === 'pending') {
-        // For GCash: show "Verify Payment & Confirm" — staff must check proof
         const confirmLabel = paymentMethod === 'gcash'
             ? '✅ Verify Payment & Confirm Order'
             : '✅ Confirm Order';
