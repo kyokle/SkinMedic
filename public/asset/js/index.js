@@ -215,10 +215,11 @@ function buildAdminOtp() {
 }
 
 function submitAdminOtp() {
-  const otp   = [...document.querySelectorAll('#adminOtpBoxes input')].map(i => i.value).join('');
   const errEl = document.getElementById('adminOtpError');
   errEl.style.color = 'red';
   errEl.textContent = '';
+
+  const otp = document.getElementById('adminOtpInput').value.trim();
 
   if (otp.length < 6) { errEl.textContent = 'Please enter all 6 digits.'; return; }
 
@@ -253,11 +254,8 @@ function showAdminLoginStep() {
   document.getElementById('adminOtpStep').style.display   = 'none';
   document.getElementById('adminLoginStep').style.display = 'block';
   document.getElementById('adminOtpError').textContent    = '';
-  const wrap = document.getElementById('adminOtpBoxes');
-  if (wrap) wrap.innerHTML = '';
+  document.getElementById('adminOtpInput').value          = '';
 }
-
-
 
 /* ═══════════════════════════════════════════════════
    SIGNUP
