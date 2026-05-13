@@ -203,12 +203,14 @@ body {
     white-space: nowrap;
 }
 
-.status-pending   { background: #fff8e6; color: #966300; border: 1px solid #f5d87a; }
-.status-confirmed { background: #e8f5e9; color: #2e7d32; border: 1px solid #a5d6a7; }
-.status-packing   { background: #e3f2fd; color: #1565c0; border: 1px solid #90caf9; }
-.status-ready     { background: #f3e5f5; color: #6a1b9a; border: 1px solid #ce93d8; }
-.status-completed { background: #f2f8e6; color: #5a7a1f; border: 1px solid #d4edb3; }
-.status-cancelled { background: #ffeaea; color: #c0392b; border: 1px solid #ffb3b3; }
+.status-pending        { background: #fff8e6; color: #966300; border: 1px solid #f5d87a; }
+.status-confirmed      { background: #e8f5e9; color: #2e7d32; border: 1px solid #a5d6a7; }
+.status-packing,
+.status-processing     { background: #e3f2fd; color: #1565c0; border: 1px solid #90caf9; }
+.status-ready,
+.status-ready_for_pickup { background: #f3e5f5; color: #6a1b9a; border: 1px solid #ce93d8; }
+.status-completed      { background: #f2f8e6; color: #5a7a1f; border: 1px solid #d4edb3; }
+.status-cancelled      { background: #ffeaea; color: #c0392b; border: 1px solid #ffb3b3; }
 
 .pay-status-unpaid { background: #fff0f0; color: #c0392b; border: 1px solid #ffcccc; }
 .pay-status-paid   { background: #f2f8e6; color: #5a7a1f; border: 1px solid #d4edb3; }
