@@ -57,7 +57,7 @@
             <div class="stat-label">Patients</div>
             <div class="stat-sub">Doctors: <span>{{ $totalDoctors }}</span></div>
         </a>
-        <a href="{{ route('admin.bookings', ['filter' => 'completed']) }}" class="stat-card" style="animation-delay:.2s;text-decoration:none;color:inherit;">
+        <a href="{{ route('admin.reports.sales') }}" class="stat-card" style="animation-delay:.2s;text-decoration:none;color:inherit;">
             <div class="stat-icon">💰</div>
             <div class="stat-value">₱{{ number_format($totalRevenue, 0) }}</div>
             <div class="stat-label">Total Revenue</div>
