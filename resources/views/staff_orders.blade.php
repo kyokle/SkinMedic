@@ -43,8 +43,8 @@
         <button class="{{ $activeFilter === 'all'       ? 'active' : '' }}" onclick="setTab('all',       this)">All</button>
         <button class="{{ $activeFilter === 'pending'   ? 'active' : '' }}" onclick="setTab('pending',   this)">Pending</button>
         <button class="{{ $activeFilter === 'confirmed' ? 'active' : '' }}" onclick="setTab('confirmed', this)">Confirmed</button>
-        <button class="{{ $activeFilter === 'packing'   ? 'active' : '' }}" onclick="setTab('packing',   this)">Packing</button>
-        <button class="{{ $activeFilter === 'ready'     ? 'active' : '' }}" onclick="setTab('ready',     this)">Ready for Pick-up</button>
+        <button class="{{ $activeFilter === 'packing'   ? 'active' : '' }}" onclick="setTab('processing',   this)">Packing</button>
+        <button class="{{ $activeFilter === 'ready'     ? 'active' : '' }}" onclick="setTab('ready_for_pickup',     this)">Ready for Pick-up</button>
         <button class="{{ $activeFilter === 'completed' ? 'active' : '' }}" onclick="setTab('completed', this)">Completed</button>
         <button class="{{ $activeFilter === 'cancelled' ? 'active' : '' }}" onclick="setTab('cancelled', this)">Cancelled</button>
     </div>
@@ -328,8 +328,8 @@ function renderTimeline(currentStatus) {
     const steps = [
         { key: 'pending',   icon: '🕐', label: 'Order Placed' },
         { key: 'confirmed', icon: '✅', label: 'Confirmed' },
-        { key: 'packing',   icon: '📦', label: 'Packing' },
-        { key: 'ready',     icon: '🏪', label: 'Ready for Pick-up' },
+        { key: 'processing',   icon: '📦', label: 'Packing' },
+        { key: 'ready_for_pickup',     icon: '🏪', label: 'Ready for Pick-up' },
         { key: 'completed', icon: '✔',  label: 'Completed' },
     ];
 
@@ -392,25 +392,25 @@ function renderActions(status, paymentMethod, paymentStatus) {
         html = `
             <p class="action-hint">Order confirmed. Start packing the items for this order.</p>
             <div class="action-buttons">
-                <button type="button" class="btn-pack" onclick="submitAction('packing', '')">
+                <button type="button" class="btn-pack" onclick="submitAction('processing', '')">
                     📦 Start Packing
                 </button>
                 <button type="button" class="btn-cancel" onclick="submitAction('cancelled', '')">
                     ✕ Cancel Order
                 </button>
             </div>`;
-    } else if (status === 'packing') {
+    } else if (status === 'processing') {
         html = `
             <p class="action-hint">Items are being packed. Mark as ready when done.</p>
             <div class="action-buttons">
-                <button type="button" class="btn-ready" onclick="submitAction('ready', '')">
+                <button type="button" class="btn-ready" onclick="submitAction('ready_for_pickup', '')">
                     🏪 Mark as Ready for Pick-up
                 </button>
                 <button type="button" class="btn-cancel" onclick="submitAction('cancelled', '')">
                     ✕ Cancel Order
                 </button>
             </div>`;
-    } else if (status === 'ready') {
+    } else if (status === 'ready_for_pickup') {
         html = `
             <p class="action-hint">Patient has been notified. Mark as completed once picked up.</p>
             <div class="action-buttons">
