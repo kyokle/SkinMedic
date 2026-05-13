@@ -186,6 +186,25 @@
                 </div>
             </div>
 
+            {{-- ── Payment Proof Lightbox ── --}}
+<div id="imgLightbox" onclick="closeLightbox()" style="
+    display:none; position:fixed; inset:0; z-index:9999;
+    background:rgba(0,0,0,0.88); cursor:zoom-out;
+    align-items:center; justify-content:center;
+">
+    <img id="imgLightboxSrc" src="" style="
+        max-width:92vw; max-height:92vh;
+        border-radius:12px;
+        box-shadow:0 8px 48px rgba(0,0,0,0.6);
+        object-fit:contain;
+    ">
+    <span style="
+        position:absolute; top:18px; right:24px;
+        color:#fff; font-size:28px; cursor:pointer;
+        line-height:1; opacity:0.8;
+    " onclick="closeLightbox()">×</span>
+</div>
+
             {{-- Order status --}}
             <div class="modal-section">
                 <p class="section-label">Order Status</p>
@@ -292,7 +311,10 @@ function openModal(id) {
         if (order.payment_proof) {
             proofSection.style.display        = '';
             proofMissingSection.style.display = 'none';
-            document.getElementById('m_proof_img').src = order.payment_proof;
+            const proofImg = document.getElementById('m_proof_img');
+proofImg.src = order.payment_proof;
+proofImg.style.cursor = 'zoom-in';
+proofImg.onclick = () => openLightbox(order.payment_proof);
         } else {
             proofSection.style.display        = 'none';
             proofMissingSection.style.display = '';
@@ -318,7 +340,21 @@ function openModal(id) {
 
     document.getElementById('orderModal').style.display = 'flex';
 }
+function openLightbox(src) {
+    document.getElementById('imgLightboxSrc').src = src;
+    document.getElementById('imgLightbox').classList.add('open');
+    document.body.style.overflow = 'hidden'; // prevent background scroll
+}
 
+function closeLightbox() {
+    document.getElementById('imgLightbox').classList.remove('open');
+    document.body.style.overflow = '';
+}
+
+// Also close lightbox with Escape key
+document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') closeLightbox();
+});
 function closeModal() {
     document.getElementById('orderModal').style.display = 'none';
 }

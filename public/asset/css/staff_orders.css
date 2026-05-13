@@ -488,6 +488,25 @@ body {
 
 .btn-cancel:hover { background: #ffeaea; }
 
+/* ── Proof image lightbox ── */
+#imgLightbox {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    background: rgba(0,0,0,0.88);
+    cursor: zoom-out;
+    align-items: center;
+    justify-content: center;
+}
+#imgLightbox.open { display: flex; }
+
+.proof-img-wrap img {
+    cursor: zoom-in;
+    transition: opacity 0.15s;
+}
+.proof-img-wrap img:hover { opacity: 0.85; }
+
 /* ── RESPONSIVE ──────────────────────────────── */
 @media (max-width: 768px) {
     .main          { margin-left: 0; padding: 20px 16px 60px; }
