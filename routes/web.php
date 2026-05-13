@@ -46,6 +46,7 @@ use App\Http\Controllers\StaffServicesController;
 use App\Http\Controllers\StaffInventoryController;
 use App\Http\Controllers\StaffProductsController;
 use App\Http\Controllers\StaffReviewsController;
+use App\Http\Controllers\StaffOrdersController;
 
 
 // ── Landing, Auth, & Booking ──────────────────────────────
@@ -210,6 +211,10 @@ Route::post('/staff/walkin/store',       [WalkinSaleController::class, 'store'])
 Route::get('/staff/walkin/receipt/{id}', [WalkinSaleController::class, 'receipt'])->name('staff.walkin.receipt');
 Route::get('/staff/walkin/check-slot',   [WalkinSaleController::class, 'checkSlot'])->name('staff.walkin.check-slot');
 
+// ── Staff Online Orders ───────────────────────────────────────
+Route::get('/staff/orders',               [StaffOrdersController::class, 'index'])->name('staff.orders');
+Route::post('/staff/orders/update-status',[StaffOrdersController::class, 'updateStatus'])->name('staff.orders.update-status');
+
 // ── Staff Profile ───────────────────────────────────────
 Route::get('staff/profile', [StaffProfileController::class, 'index'])
     ->name('staff.profile')
@@ -254,6 +259,10 @@ Route::get('/admin/products',                    [AdminProductsController::class
 Route::post('/admin/products/add',               [AdminProductsController::class,     'add'])->name('admin.products.add');
 Route::post('/admin/products/update',            [AdminProductsController::class,     'update'])->name('admin.products.update');
 Route::post('/admin/products/delete',            [AdminProductsController::class,     'delete'])->name('admin.products.delete');
+
+// ── Admin Online Orders ───────────────────────────────────────
+Route::get('/admin/orders',               [StaffOrdersController::class, 'index'])->name('admin.orders');
+Route::post('/admin/orders/update-status',[StaffOrdersController::class, 'updateStatus'])->name('admin.orders.update-status');
 
 // ── Admin Inventory ──────────────────────────────────
 Route::get('/admin/inventory',                   [AdminInventoryController::class,    'index'])->name('admin.inventory');

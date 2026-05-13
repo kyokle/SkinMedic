@@ -72,6 +72,11 @@
             <span class="ni">📦</span> Inventory
         </a>
 
+        <a href="{{ route('admin.orders') }}"
+           class="{{ request()->routeIs('admin.orders*') ? 'active' : '' }}">
+            <span class="ni">🛍</span> Online Orders
+        </a>
+
         <span class="sb-label">People</span>
         <a href="{{ route('admin.manage-users') }}"
            class="{{ request()->routeIs('admin.manage-users') ? 'active' : '' }}">
