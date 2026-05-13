@@ -297,7 +297,6 @@ Route::get('/skin-analysis/result', [SkinAnalysisController::class, 'result'])->
 
 
 // ── Notifications ───────────────────────────────────────
-
 Route::get('/notifications',           [NotificationController::class, 'index']);
 Route::get('/notifications/unread',    [NotificationController::class, 'unreadCount']);
 Route::post('/notifications/read',     [NotificationController::class, 'markRead']);
@@ -308,3 +307,8 @@ Route::post('/notifications/read-all-inventory', [NotificationController::class,
 Route::get('/notifications/by-type',          [NotificationController::class, 'byType']);
 Route::get('/notifications/unread-by-type',   [NotificationController::class, 'unreadByType']);
 Route::post('/notifications/read-all-by-type',[NotificationController::class, 'markAllByTypeRead']);
+
+// Admin, Staff, Doctor Login
+Route::get('/staff-login', function () {
+    return redirect('/?admin=true');
+});
