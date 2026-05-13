@@ -11,7 +11,11 @@
 
 @section('content')
 
-@include('partials.sidebar_staff')
+@if(session('role') === 'admin')
+    @include('partials.sidebar_admin')
+@else
+    @include('partials.sidebar_staff')
+@endif
 
 <div class="walkin-wrap">
 
@@ -21,9 +25,9 @@
             <p class="walkin-sub">Sale #{{ $sale->sale_id }}</p>
         </div>
         <div style="display:flex;gap:10px;">
-            <a href="{{ route('staff.walkin') }}" class="back-btn">← Back</a>
+            <a href="{{ session('role') === 'admin' ? route('admin.walkin') : route('staff.walkin') }}" class="back-btn">← Back</a>
             <button onclick="window.print()" class="print-btn">🖨 Print Receipt</button>
-            <a href="{{ route('staff.walkin') }}" class="back-btn">+ New Sale</a>
+            <a href="{{ session('role') === 'admin' ? route('admin.walkin') : route('staff.walkin') }}" class="back-btn">+ New Sale</a>
         </div>
     </div>
 

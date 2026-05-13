@@ -261,6 +261,12 @@ Route::post('/admin/products/add',               [AdminProductsController::class
 Route::post('/admin/products/update',            [AdminProductsController::class,     'update'])->name('admin.products.update');
 Route::post('/admin/products/delete',            [AdminProductsController::class,     'delete'])->name('admin.products.delete');
 
+// ── Admin Walk-in Sales (shared controller) ───────────────────
+Route::get('/admin/walkin',              [WalkinSaleController::class, 'index'])->name('admin.walkin');
+Route::post('/admin/walkin/store',       [WalkinSaleController::class, 'store'])->name('admin.walkin.store');
+Route::get('/admin/walkin/receipt/{id}', [WalkinSaleController::class, 'receipt'])->name('admin.walkin.receipt');
+Route::get('/admin/walkin/check-slot',   [WalkinSaleController::class, 'checkSlot'])->name('admin.walkin.check-slot');
+
 // ── Admin Online Orders ───────────────────────────────────────
 Route::get('/admin/orders',               [StaffOrdersController::class, 'index'])->name('admin.orders');
 Route::post('/admin/orders/update-status',[StaffOrdersController::class, 'updateStatus'])->name('admin.orders.update-status');

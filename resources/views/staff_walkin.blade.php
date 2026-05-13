@@ -11,7 +11,11 @@
 
 @section('content')
 
-@include('partials.sidebar_staff')
+@if(session('role') === 'admin')
+    @include('partials.sidebar_admin')
+@else
+    @include('partials.sidebar_staff')
+@endif
 
 <div class="walkin-wrap">
 
@@ -57,7 +61,7 @@
         </div>
     @endif
 
-    <form method="POST" action="{{ route('staff.walkin.store') }}" id="walkinForm">
+    <form method="POST" action="{{ session('role') === 'admin' ? route('admin.walkin.store') : route('staff.walkin.store') }}" id="walkinForm">
         @csrf
 
         <div class="walkin-grid">
@@ -229,7 +233,7 @@
                         <td><span class="pay-badge {{ $rs->payment_method }}">{{ strtoupper($rs->payment_method) }}</span></td>
                         <td>{{ \Carbon\Carbon::parse($rs->created_at)->format('M j, Y g:i A') }}</td>
                         <td>
-                            <a href="{{ route('staff.walkin.receipt', $rs->sale_id) }}" class="receipt-link">Receipt</a>
+                            <a href="{{ session('role') === 'admin' ? route('admin.walkin.receipt', $rs->sale_id) : route('staff.walkin.receipt', $rs->sale_id) }}" class="receipt-link">Receipt</a>
                         </td>
                     </tr>
                     @endforeach
@@ -422,7 +426,7 @@ function checkSlot(el) {
     if (!doctor || !date || !time) { status.textContent = ''; return; }
     status.textContent = 'Checking...';
     status.className   = 'svc-slot-status checking';
-    const url = `{{ route('staff.walkin.check-slot') }}?doctor_id=${doctor}&date=${date}&time=${time}`
+    const url = `{{ session('role') === 'admin' ? route('admin.walkin.check-slot') : route('staff.walkin.check-slot') }}?doctor_id=${doctor}&date=${date}&time=${time}`
               + (existingId ? `&exclude_appointment_id=${existingId}` : '');
     fetch(url)
         .then(r => r.json())
