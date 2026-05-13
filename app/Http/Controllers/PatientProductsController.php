@@ -1,5 +1,4 @@
 <?php
-// app/Http/Controllers/PatientProductsController.php
 namespace App\Http\Controllers;
 
 use App\Http\Controllers\SidebarDataController;
@@ -210,8 +209,6 @@ class PatientProductsController extends Controller
             );
         }
 
-        return redirect()
-            ->route('patient.products')
-            ->with('success', 'Order #' . $orderId . ' placed successfully! We will contact you shortly.');
+        return response()->json(['success' => true, 'message' => 'Order #' . $orderId . ' placed successfully!', 'redirect' => route('patient.orders')]);
     }
 }
