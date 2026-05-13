@@ -1,5 +1,5 @@
 <?php
-// app/Http/Controllers/PatientProductsController.php
+
 namespace App\Http\Controllers;
 
 use App\Http\Controllers\SidebarDataController;

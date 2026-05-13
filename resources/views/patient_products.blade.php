@@ -188,12 +188,18 @@
         <button class="modal-close" onclick="closeCheckoutModal()">✕</button>
         <h2 class="modal-title">Order Summary</h2>
 
+        {{-- Order items list --}}
         <div id="checkoutItems" class="checkout-items"></div>
 
-        <div class="checkout-totals">
+        {{-- Totals --}}
+        <div class="checkout-totals" id="checkoutTotals">
             <div class="summary-row">
                 <span>Subtotal</span>
                 <span id="checkoutSubtotal">₱0.00</span>
+            </div>
+            <div class="summary-row gcash-fee-row" id="gcashFeeRow" style="display:none">
+                <span>GCash Convenience Fee</span>
+                <span>₱20.00</span>
             </div>
             <div class="summary-row summary-total">
                 <span>Total</span>
@@ -203,11 +209,11 @@
 
         {{-- Pickup-only notice --}}
         <div class="pickup-notice">
-            <svg viewBox="0 0 20 20" fill="none" width="16" height="16" style="flex-shrink:0;margin-top:1px">
+            <svg viewBox="0 0 20 20" fill="none" width="16" height="16" style="flex-shrink:0;margin-top:2px">
                 <circle cx="10" cy="10" r="8" stroke="currentColor" stroke-width="1.6"/>
                 <path d="M10 6v4.5M10 13.5v.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
             </svg>
-            <span>Products are available for <strong>pick-up only</strong> at our clinic. We will contact you to confirm your order and schedule.</span>
+            <span>Products are available for <strong>pick-up only</strong> at our clinic. We will contact you to confirm your schedule.</span>
         </div>
 
         {{-- Payment method --}}
@@ -215,7 +221,7 @@
             <p class="payment-label">Payment Method</p>
             <div class="payment-options">
                 <label class="payment-option">
-                    <input type="radio" name="payment_method" value="cash" checked>
+                    <input type="radio" name="payment_method" value="cash" checked onchange="onPaymentChange()">
                     <span class="payment-option-box">
                         <svg viewBox="0 0 24 24" fill="none" width="20" height="20">
                             <rect x="2" y="6" width="20" height="13" rx="2" stroke="currentColor" stroke-width="1.6"/>
@@ -226,7 +232,7 @@
                     </span>
                 </label>
                 <label class="payment-option">
-                    <input type="radio" name="payment_method" value="gcash">
+                    <input type="radio" name="payment_method" value="gcash" onchange="onPaymentChange()">
                     <span class="payment-option-box">
                         <svg viewBox="0 0 24 24" fill="none" width="20" height="20">
                             <rect x="3" y="5" width="18" height="14" rx="2" stroke="currentColor" stroke-width="1.6"/>
@@ -239,19 +245,67 @@
             </div>
         </div>
 
+        {{-- GCash payment details (shown only when GCash is selected) --}}
+        <div class="gcash-details" id="gcashDetails" style="display:none">
+            <div class="gcash-info-box">
+                <svg viewBox="0 0 24 24" fill="none" width="32" height="32">
+                    <rect x="3" y="5" width="18" height="14" rx="2" fill="#007bff" opacity=".12" stroke="#007bff" stroke-width="1.4"/>
+                    <path d="M3 9h18" stroke="#007bff" stroke-width="1.4"/>
+                    <path d="M7 14h4" stroke="#007bff" stroke-width="1.4" stroke-linecap="round"/>
+                </svg>
+                <div class="gcash-info-text">
+                    <p class="gcash-label">Send payment to:</p>
+                    <p class="gcash-number">09165936995</p>
+                    <p class="gcash-name">Cinderella Dianne Hoseña</p>
+                    <p class="gcash-fee-note">Note: A ₱20.00 convenience fee is added for GCash payments.</p>
+                </div>
+            </div>
+
+            <div class="gcash-fields">
+                <div class="gcash-field">
+                    <label for="gcashReference">GCash Reference Number <span class="required">*</span></label>
+                    <input type="text" id="gcashReference" placeholder="e.g. 1234 5678 9012"
+                           maxlength="30" class="gcash-input">
+                    <span class="gcash-field-hint">Found in your GCash transaction receipt</span>
+                </div>
+
+                <div class="gcash-field">
+                    <label>Payment Screenshot <span class="required">*</span></label>
+                    <div class="proof-upload-area" id="proofUploadArea" onclick="document.getElementById('gcashProofFile').click()">
+                        <input type="file" id="gcashProofFile" accept="image/*" style="display:none" onchange="handleProofUpload(this)">
+                        <div class="proof-placeholder" id="proofPlaceholder">
+                            <svg viewBox="0 0 24 24" fill="none" width="28" height="28" opacity=".4">
+                                <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                            <span>Tap to upload screenshot</span>
+                            <span class="proof-hint">JPG, PNG up to 5MB</span>
+                        </div>
+                        <img id="proofPreview" class="proof-preview" src="" alt="Payment proof" style="display:none">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {{-- Note --}}
         <div class="checkout-note">
             <label for="orderNote">Note (optional)</label>
             <textarea id="orderNote" rows="2" placeholder="Any special instructions…"></textarea>
         </div>
 
-        <form method="POST" action="{{ route('patient.order.place') }}" id="checkoutForm">
+        {{-- Form — multipart because of file upload --}}
+        <form method="POST" action="{{ route('patient.order.place') }}"
+              id="checkoutForm" enctype="multipart/form-data">
             @csrf
             <input type="hidden" name="items"          id="checkoutItemsInput">
             <input type="hidden" name="note"           id="checkoutNoteInput">
             <input type="hidden" name="payment_method" id="checkoutPaymentInput">
-            <button type="submit" class="confirm-order-btn">
-                Confirm Order
-            </button>
+            <input type="hidden" name="reference"      id="checkoutReferenceInput">
+            {{-- proof image will be appended via JS before submit --}}
+            <div id="confirmBtnWrap">
+                <button type="submit" class="confirm-order-btn" id="confirmOrderBtn">
+                    Confirm Order
+                </button>
+            </div>
         </form>
     </div>
 </div>
@@ -260,6 +314,13 @@
 <script>
 /* ── STATE ───────────────────────────────────── */
 let cart = JSON.parse(localStorage.getItem('skinmedic_cart') || '[]');
+const GCASH_FEE = 20;
+
+/* ── CLEAR CART ON SUCCESSFUL ORDER ─────────── */
+@if(session('success'))
+    localStorage.removeItem('skinmedic_cart');
+    cart = [];
+@endif
 
 /* ── QTY STEPPER ─────────────────────────────── */
 function changeQty(id, delta) {
@@ -272,7 +333,7 @@ function changeQty(id, delta) {
 
 /* ── ADD TO CART ─────────────────────────────── */
 function addToCart(id, name, price, image) {
-    const qty   = parseInt(document.getElementById('qty-' + id).textContent);
+    const qty      = parseInt(document.getElementById('qty-' + id).textContent);
     const existing = cart.find(i => i.id === id);
     if (existing) {
         existing.qty += qty;
@@ -311,9 +372,9 @@ function renderCart() {
     footer.style.display = 'block';
 
     const subtotal = cart.reduce((s, i) => s + i.price * i.qty, 0);
-    document.getElementById('cartSubtotal').textContent = '₱' + subtotal.toFixed(2);
+    document.getElementById('cartSubtotal').textContent  = '₱' + subtotal.toFixed(2);
     document.getElementById('cartTotal').textContent     = '₱' + subtotal.toFixed(2);
-    document.getElementById('cartItemCount').textContent  = cart.reduce((s, i) => s + i.qty, 0);
+    document.getElementById('cartItemCount').textContent = cart.reduce((s, i) => s + i.qty, 0);
 
     container.innerHTML = cart.map(item => `
         <div class="cart-item" data-id="${item.id}">
@@ -343,9 +404,7 @@ function updateCartQty(id, delta) {
     const item = cart.find(i => i.id === id);
     if (!item) return;
     item.qty += delta;
-    if (item.qty <= 0) {
-        cart = cart.filter(i => i.id !== id);
-    }
+    if (item.qty <= 0) cart = cart.filter(i => i.id !== id);
     saveCart();
     renderCart();
 }
@@ -376,18 +435,56 @@ function closeCart(e) {
     if (e.target === document.getElementById('cartOverlay')) toggleCart();
 }
 
-/* ── CHECKOUT ────────────────────────────────── */
+/* ── PAYMENT METHOD TOGGLE ───────────────────── */
+function onPaymentChange() {
+    const isGcash   = document.querySelector('input[name="payment_method"]:checked').value === 'gcash';
+    const subtotal  = cart.reduce((s, i) => s + i.price * i.qty, 0);
+    const total     = isGcash ? subtotal + GCASH_FEE : subtotal;
+
+    document.getElementById('gcashDetails').style.display  = isGcash ? 'block' : 'none';
+    document.getElementById('gcashFeeRow').style.display   = isGcash ? 'flex'  : 'none';
+    document.getElementById('checkoutTotal').textContent   = '₱' + total.toFixed(2);
+
+    // Require/unrequire GCash fields
+    document.getElementById('gcashReference').required = isGcash;
+    document.getElementById('gcashProofFile').required  = isGcash;
+}
+
+/* ── PROOF IMAGE UPLOAD PREVIEW ──────────────── */
+function handleProofUpload(input) {
+    const file = input.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = e => {
+        const preview = document.getElementById('proofPreview');
+        preview.src   = e.target.result;
+        preview.style.display       = 'block';
+        document.getElementById('proofPlaceholder').style.display = 'none';
+        document.getElementById('proofUploadArea').classList.add('has-image');
+    };
+    reader.readAsDataURL(file);
+}
+
+/* ── CHECKOUT MODAL OPEN ─────────────────────── */
 function proceedCheckout() {
     if (!cart.length) return;
+
     const subtotal = cart.reduce((s, i) => s + i.price * i.qty, 0);
     document.getElementById('checkoutSubtotal').textContent = '₱' + subtotal.toFixed(2);
-    document.getElementById('checkoutTotal').textContent     = '₱' + subtotal.toFixed(2);
+    document.getElementById('checkoutTotal').textContent    = '₱' + subtotal.toFixed(2);
+    document.getElementById('gcashFeeRow').style.display    = 'none';
+    document.getElementById('gcashDetails').style.display   = 'none';
+
+    // Reset payment to cash
+    document.querySelectorAll('input[name="payment_method"]').forEach(r => r.checked = r.value === 'cash');
+
     document.getElementById('checkoutItems').innerHTML = cart.map(item => `
         <div class="checkout-item-row">
             <span class="co-name">${item.name} <em>×${item.qty}</em></span>
             <span class="co-price">₱${(item.price * item.qty).toFixed(2)}</span>
         </div>
     `).join('');
+
     document.getElementById('checkoutModal').style.display = 'flex';
     toggleCart();
 }
@@ -398,17 +495,56 @@ function closeCheckoutModal(e) {
     }
 }
 
-function prepareCheckout() {
-    document.getElementById('checkoutItemsInput').value   = JSON.stringify(cart);
-    document.getElementById('checkoutNoteInput').value    = document.getElementById('orderNote').value;
-    const selectedPayment = document.querySelector('input[name="payment_method"]:checked');
-    document.getElementById('checkoutPaymentInput').value = selectedPayment ? selectedPayment.value : 'cash';
-}
-
-// Attach submit handler so hidden inputs are always populated before the form posts
+/* ── FORM SUBMIT ─────────────────────────────── */
 document.getElementById('checkoutForm').addEventListener('submit', function (e) {
-    prepareCheckout();
-    // Allow the form to continue submitting
+    const isGcash = document.querySelector('input[name="payment_method"]:checked').value === 'gcash';
+
+    // Validate GCash fields
+    if (isGcash) {
+        const ref   = document.getElementById('gcashReference').value.trim();
+        const proof = document.getElementById('gcashProofFile').files[0];
+        if (!ref) {
+            e.preventDefault();
+            showToast('Please enter your GCash reference number.');
+            document.getElementById('gcashReference').focus();
+            return;
+        }
+        if (!proof) {
+            e.preventDefault();
+            showToast('Please upload your GCash payment screenshot.');
+            return;
+        }
+    }
+
+    // Populate hidden fields
+    const subtotal = cart.reduce((s, i) => s + i.price * i.qty, 0);
+    const total    = isGcash ? subtotal + GCASH_FEE : subtotal;
+
+    document.getElementById('checkoutItemsInput').value    = JSON.stringify(
+        cart.map(i => ({ id: i.id, name: i.name, price: i.price, qty: i.qty }))
+    );
+    document.getElementById('checkoutNoteInput').value     = document.getElementById('orderNote').value;
+    document.getElementById('checkoutPaymentInput').value  = isGcash ? 'gcash' : 'cash';
+    document.getElementById('checkoutReferenceInput').value = isGcash
+        ? document.getElementById('gcashReference').value.trim()
+        : '';
+
+    // Append proof file to form if GCash
+    if (isGcash) {
+        const proofFile = document.getElementById('gcashProofFile').files[0];
+        // Create a real file input and append it so Laravel receives it
+        const existingHidden = document.getElementById('proofFileHidden');
+        if (existingHidden) existingHidden.remove();
+        const dt     = new DataTransfer();
+        dt.items.add(proofFile);
+        const fi     = document.createElement('input');
+        fi.type      = 'file';
+        fi.name      = 'payment_proof';
+        fi.id        = 'proofFileHidden';
+        fi.style.display = 'none';
+        fi.files     = dt.files;
+        this.appendChild(fi);
+    }
 });
 
 /* ── SEARCH ──────────────────────────────────── */
@@ -452,7 +588,7 @@ function showToast(msg) {
     }
     toast.textContent = msg;
     toast.classList.add('show');
-    setTimeout(() => toast.classList.remove('show'), 2500);
+    setTimeout(() => toast.classList.remove('show'), 2800);
 }
 
 /* ── INIT ────────────────────────────────────── */

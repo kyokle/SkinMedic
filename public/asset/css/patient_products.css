@@ -756,6 +756,143 @@ body { background: var(--cream); font-family: 'DM Sans', sans-serif; color: var(
     background: var(--green-light);
 }
 
+/* ── GCASH FEE ROW ──────────────────────────── */
+.gcash-fee-row { color: #007bff; font-size: 13px; }
+
+/* ── GCASH DETAILS BLOCK ────────────────────── */
+.gcash-details {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    animation: fadeSlide .2s ease;
+}
+
+@keyframes fadeSlide {
+    from { opacity: 0; transform: translateY(-6px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+.gcash-info-box {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    background: #eef5ff;
+    border: 1.5px solid #b3d0ff;
+    border-radius: var(--radius-sm);
+    padding: 14px 16px;
+}
+
+.gcash-info-text { display: flex; flex-direction: column; gap: 2px; }
+
+.gcash-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: #4a6fa5;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    margin: 0;
+}
+
+.gcash-number {
+    font-size: 20px;
+    font-weight: 700;
+    color: #0056cc;
+    margin: 2px 0 0;
+    letter-spacing: .04em;
+}
+
+.gcash-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: #1a3a6b;
+    margin: 0;
+}
+
+.gcash-fee-note {
+    font-size: 12px;
+    color: #5a6a8a;
+    margin: 6px 0 0;
+    padding-top: 6px;
+    border-top: 1px solid #c8dbf5;
+}
+
+/* ── GCASH INPUT FIELDS ─────────────────────── */
+.gcash-fields { display: flex; flex-direction: column; gap: 12px; }
+
+.gcash-field { display: flex; flex-direction: column; gap: 5px; }
+
+.gcash-field label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--muted);
+}
+
+.gcash-field label .required { color: #e05252; }
+
+.gcash-input {
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 10px 13px;
+    font-family: inherit;
+    font-size: 14px;
+    color: var(--text);
+    outline: none;
+    transition: border var(--transition);
+}
+
+.gcash-input:focus { border-color: #007bff; box-shadow: 0 0 0 3px rgba(0,123,255,.1); }
+
+.gcash-field-hint {
+    font-size: 11.5px;
+    color: var(--muted);
+}
+
+/* ── PROOF UPLOAD AREA ──────────────────────── */
+.proof-upload-area {
+    border: 2px dashed var(--border);
+    border-radius: var(--radius-sm);
+    min-height: 110px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: border-color var(--transition), background var(--transition);
+    position: relative;
+    overflow: hidden;
+    background: #fafafa;
+}
+
+.proof-upload-area:hover {
+    border-color: #007bff;
+    background: #f0f6ff;
+}
+
+.proof-upload-area.has-image {
+    border-style: solid;
+    border-color: #007bff;
+    min-height: 160px;
+}
+
+.proof-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    color: var(--muted);
+    font-size: 13px;
+    pointer-events: none;
+}
+
+.proof-hint { font-size: 11px; color: #aaa; }
+
+.proof-preview {
+    width: 100%;
+    max-height: 220px;
+    object-fit: contain;
+    border-radius: 6px;
+    display: block;
+}
+
 /* ═══════════════════════════════════════════════════════════
    TOAST NOTIFICATION
 ═══════════════════════════════════════════════════════════ */
