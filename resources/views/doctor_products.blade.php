@@ -1,4 +1,4 @@
-{{-- resources/views/doctor/doctor_products.blade.php --}}
+{{-- resources/views/staff_products.blade.php --}}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -7,32 +7,32 @@
   <meta name="csrf-token" content="{{ csrf_token() }}">
   <title>Product Management - SkinMedic</title>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Fraunces:wght@700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="{{ asset('asset/css/doctor_products.css') }}">
+  <link rel="stylesheet" href="{{ asset('asset/css/staff_products.css') }}">
 </head>
 <body style="background:#f8f8f8;">
 
-  @if(session('role') === 'doctor')
-    @include('partials.sidebar_doctor')
-  @elseif(session('role') === 'staff')
+  @if(session('role') === 'staff')
     @include('partials.sidebar_staff')
-  @else
+  @elseif(session('role') === 'admin')
     @include('partials.sidebar_admin')
+  @else
+    @include('partials.sidebar_doctor')
   @endif
 
   <main class="content">
-   <header class="header">
-    <h2>Product Management</h2>
-    <div style="display:flex;align-items:center;gap:14px;">
+    <header class="header">
+      <h2>Product Management</h2>
+      <div style="display:flex;align-items:center;gap:14px;">
         <div class="date-box">
-            <p>Today's Date</p>
-            <strong>{{ now()->format('Y-m-d') }}</strong><br>
-            <button class="add-product-btn" onclick="openModal()">+ Add Product</button>
+          <p>Today's Date</p>
+          <strong>{{ now()->format('Y-m-d') }}</strong><br>
+          <button class="add-product-btn" onclick="openModal()">+ Add Product</button>
         </div>
-        @include('partials.notif_bell_doctor')
-    </div>
-</header>
+        @include('partials.notif_bell_staff')
+      </div>
+    </header>
 
-{{-- ── Filter bar ── --}}
+    {{-- ── Filter bar ── --}}
     <div class="filter-bar">
       <div class="product-search-wrap">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#aaa" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
@@ -63,17 +63,25 @@
       <span class="filter-count" id="productCount"></span>
     </div>
 
-    <div class="product-list">
+    {{-- ── Product grid ── --}}
+    <div class="product-list" id="productGrid">
       @forelse ($products as $row)
         @php $statusClass = strtolower($row->status) === 'available' ? 'on' : 'off'; @endphp
-        <div class="product-card">
-          <img src="{{  $row->image }}"
+        <div class="product-card"
+             data-name="{{ strtolower($row->product_name) }}"
+             data-category="{{ strtolower($row->category ?? '') }}">
+          <img src="{{ $row->image }}"
                alt="{{ $row->product_name }}"
                onerror="this.src='{{ asset('uploads/default.png') }}'">
           <h3>{{ $row->product_name }}</h3>
           <p>{{ $row->description }}</p>
           <p><strong>₱{{ $row->selling_price }}</strong></p>
           <p class="status {{ $statusClass }}">Status: {{ $row->status }}</p>
+          @if($row->category)
+            <p class="category-badge">
+              <span>{{ $row->category }}</span>
+            </p>
+          @endif
           <div class="action-buttons">
             <button class="edit-btn" onclick="openEditModal(
               '{{ $row->product_id }}',
@@ -89,7 +97,7 @@
               '{{ $row->status }}'
             )">✏ Edit</button>
 
-            <form method="POST" action="{{ url('doctor/products/delete') }}" style="display:inline;"
+            <form method="POST" action="{{ route('staff.products.delete') }}" style="display:inline;"
                   onsubmit="return confirm('Delete this product?');">
               @csrf
               <input type="hidden" name="product_id" value="{{ $row->product_id }}">
@@ -100,6 +108,10 @@
       @empty
         <p style="text-align:center;color:#666;">No products added yet.</p>
       @endforelse
+
+      <p id="noProductsMsg" class="no-products-msg" style="display:none;">
+        No products match your search.
+      </p>
     </div>
   </main>
 
@@ -111,7 +123,7 @@
         <span class="close-btn" onclick="closeModal()">&times;</span>
       </div>
       <div class="modal-body">
-        <form method="POST" action="{{ url('doctor/products/add') }}" enctype="multipart/form-data">
+        <form method="POST" action="{{ route('staff.products.store') }}" enctype="multipart/form-data">
           @csrf
           <label>Product Name</label>
           <input type="text" name="product_name" required>
@@ -158,7 +170,7 @@
         <span class="close-btn" onclick="closeEditModal()">&times;</span>
       </div>
       <div class="modal-body">
-        <form method="POST" action="{{ url('doctor/products/update') }}" enctype="multipart/form-data">
+        <form method="POST" action="{{ route('staff.products.update') }}" enctype="multipart/form-data">
           @csrf
           <input type="hidden" name="product_id" id="edit_id">
           <label>Product Name</label>
