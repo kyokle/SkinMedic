@@ -22,7 +22,6 @@
     font-size: 1.6rem;
     font-weight: 700;
     color: #222;
-    margin: 0;
 }
 
 .date-box {
@@ -57,6 +56,12 @@
     background: #fff0f0;
     border-left: 4px solid #e53e3e;
     color: #7a0000;
+}
+
+.alert-block.success {
+    background: #f0fdf4;
+    border-left: 4px solid #4caf50;
+    color: #1b5e20;
 }
 
 /* ── Table wrapper ── */
@@ -168,6 +173,77 @@
 
 .add-btn:hover { background: #629b2a; }
 
+/* ── Inline validation error ── */
+.inline-error {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    margin-top: 5px;
+}
+
+.inline-error span {
+    font-size: 0.75rem;
+    color: #dc2626;
+    background: #fff5f5;
+    border-radius: 4px;
+    padding: 2px 6px;
+}
+
+/* ── Search + filter bar ── */
+.search-bar-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+}
+
+.inventory-search {
+    padding: 8px 14px 8px 36px;
+    border: 1px solid #d4edb3;
+    border-radius: 8px;
+    font-family: inherit;
+    font-size: 14px;
+    width: 280px;
+    background: #f9fff2 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%2380a833' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='m21 21-4.35-4.35'/%3E%3C/svg%3E") no-repeat 10px center;
+    outline: none;
+    transition: border-color .2s;
+}
+
+.inventory-search:focus {
+    border-color: #80a833;
+}
+
+/* ── Status filter dropdown ── */
+.status-filter-select {
+    padding: 8px 12px;
+    border: 1px solid #d4edb3;
+    border-radius: 8px;
+    font-family: inherit;
+    font-size: 14px;
+    background: #f9fff2;
+    color: #444;
+    outline: none;
+    cursor: pointer;
+    transition: border-color .2s;
+}
+
+.status-filter-select:focus {
+    border-color: #80a833;
+}
+
+.search-count {
+    font-size: 13px;
+    color: #888;
+}
+
+.no-results-row td {
+    text-align: center;
+    color: #999;
+    padding: 24px;
+    font-style: italic;
+}
+
 /* ── Responsive ── */
 @media (max-width: 1024px) {
     .main { padding: 24px 20px; }
@@ -183,6 +259,10 @@
     .inventory-table td { font-size: 0.82rem; padding: 10px; }
 
     .input-date { width: 115px; }
+
+    .inventory-search { width: 100%; }
+    .status-filter-select { width: 100%; }
+    .search-bar-wrapper { flex-direction: column; align-items: stretch; }
 }
 
 @media (max-width: 480px) {
@@ -197,7 +277,7 @@
     .add-btn    { padding: 5px 10px; font-size: 0.78rem; }
 }
 
-/* Deduct button */
+/* ── Deduct button ── */
 .deduct-btn {
     background: #e8f0fe;
     color: #3b5bdb;
@@ -212,7 +292,7 @@
 }
 .deduct-btn:hover { background: #d0e0ff; }
 
-/* Modal overlay */
+/* ── Modal overlay ── */
 .modal-overlay {
     display: none;
     position: fixed;
@@ -223,26 +303,29 @@
     align-items: center;
 }
 
-/* Modal box */
+/* ── Modal box ── */
 .modal-box {
     background: #fff;
     border-radius: 14px;
     padding: 28px 32px;
-    width: 420px;
+    width: 440px;
     max-width: 95vw;
     position: relative;
     box-shadow: 0 10px 30px rgba(0,0,0,0.2);
 }
+
 .modal-box h3 {
     margin: 0 0 4px;
     font-size: 1rem;
     color: #1a1f16;
 }
+
 .deduct-current {
     font-size: 0.82rem;
     color: #888;
-    margin: 0 0 18px;
+    margin: 0 0 14px;
 }
+
 .modal-close {
     position: absolute;
     top: 14px; right: 18px;
@@ -252,12 +335,54 @@
 }
 .modal-close:hover { color: #333; }
 
+/* ── Modal mode toggle ── */
+.modal-toggle-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.modal-toggle-btn {
+    flex: 1;
+    padding: 8px 12px;
+    border: 1.5px solid #d4edb3;
+    border-radius: 8px;
+    background: #f9fff2;
+    color: #555;
+    font-size: 0.85rem;
+    font-weight: 500;
+    font-family: inherit;
+    cursor: pointer;
+    transition: all .15s;
+}
+
+.modal-toggle-btn.active {
+    background: #80a833;
+    border-color: #80a833;
+    color: #fff;
+    font-weight: 600;
+}
+
+.modal-toggle-btn:not(.active):hover {
+    border-color: #80a833;
+    color: #80a833;
+}
+
+.mode-hint {
+    font-size: 0.8rem;
+    color: #888;
+    margin: 0 0 16px;
+    font-style: italic;
+}
+
+/* ── Deduct form rows ── */
 .deduct-row {
     display: flex;
     flex-direction: column;
     gap: 5px;
     margin-bottom: 14px;
 }
+
 .deduct-row label {
     font-size: 0.78rem;
     font-weight: 600;
@@ -265,6 +390,7 @@
     text-transform: uppercase;
     letter-spacing: .4px;
 }
+
 .deduct-row input,
 .deduct-row select {
     padding: 9px 12px;
@@ -274,8 +400,15 @@
     outline: none;
     transition: border-color .2s;
 }
+
 .deduct-row input:focus,
 .deduct-row select:focus { border-color: #80a833; }
+
+.qty-hint {
+    font-size: 0.75rem;
+    color: #aaa;
+    margin-top: 2px;
+}
 
 .save-deduct-btn {
     width: 100%;

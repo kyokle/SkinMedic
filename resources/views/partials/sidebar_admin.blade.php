@@ -71,6 +71,10 @@
            class="{{ request()->routeIs('admin.inventory') ? 'active' : '' }}">
             <span class="ni">📦</span> Inventory
         </a>
+        <a href="{{ route('admin.walkin') }}"
+            class="{{ request()->routeIs('admin.walkin*') ? 'active' : '' }}">
+            <span class="ni">🛒</span> Walk-in Sale
+        </a>
 
         <a href="{{ route('admin.orders') }}"
            class="{{ request()->routeIs('admin.orders*') ? 'active' : '' }}">
