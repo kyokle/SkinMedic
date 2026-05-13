@@ -40,7 +40,7 @@ class AdminSalesReportController extends Controller
 
         // Online order product sales (order_items)
         $onlineProducts = DB::table('order_items as oi')
-            ->join('orders as o',    'o.order_id',   '=', 'oi.order_id')
+            ->join('orders as o',    'o.id',         '=', 'oi.order_id')
             ->join('products as p',  'p.product_id', '=', 'oi.product_id')
             ->select(
                 'p.product_name as name',
@@ -229,7 +229,7 @@ class AdminSalesReportController extends Controller
             ->groupBy('p.product_id', 'p.product_name');
 
         $online = DB::table('order_items as oi')
-            ->join('orders as o',   'o.order_id',   '=', 'oi.order_id')
+            ->join('orders as o',   'o.id',         '=', 'oi.order_id')
             ->join('products as p', 'p.product_id', '=', 'oi.product_id')
             ->select('p.product_name as name', DB::raw('SUM(oi.quantity) as total_qty'), DB::raw('SUM(oi.subtotal) as total_revenue'))
             ->whereBetween(DB::raw('DATE(o.created_at)'), [$from, $to])
