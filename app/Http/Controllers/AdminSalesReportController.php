@@ -36,71 +36,71 @@ class AdminSalesReportController extends Controller
             'revenue' => $serviceRows->sum('total_revenue'),
         ];
 
-        // All products with their price, left-joined to sales data
-$allProducts = DB::table('products as p')
-    ->leftJoin(DB::raw("(
-        SELECT pr.product_name as name,
-               SUM(wi.quantity) as total_qty,
-               SUM(wi.subtotal) as total_revenue
-        FROM walkin_sale_items wi
-        JOIN walkin_sales ws ON ws.sale_id = wi.sale_id
-        JOIN products pr ON pr.product_id = wi.product_id
-        WHERE DATE(ws.created_at) BETWEEN '{$dateFrom}' AND '{$dateTo}'
-          AND ws.status = 'completed'
-        GROUP BY pr.product_name
-        UNION ALL
-        SELECT pr.product_name,
-               SUM(oi.quantity),
-               SUM(oi.subtotal)
-        FROM order_items oi
-        JOIN orders o ON o.id = oi.order_id
-        JOIN products pr ON pr.product_id = oi.product_id
-        WHERE DATE(o.created_at) BETWEEN '{$dateFrom}' AND '{$dateTo}'
-          AND o.status = 'completed'
-        GROUP BY pr.product_name
-    ) as sales"), 'sales.name', '=', 'p.product_name')
-    ->select(
-        'p.product_name as name',
-        'p.selling_price',
-        DB::raw('COALESCE(SUM(sales.total_qty), 0) as total_qty'),
-        DB::raw('COALESCE(SUM(sales.total_revenue), 0) as total_revenue')
-    )
-    ->groupBy('p.product_id', 'p.product_name', 'p.selling_price')
-    ->orderByDesc('total_revenue')
-    ->get();
+        // ── All products with their price, left-joined to sales data ──
+        $allProducts = DB::table('products as p')
+            ->leftJoin(DB::raw("(
+                SELECT pr.product_name as name,
+                       SUM(wi.quantity) as total_qty,
+                       SUM(wi.subtotal) as total_revenue
+                FROM walkin_sale_items wi
+                JOIN walkin_sales ws ON ws.sale_id = wi.sale_id
+                JOIN products pr ON pr.product_id = wi.product_id
+                WHERE DATE(ws.created_at) BETWEEN '{$dateFrom}' AND '{$dateTo}'
+                  AND ws.status = 'completed'
+                GROUP BY pr.product_name
+                UNION ALL
+                SELECT pr.product_name,
+                       SUM(oi.quantity),
+                       SUM(oi.subtotal)
+                FROM order_items oi
+                JOIN orders o ON o.id = oi.order_id
+                JOIN products pr ON pr.product_id = oi.product_id
+                WHERE DATE(o.created_at) BETWEEN '{$dateFrom}' AND '{$dateTo}'
+                  AND o.status = 'completed'
+                GROUP BY pr.product_name
+            ) as sales"), 'sales.name', '=', 'p.product_name')
+            ->select(
+                'p.product_name as name',
+                'p.selling_price',
+                DB::raw('COALESCE(SUM(sales.total_qty), 0) as total_qty'),
+                DB::raw('COALESCE(SUM(sales.total_revenue), 0) as total_revenue')
+            )
+            ->groupBy('p.product_id', 'p.product_name', 'p.selling_price')
+            ->orderByDesc('total_revenue')
+            ->get();
 
-// All services with their price, left-joined to sales data
-$allServices = DB::table('services as sv')
-    ->leftJoin(DB::raw("(
-        SELECT sv2.name as service_name,
-               COUNT(wss.id) as total_count,
-               SUM(wss.service_price) as total_revenue
-        FROM walkin_sale_services wss
-        JOIN walkin_sales ws ON ws.sale_id = wss.sale_id
-        JOIN appointments a ON a.appointment_id = wss.appointment_id
-        JOIN services sv2 ON sv2.service_id = a.service_id
-        WHERE DATE(ws.created_at) BETWEEN '{$dateFrom}' AND '{$dateTo}'
-          AND ws.status = 'completed' AND wss.is_prefilled = 1
-        GROUP BY sv2.name
-        UNION ALL
-        SELECT sv2.name,
-               COUNT(a2.appointment_id),
-               SUM(sv2.price)
-        FROM appointments a2
-        JOIN services sv2 ON sv2.service_id = a2.service_id
-        WHERE a2.appointment_date BETWEEN '{$dateFrom}' AND '{$dateTo}'
-          AND a2.status = 'completed'
-        GROUP BY sv2.name
-    ) as sales"), 'sales.service_name', '=', 'sv.name')
-    ->select(
-        'sv.name as service_name',
-        'sv.price',
-        DB::raw('COALESCE(SUM(sales.total_count), 0) as total_count'),
-        DB::raw('COALESCE(SUM(sales.total_revenue), 0) as total_revenue')
-    )
-    ->groupBy('sv.service_id', 'sv.name', 'sv.price')
-    ->orderByDesc('total_revenue')
-    ->get();
+        // ── All services with their price, left-joined to sales data ──
+        $allServices = DB::table('services as sv')
+            ->leftJoin(DB::raw("(
+                SELECT sv2.name as service_name,
+                       COUNT(wss.id) as total_count,
+                       SUM(wss.service_price) as total_revenue
+                FROM walkin_sale_services wss
+                JOIN walkin_sales ws ON ws.sale_id = wss.sale_id
+                JOIN appointments a ON a.appointment_id = wss.appointment_id
+                JOIN services sv2 ON sv2.service_id = a.service_id
+                WHERE DATE(ws.created_at) BETWEEN '{$dateFrom}' AND '{$dateTo}'
+                  AND ws.status = 'completed' AND wss.is_prefilled = 1
+                GROUP BY sv2.name
+                UNION ALL
+                SELECT sv2.name,
+                       COUNT(a2.appointment_id),
+                       SUM(sv2.price)
+                FROM appointments a2
+                JOIN services sv2 ON sv2.service_id = a2.service_id
+                WHERE a2.appointment_date BETWEEN '{$dateFrom}' AND '{$dateTo}'
+                  AND a2.status = 'completed'
+                GROUP BY sv2.name
+            ) as sales"), 'sales.service_name', '=', 'sv.name')
+            ->select(
+                'sv.name as service_name',
+                'sv.price',
+                DB::raw('COALESCE(SUM(sales.total_count), 0) as total_count'),
+                DB::raw('COALESCE(SUM(sales.total_revenue), 0) as total_revenue')
+            )
+            ->groupBy('sv.service_id', 'sv.name', 'sv.price')
+            ->orderByDesc('total_revenue')
+            ->get();
 
         // ── Grand summary ─────────────────────────────────────
         $grandTotal = $productTotals['revenue'] + $serviceTotals['revenue'];
@@ -124,8 +124,8 @@ $allServices = DB::table('services as sv')
             ->pluck('total', 'date');
 
         // ── Extra computed stats ──────────────────────────────
-        $activeDays       = $dailyRevenue->count();
-        $avgDailyRevenue  = $activeDays > 0 ? $dailyRevenue->sum() / $activeDays : 0;
+        $activeDays        = $dailyRevenue->count();
+        $avgDailyRevenue   = $activeDays > 0 ? $dailyRevenue->sum() / $activeDays : 0;
         $totalTransactions = $paymentBreakdown->sum('count');
 
         return view('admin_sales_report', array_merge(
@@ -159,100 +159,105 @@ $allServices = DB::table('services as sv')
 
         $filename = "sales_report_{$dateFrom}_to_{$dateTo}";
 
+        // ── CSV Export ────────────────────────────────────────
         if ($format === 'csv') {
-    $headers = [
-        'Content-Type'        => 'text/csv',
-        'Content-Disposition' => "attachment; filename=\"{$filename}.csv\"",
-    ];
-
-    // All products with price (including zero-sales)
-    $allProductsCsv = DB::table('products')
-        ->select('product_name as name', 'selling_price')
-        ->orderBy('product_name')
-        ->get()
-        ->map(function ($p) use ($productRows) {
-            $sold = $productRows->firstWhere('name', $p->name);
-            return (object)[
-                'name'          => $p->name,
-                'selling_price' => $p->selling_price,
-                'total_qty'     => $sold ? $sold->total_qty     : 0,
-                'total_revenue' => $sold ? $sold->total_revenue : 0,
+            $headers = [
+                'Content-Type'        => 'text/csv; charset=UTF-8',
+                'Content-Disposition' => "attachment; filename=\"{$filename}.csv\"",
             ];
-        });
 
-    // All services with price (including zero-sales)
-    $allServicesCsv = DB::table('services')
-        ->select('name as service_name', 'price')
-        ->orderBy('name')
-        ->get()
-        ->map(function ($s) use ($serviceRows) {
-            $sold = $serviceRows->firstWhere('service_name', $s->service_name);
-            return (object)[
-                'service_name'  => $s->service_name,
-                'price'         => $s->price,
-                'total_count'   => $sold ? $sold->total_count   : 0,
-                'total_revenue' => $sold ? $sold->total_revenue : 0,
-            ];
-        });
+            // All products with price (including zero-sales)
+            $allProductsCsv = DB::table('products')
+                ->select('product_name as name', 'selling_price')
+                ->orderBy('product_name')
+                ->get()
+                ->map(function ($p) use ($productRows) {
+                    $sold = $productRows->firstWhere('name', $p->name);
+                    return (object)[
+                        'name'          => $p->name,
+                        'selling_price' => $p->selling_price,
+                        'total_qty'     => $sold ? $sold->total_qty     : 0,
+                        'total_revenue' => $sold ? $sold->total_revenue : 0,
+                    ];
+                });
 
-    $callback = function () use ($allProductsCsv, $allServicesCsv, $dateFrom, $dateTo) {
-        $out = fopen('php://output', 'w');
+            // All services with price (including zero-sales)
+            $allServicesCsv = DB::table('services')
+                ->select('name as service_name', 'price')
+                ->orderBy('name')
+                ->get()
+                ->map(function ($s) use ($serviceRows) {
+                    $sold = $serviceRows->firstWhere('service_name', $s->service_name);
+                    return (object)[
+                        'service_name'  => $s->service_name,
+                        'price'         => $s->price,
+                        'total_count'   => $sold ? $sold->total_count   : 0,
+                        'total_revenue' => $sold ? $sold->total_revenue : 0,
+                    ];
+                });
 
-        fputcsv($out, ["SkinMedic — Sales Report"]);
-        fputcsv($out, ["Period: {$dateFrom} to {$dateTo}"]);
-        fputcsv($out, ["Generated: " . now()->format('Y-m-d H:i')]);
-        fputcsv($out, []);
+            $callback = function () use ($allProductsCsv, $allServicesCsv, $dateFrom, $dateTo) {
+                $out = fopen('php://output', 'w');
 
-        // Products
-        fputcsv($out, ["PRODUCT SALES"]);
-        fputcsv($out, ["#", "Product", "Unit", "Price (₱)", "Qty Sold", "Total Revenue (₱)"]);
-        foreach ($allProductsCsv as $i => $r) {
-            fputcsv($out, [
-                $i + 1,
-                $r->name,
-                1,
-                number_format($r->selling_price, 2),
-                $r->total_qty > 0 ? $r->total_qty : '—',
-                $r->total_revenue > 0 ? number_format($r->total_revenue, 2) : '—',
-            ]);
+                // UTF-8 BOM — fixes currency symbol corruption in Excel
+                fprintf($out, chr(0xEF) . chr(0xBB) . chr(0xBF));
+
+                fputcsv($out, ["SkinMedic - Sales Report"]);
+                fputcsv($out, ["Period: {$dateFrom} to {$dateTo}"]);
+                fputcsv($out, ["Generated: " . now()->format('Y-m-d H:i')]);
+                fputcsv($out, []);
+
+                // ── Products ──────────────────────────────────
+                fputcsv($out, ["PRODUCT SALES"]);
+                fputcsv($out, ["#", "Product", "Unit", "Price (PHP)", "Qty Sold", "Total Revenue (PHP)"]);
+                foreach ($allProductsCsv as $i => $r) {
+                    fputcsv($out, [
+                        $i + 1,
+                        $r->name,
+                        1,
+                        number_format($r->selling_price, 2),
+                        $r->total_qty > 0 ? $r->total_qty : 0,
+                        $r->total_revenue > 0 ? number_format($r->total_revenue, 2) : 0,
+                    ]);
+                }
+                fputcsv($out, [
+                    '', 'TOTAL', '', '',
+                    $allProductsCsv->sum('total_qty'),
+                    number_format($allProductsCsv->sum('total_revenue'), 2),
+                ]);
+                fputcsv($out, []);
+
+                // ── Services ──────────────────────────────────
+                fputcsv($out, ["SERVICE SALES"]);
+                fputcsv($out, ["#", "Service", "Unit", "Price (PHP)", "Total Sessions", "Total Revenue (PHP)"]);
+                foreach ($allServicesCsv as $i => $r) {
+                    fputcsv($out, [
+                        $i + 1,
+                        $r->service_name,
+                        1,
+                        number_format($r->price, 2),
+                        $r->total_count > 0 ? $r->total_count : 0,
+                        $r->total_revenue > 0 ? number_format($r->total_revenue, 2) : 0,
+                    ]);
+                }
+                fputcsv($out, [
+                    '', 'TOTAL', '', '',
+                    $allServicesCsv->sum('total_count'),
+                    number_format($allServicesCsv->sum('total_revenue'), 2),
+                ]);
+                fputcsv($out, []);
+
+                // ── Grand Total ───────────────────────────────
+                $grand = $allProductsCsv->sum('total_revenue') + $allServicesCsv->sum('total_revenue');
+                fputcsv($out, ["GRAND TOTAL", "", "", "", "", number_format($grand, 2)]);
+
+                fclose($out);
+            };
+
+            return response()->stream($callback, 200, $headers);
         }
-        fputcsv($out, [
-            '', 'TOTAL', '', '',
-            $allProductsCsv->sum('total_qty'),
-            number_format($allProductsCsv->sum('total_revenue'), 2),
-        ]);
-        fputcsv($out, []);
 
-        // Services
-        fputcsv($out, ["SERVICE SALES"]);
-        fputcsv($out, ["#", "Service", "Unit", "Price (₱)", "Total Sessions", "Total Revenue (₱)"]);
-        foreach ($allServicesCsv as $i => $r) {
-            fputcsv($out, [
-                $i + 1,
-                $r->service_name,
-                1,
-                number_format($r->price, 2),
-                $r->total_count > 0 ? $r->total_count : '—',
-                $r->total_revenue > 0 ? number_format($r->total_revenue, 2) : '—',
-            ]);
-        }
-        fputcsv($out, [
-            '', 'TOTAL', '', '',
-            $allServicesCsv->sum('total_count'),
-            number_format($allServicesCsv->sum('total_revenue'), 2),
-        ]);
-        fputcsv($out, []);
-
-        $grand = $allProductsCsv->sum('total_revenue') + $allServicesCsv->sum('total_revenue');
-        fputcsv($out, ["GRAND TOTAL", "", "", "", "", number_format($grand, 2)]);
-
-        fclose($out);
-    };
-
-    return response()->stream($callback, 200, $headers);
-}
-
-        // PDF export — pass paymentBreakdown and period breakdowns for the enhanced PDF view
+        // ── PDF Export ────────────────────────────────────────
         $paymentBreakdown = DB::table('walkin_sales')
             ->select('payment_method', DB::raw('COUNT(*) as count'), DB::raw('SUM(total_amount) as total'))
             ->whereBetween(DB::raw('DATE(created_at)'), [$dateFrom, $dateTo])
@@ -262,14 +267,18 @@ $allServices = DB::table('services as sv')
 
         // Daily breakdown
         $dailyBreakdown = DB::table('walkin_sales')
-            ->select(DB::raw('DATE(created_at) as date'), DB::raw('COUNT(*) as transactions'), DB::raw('SUM(total_amount) as revenue'))
+            ->select(
+                DB::raw('DATE(created_at) as date'),
+                DB::raw('COUNT(*) as transactions'),
+                DB::raw('SUM(total_amount) as revenue')
+            )
             ->whereBetween(DB::raw('DATE(created_at)'), [$dateFrom, $dateTo])
             ->where('status', 'completed')
             ->groupBy(DB::raw('DATE(created_at)'))
             ->orderBy('date')
             ->get();
 
-        // Weekly breakdown (week number grouping)
+        // Weekly breakdown (Mon–Sun grouping)
         $weeklyBreakdown = DB::table('walkin_sales')
             ->select(
                 DB::raw('YEARWEEK(created_at, 1) as week_key'),
@@ -297,24 +306,28 @@ $allServices = DB::table('services as sv')
             ->groupBy(DB::raw('DATE_FORMAT(created_at, "%Y-%m")'), DB::raw('DATE_FORMAT(created_at, "%M %Y")'))
             ->orderBy('month_key')
             ->get();
-        
-            $diffDays   = \Carbon\Carbon::parse($dateFrom)->diffInDays(\Carbon\Carbon::parse($dateTo));
-$diffMonths = \Carbon\Carbon::parse($dateFrom)->diffInMonths(\Carbon\Carbon::parse($dateTo));
 
-if ($diffDays == 0) {
-    $periodType = 'daily';
-} elseif ($diffDays <= 7) {
-    $periodType = 'weekly';
-} elseif ($diffMonths < 3) {
-    $periodType = 'monthly';   // show week-by-week breakdown
-} else {
-    $periodType = 'yearly';    // show quarter breakdown
-}
+        // ── Detect period type for PDF layout ─────────────────
+        $diffDays   = \Carbon\Carbon::parse($dateFrom)->diffInDays(\Carbon\Carbon::parse($dateTo));
+        $diffMonths = \Carbon\Carbon::parse($dateFrom)->diffInMonths(\Carbon\Carbon::parse($dateTo));
+
+        if ($diffDays == 0) {
+            $periodType = 'daily';
+        } elseif ($diffDays <= 7) {
+            $periodType = 'weekly';
+        } elseif ($diffMonths < 3) {
+            $periodType = 'monthly';   // week-by-week breakdown
+        } else {
+            $periodType = 'yearly';    // quarter breakdown
+        }
 
         return view('admin_sales_report_pdf', compact(
-    'dateFrom', 'dateTo', 'productRows', 'serviceRows', 'paymentBreakdown',
-    'dailyBreakdown', 'weeklyBreakdown', 'monthlyBreakdown', 'periodType'  // ← add this
-));
+            'dateFrom', 'dateTo',
+            'productRows', 'serviceRows',
+            'paymentBreakdown',
+            'dailyBreakdown', 'weeklyBreakdown', 'monthlyBreakdown',
+            'periodType'
+        ));
     }
 
     // ── Private query helpers ─────────────────────────────────
@@ -334,7 +347,7 @@ if ($diffDays == 0) {
             ->groupBy('p.product_id', 'p.product_name');
 
         $online = DB::table('order_items as oi')
-            ->join('orders as o',   'o.id',   '=', 'oi.order_id')
+            ->join('orders as o',   'o.id',         '=', 'oi.order_id')
             ->join('products as p', 'p.product_id', '=', 'oi.product_id')
             ->select(
                 'p.product_name as name',
