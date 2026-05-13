@@ -271,8 +271,9 @@
 
                 <div class="gcash-field">
                     <label>Payment Screenshot <span class="required">*</span></label>
-                    <div class="proof-upload-area" id="proofUploadArea" onclick="document.getElementById('gcashProofFile').click()">
-                        <input type="file" id="gcashProofFile" accept="image/*" style="display:none" onchange="handleProofUpload(this)">
+                    <div class="proof-upload-area" id="proofUploadArea"
+                         onclick="document.getElementById('gcashProofFile').click()">
+                        {{-- File input lives INSIDE the form below; triggered via JS click --}}
                         <div class="proof-placeholder" id="proofPlaceholder">
                             <svg viewBox="0 0 24 24" fill="none" width="28" height="28" opacity=".4">
                                 <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
@@ -300,7 +301,10 @@
             <input type="hidden" name="note"           id="checkoutNoteInput">
             <input type="hidden" name="payment_method" id="checkoutPaymentInput">
             <input type="hidden" name="reference"      id="checkoutReferenceInput">
-            {{-- proof image will be appended via JS before submit --}}
+            {{-- File input MUST be inside the form for multipart upload to work --}}
+            <input type="file" id="gcashProofFile" name="payment_proof"
+                   accept="image/*" style="display:none"
+                   onchange="handleProofUpload(this)">
             <div id="confirmBtnWrap">
                 <button type="submit" class="confirm-order-btn" id="confirmOrderBtn">
                     Confirm Order
@@ -528,23 +532,8 @@ document.getElementById('checkoutForm').addEventListener('submit', function (e) 
     document.getElementById('checkoutReferenceInput').value = isGcash
         ? document.getElementById('gcashReference').value.trim()
         : '';
-
-    // Append proof file to form if GCash
-    if (isGcash) {
-        const proofFile = document.getElementById('gcashProofFile').files[0];
-        // Create a real file input and append it so Laravel receives it
-        const existingHidden = document.getElementById('proofFileHidden');
-        if (existingHidden) existingHidden.remove();
-        const dt     = new DataTransfer();
-        dt.items.add(proofFile);
-        const fi     = document.createElement('input');
-        fi.type      = 'file';
-        fi.name      = 'payment_proof';
-        fi.id        = 'proofFileHidden';
-        fi.style.display = 'none';
-        fi.files     = dt.files;
-        this.appendChild(fi);
-    }
+    // payment_proof file input is already inside the form with name="payment_proof"
+    // no extra JS needed — browser includes it automatically on submit
 });
 
 /* ── SEARCH ──────────────────────────────────── */
