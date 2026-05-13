@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Http\Controllers;
 
 use App\Http\Controllers\SidebarDataController;
@@ -43,34 +42,62 @@ class PatientProductsController extends Controller
     // ─────────────────────────────────────────
     public function placeOrder(Request $request)
     {
-        //added for testing
-        \Log::info('Order request data', [
-    'has_file'       => $request->hasFile('payment_proof'),
-    'all_files'      => array_keys($request->allFiles()),
-    'payment_method' => $request->input('payment_method'),
-    'reference'      => $request->input('reference'),
-]);
         $request->validate([
-            'items' => 'required|string',
+            'items'          => 'required|string',
+            'payment_method' => 'required|in:cash,gcash',
+            'reference'      => 'required_if:payment_method,gcash|nullable|string|max:60',
+            'payment_proof'  => 'required_if:payment_method,gcash|nullable|image|max:5120',
         ]);
 
         $items         = json_decode($request->input('items'), true);
         $note          = $request->input('note', '');
         $paymentMethod = $request->input('payment_method', 'cash');
+        $reference     = $request->input('reference', null);
         $userId        = session('user_id');
 
         if (empty($items) || !is_array($items)) {
             return back()->with('error', 'Your cart is empty.');
         }
 
-        // ── Create the order header ────────────────────────
-        $total = collect($items)->sum(fn($i) => $i['price'] * $i['qty']);
+        // ── Upload GCash proof to Cloudinary ───────────────
+        $proofUrl = null;
+        if ($paymentMethod === 'gcash' && $request->hasFile('payment_proof')) {
+            try {
+                $uploaded = cloudinary()->uploadApi()->upload(
+                    $request->file('payment_proof')->getRealPath(),
+                    ['folder' => 'online_payments']
+                );
+                $proofUrl = $uploaded['secure_url'];
+                \Log::info('Cloudinary upload success', ['url' => $proofUrl]);
+            } catch (\Exception $e) {
+                \Log::error('Cloudinary upload failed', [
+                    'message' => $e->getMessage(),
+                    'trace'   => $e->getTraceAsString(),
+                ]);
+                return back()->with('error', 'Failed to upload payment proof. Please try again.');
+            }
+        }
 
+        // ── Calculate total (add ₱20 GCash fee) ───────────
+        $subtotal = collect($items)->sum(fn($i) => $i['price'] * $i['qty']);
+        $total    = $paymentMethod === 'gcash' ? $subtotal + 20 : $subtotal;
+
+        \Log::info('About to insert order', [
+            'payment_method' => $paymentMethod,
+            'reference'      => $reference,
+            'proof_url'      => $proofUrl,
+            'total'          => $total,
+        ]);
+
+        // ── Create the order header ────────────────────────
         $orderId = DB::table('orders')->insertGetId([
             'user_id'        => $userId,
             'total'          => $total,
             'note'           => $note,
             'payment_method' => $paymentMethod,
+            'payment_status' => 'unpaid',
+            'payment_proof'  => $proofUrl,
+            'reference'      => $reference,
             'status'         => 'pending',
             'created_at'     => now(),
             'updated_at'     => now(),
@@ -154,9 +181,20 @@ class PatientProductsController extends Controller
             }
         }
 
+        // ── Notify staff/admin of new order ───────────────
+        $adminStaff = DB::table('users')->whereIn('role', ['admin', 'staff'])->get();
+        $paymentLabel = $paymentMethod === 'gcash' ? 'GCash' : 'Cash on Pick-up';
+        foreach ($adminStaff as $u) {
+            NotificationHelper::send(
+                $u->user_id,
+                '🛒 New Online Order',
+                'Order #' . $orderId . ' placed by patient. Total: ₱' . number_format($total, 2) . '. Payment: ' . $paymentLabel . '.',
+                'order'
+            );
+        }
+
         // ── Notify patient ─────────────────────────────────
         if ($userId) {
-            $paymentLabel = $paymentMethod === 'gcash' ? 'GCash' : 'Cash on Pick-up';
             NotificationHelper::send(
                 $userId,
                 '🛍 Order Placed',
