@@ -113,7 +113,6 @@
           </div>
           <button type="submit" class="login-btn">Login</button>
         </form>
-        <button class="back-btn" onclick="closeAdminPopup(); openPopup();">← Back to Client Login</button>
       </div>
  
       {{-- ── Step 2: OTP panel (hidden until needed) ── --}}
