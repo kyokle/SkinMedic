@@ -199,6 +199,7 @@ Route::post('/staff/inventory/deduct-stock', [StaffInventoryController::class, '
 Route::post('/staff/inventory/add-stock', [StaffInventoryController::class, 'addStock'])
     ->name('staff.inventory.add-stock')
     ->middleware('check.staff.role');
+Route::post('/staff/inventory/update-reorder', [StaffInventoryController::class, 'updateReorder'])->name('staff.inventory.update-reorder');
 
 // ── Staff Products ───────────────────────────────────────
 Route::get('/staff/products',  [StaffProductsController::class,  'index'])->name('staff.products');

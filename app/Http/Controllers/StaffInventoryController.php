@@ -251,6 +251,42 @@ class StaffInventoryController extends Controller
         return back()->with('success', 'Stock updated successfully.');
     }
 
+    public function updateReorder(Request $request)
+{
+    $request->validate([
+        'product_id'    => 'required|integer|exists:products,product_id',
+        'reorder_level' => 'required|integer|min:0|max:99999',
+    ], [
+        'reorder_level.min' => 'Reorder level cannot be negative.',
+        'reorder_level.max' => 'Reorder level cannot exceed 99,999.',
+    ]);
+
+    $productId    = (int) $request->input('product_id');
+    $reorderLevel = (int) $request->input('reorder_level');
+
+    $product = DB::table('products')->where('product_id', $productId)->first();
+    if (!$product) return back()->with('error', 'Product not found.');
+
+    DB::table('products')
+        ->where('product_id', $productId)
+        ->update(['reorder_level' => $reorderLevel]);
+
+    // ── Notifications ─────────────────────────────────────
+    $adminStaff = DB::table('users')->whereIn('role', ['admin', 'staff'])->get();
+
+    foreach ($adminStaff as $u) {
+        NotificationHelper::send(
+            $u->user_id,
+            'Reorder Level Updated',
+            ($product->product_name ?? 'A product') . ' reorder level changed to ' . $reorderLevel . ' units.',
+            'inventory'
+        );
+    }
+    // ─────────────────────────────────────────────────────
+
+    return back()->with('success', 'Reorder level updated successfully.');
+}
+
     private function checkNearExpiry(): void
     {
         $nearExpiry = DB::table('inventory_logs as l')
