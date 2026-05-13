@@ -127,6 +127,30 @@ class IndexController extends Controller
             return response()->json(['success' => false, 'error' => 'Invalid admin credentials.']);
         }
 
+        // Block unverified users — resend a fresh OTP and tell the frontend to show the OTP panel
+        if (is_null($admin->email_verified_at)) {
+            $otp = rand(100000, 999999);
+
+            DB::table('users')->where('email', $admin->email)->update([
+                'email_otp'      => $otp,
+                'otp_expires_at' => now()->addMinutes(10),
+            ]);
+
+            try {
+                Mail::to($admin->email)->send(new VerifyEmailMail((string)$otp, $admin->firstName));
+            } catch (\Exception $e) {
+                \Log::error('Admin OTP email failed: ' . $e->getMessage());
+            }
+
+            Session::put('pending_verify_email', $admin->email);
+
+            return response()->json([
+                'success'  => false,
+                'need_otp' => true,
+                'message'  => 'A verification code has been sent to ' . $admin->email . '. Please enter it below.',
+            ]);
+        }
+
         Session::put('user_id', $admin->user_id);
         Session::put('email', $admin->email);
         Session::put('role',  $admin->role);

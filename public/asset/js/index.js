@@ -9,8 +9,12 @@ function openPopup() {
   document.getElementById('loginPopup').style.display = 'flex';
 }
 
+/* ═══════════════════════════════════════════════════
+   POPUP OPEN / CLOSE  (replaced existing versions)
+═══════════════════════════════════════════════════ */
 function closeAdminPopup() {
   document.getElementById('adminPopup').style.display = 'none';
+  showAdminLoginStep();                          // ← reset to login step
   document.getElementById('adminError').textContent = '';
 }
 function openAdminPopup() {
@@ -148,13 +152,113 @@ document.getElementById('loginForm').addEventListener('submit', function (e) {
 });
 
 /* ═══════════════════════════════════════════════════
-   ADMIN LOGIN
+   ADMIN LOGIN  (replaced existing adminForm listener)
 ═══════════════════════════════════════════════════ */
 document.getElementById('adminForm').addEventListener('submit', function (e) {
   e.preventDefault();
+  document.getElementById('adminError').textContent = '';
+ 
   const fd = new FormData(this);
-  doPost('/admin-login', fd, 'adminError', d => { closeAdminPopup(); location.href = d.redirect; });
+  fetch('/admin-login', {
+    method:  'POST',
+    body:    fd,
+    headers: {
+      'X-Requested-With': 'XMLHttpRequest',
+      'X-CSRF-TOKEN': getCsrf(),
+    },
+  })
+    .then(r => r.json())
+    .then(data => {
+      if (data.success) {
+        closeAdminPopup();
+        location.href = data.redirect;
+ 
+      } else if (data.need_otp) {
+        // Show OTP panel inside the popup
+        document.getElementById('adminOtpMsg').textContent      = data.message;
+        document.getElementById('adminLoginStep').style.display = 'none';
+        document.getElementById('adminOtpStep').style.display   = 'block';
+        buildAdminOtp();                         // render the 6 boxes
+        document.querySelector('#adminOtpBoxes input').focus();
+ 
+      } else {
+        document.getElementById('adminError').textContent = data.error;
+      }
+    })
+    .catch(() => {
+      document.getElementById('adminError').textContent = 'Network error. Please try again.';
+    });
 });
+
+/* ═══════════════════════════════════════════════════
+   ADMIN OTP  (new — add after the adminForm listener)
+═══════════════════════════════════════════════════ */
+function buildAdminOtp() {
+  const wrap = document.getElementById('adminOtpBoxes');
+  wrap.innerHTML = '';
+  for (let i = 0; i < 6; i++) {
+    const inp = document.createElement('input');
+    inp.type      = 'text';
+    inp.maxLength = 1;
+    inp.inputMode = 'numeric';
+    inp.style     = 'width:45px;height:50px;font-size:24px;text-align:center;border:2px solid #ccc;border-radius:8px;';
+    inp.addEventListener('input', function () {
+      this.style.borderColor = this.value ? '#80a833' : '#ccc';
+      if (this.value && this.nextElementSibling) this.nextElementSibling.focus();
+    });
+    inp.addEventListener('keydown', function (e) {
+      if (e.key === 'Backspace' && !this.value && this.previousElementSibling)
+        this.previousElementSibling.focus();
+    });
+    wrap.appendChild(inp);
+  }
+}
+ 
+function submitAdminOtp() {
+  const otp    = [...document.querySelectorAll('#adminOtpBoxes input')].map(i => i.value).join('');
+  const errEl  = document.getElementById('adminOtpError');
+  errEl.style.color   = 'red';
+  errEl.textContent   = '';
+ 
+  if (otp.length < 6) { errEl.textContent = 'Please enter all 6 digits.'; return; }
+ 
+  const fd = new FormData();
+  fd.append('otp', otp);
+ 
+  fetch('/verify-email-otp', {
+    method:  'POST',
+    body:    fd,
+    headers: {
+      'X-Requested-With': 'XMLHttpRequest',
+      'X-CSRF-TOKEN': getCsrf(),
+    },
+  })
+    .then(r => r.json())
+    .then(data => {
+      if (data.success) {
+        errEl.style.color = '#80a833';
+        errEl.textContent = '✅ Email verified! Logging you in…';
+ 
+        // Auto re-submit the login form — user gets redirected without retyping password
+        setTimeout(() => {
+          showAdminLoginStep();
+          document.getElementById('adminForm').dispatchEvent(new Event('submit'));
+        }, 1200);
+ 
+      } else {
+        errEl.textContent = data.error;
+      }
+    })
+    .catch(() => { errEl.textContent = 'Network error. Please try again.'; });
+}
+ 
+function showAdminLoginStep() {
+  document.getElementById('adminOtpStep').style.display   = 'none';
+  document.getElementById('adminLoginStep').style.display = 'block';
+  document.getElementById('adminOtpError').textContent    = '';
+  const wrap = document.getElementById('adminOtpBoxes');
+  if (wrap) wrap.innerHTML = '';
+}
 
 /* ═══════════════════════════════════════════════════
    SIGNUP

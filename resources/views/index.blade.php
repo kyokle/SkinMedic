@@ -90,30 +90,51 @@
 
     <!-- ═══════════════════ ADMIN LOGIN POPUP ═══════════════════ -->
     <div id="adminPopup" class="popup">
-      <div class="popup-content">
-        <div class="popup-left">
-          <img src="{{ asset('asset/image/skintransparent.png') }}" alt="Skin Medic Logo" class="logo" style="width:80px; height:auto;">
-          <h2>Skin Medic</h2>
-          <p>Admin Access</p>
-        </div>
-        <div class="popup-right">
-          <span class="close" onclick="closeAdminPopup()">&times;</span>
-          <h3>Admin Login</h3>
-          <div id="adminError" style="color:red;margin-bottom:10px;font-size:13px;"></div>
-          <form id="adminForm">
-            <div class="input-group">
-              <input type="email" name="email" placeholder="Email" required>
-            </div>
-            <div class="input-group pw-field">
-              <input type="password" name="password" id="adminPw" placeholder="Password" required>
-              <button type="button" class="pw-toggle" onclick="togglePw('adminPw',this)">👁</button>
-            </div>
-            <button type="submit" class="login-btn">Login</button>
-          </form>
-          <button class="back-btn" onclick="closeAdminPopup(); openPopup();">← Back to Client Login</button>
-        </div>
-      </div>
+  <div class="popup-content">
+    <div class="popup-left">
+      <img src="{{ asset('asset/image/skintransparent.png') }}" alt="Skin Medic Logo" class="logo" style="width:80px;height:auto;">
+      <h2>Skin Medic</h2>
+      <p>Admin Access</p>
     </div>
+    <div class="popup-right">
+      <span class="close" onclick="closeAdminPopup()">&times;</span>
+ 
+      {{-- ── Step 1: Login form ── --}}
+      <div id="adminLoginStep">
+        <h3>Admin Login</h3>
+        <div id="adminError" style="color:red;margin-bottom:10px;font-size:13px;"></div>
+        <form id="adminForm">
+          <div class="input-group">
+            <input type="email" name="email" id="adminEmail" placeholder="Email" required>
+          </div>
+          <div class="input-group pw-field">
+            <input type="password" name="password" id="adminPw" placeholder="Password" required>
+            <button type="button" class="pw-toggle" onclick="togglePw('adminPw',this)">👁</button>
+          </div>
+          <button type="submit" class="login-btn">Login</button>
+        </form>
+        <button class="back-btn" onclick="closeAdminPopup(); openPopup();">← Back to Client Login</button>
+      </div>
+ 
+      {{-- ── Step 2: OTP panel (hidden until needed) ── --}}
+      <div id="adminOtpStep" style="display:none;">
+        <h3>Verify Your Email</h3>
+        <p id="adminOtpMsg" style="font-size:13px;color:#555;margin-bottom:14px;"></p>
+        <div id="adminOtpError" style="margin-bottom:10px;font-size:13px;"></div>
+        <form id="adminOtpForm">
+          <div class="input-group">
+            <input type="text" id="adminOtpInput" name="otp" maxlength="6"
+                   placeholder="Enter 6-digit code" required
+                   style="letter-spacing:4px;font-size:1.2rem;text-align:center;">
+          </div>
+          <button type="submit" class="login-btn">Verify &amp; Login</button>
+        </form>
+        <button class="back-btn" onclick="showAdminLoginStep();">← Back to Login</button>
+      </div>
+ 
+    </div>
+  </div>
+</div>
 
     <!-- ═══════════════════ FORGOT PASSWORD POPUP ═══════════════════ -->
     <div id="forgotPopup" class="popup">
