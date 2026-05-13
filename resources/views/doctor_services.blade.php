@@ -1,332 +1,174 @@
-{{-- resources/views/doctor_bookings.blade.php --}}
+{{-- resources/views/doctor/doctor_services.blade.php --}}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="csrf-token" content="{{ csrf_token() }}">
+  <title>Doctor Service Management - SkinMedic</title>
+  <link rel="stylesheet" href="{{ asset('/asset/css/doctor_services.css') }}">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Fraunces:wght@700&display=swap" rel="stylesheet">
+</head>
+<body style="background:#f8f8f8;">
 
-@extends('layouts.app')
+  @if(session('role') === 'doctor')
+    @include('partials.sidebar_doctor')
+  @elseif(session('role') === 'staff')
+    @include('partials.sidebar_staff')
+  @else
+    @include('partials.sidebar_admin')
+  @endif
 
-@section('title', 'SkinMedic - My Bookings')
-<meta name="csrf-token" content="{{ csrf_token() }}">
-
-@push('styles')
-    <link rel="stylesheet" href="{{ asset('asset/css/doctor_bookings.css') }}">
-@endpush
-
-@section('content')
-
-@include('partials.sidebar_doctor')
-
-<div class="main">
-
-    <div class="topbar">
-        <h2>My Bookings</h2>
-        <div style="display:flex;align-items:center;gap:14px;">
-            <div class="date-box">
-                <p>Today's Date</p>
-                <strong>{{ now()->toDateString() }}</strong>
-            </div>
-            @include('partials.notif_bell_doctor')
+  <main class="content">
+    <header class="header">
+    <h2>Doctor Service Management</h2>
+    <div style="display:flex;align-items:center;gap:14px;">
+        <div class="date-box">
+            <p>Today's Date</p>
+            <strong>{{ now()->format('Y-m-d') }}</strong><br>
+            <button class="add-service-btn" onclick="openModal()">+ Add New Service</button>
         </div>
+        @include('partials.notif_bell_doctor')
     </div>
+</header>
 
-    @if(session('success'))
-    <div style="background:#f0fdf4;border:1px solid #86efac;color:#166534;padding:12px 16px;
-                border-radius:8px;margin-bottom:16px;">
-        ✅ {{ session('success') }}
-    </div>
-    @endif
-
-    <div class="filter-tabs">
-        @foreach(['all', 'pending', 'approved', 'completed', 'cancelled'] as $tab)
-        <button class="{{ $activeFilter === $tab ? 'active' : '' }}"
-                onclick="filterTable('{{ $tab }}', this)">
-            {{ ucfirst($tab) }}
-        </button>
-        @endforeach
-    </div>
-
-    {{-- ── Search / filter bar ── --}}
-    <div class="search-bar">
-        <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none"
-             stroke="#aaa" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-             style="flex-shrink:0">
-            <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
-        </svg>
-        <input type="text" id="q" placeholder="Search patient or service…" oninput="applyFilters()">
-        <label for="dateFrom">From</label>
-        <input type="date" id="dateFrom" style="width:132px" onchange="applyFilters()">
-        <label for="dateTo">To</label>
-        <input type="date" id="dateTo" style="width:132px" onchange="applyFilters()">
-        <button class="reset-btn" onclick="resetFilters()">↺ Reset</button>
-        <span class="result-count" id="resultCount"></span>
-    </div>
-
-    <table id="bookingsTable">
-        <thead>
-            <tr>
-                <th>#</th>
-                <th>Patient</th>
-                <th>Service</th>
-                <th>Date</th>
-                <th>Time</th>
-                <th>Status</th>
-            </tr>
-        </thead>
-        <tbody>
-            @forelse($bookings as $row)
-            @php $cls = strtolower($row->status); @endphp
-            <tr data-status="{{ $row->status }}"
-                data-id="{{ $row->appointment_id }}"
-                data-date="{{ $row->appointment_date }}"
-                onclick="openModal(
-                    '{{ $row->appointment_id }}',
-                    '{{ addslashes($row->patient_name) }}',
-                    '{{ addslashes($row->service_name) }}',
-                    '{{ $row->appointment_date }}',
-                    '{{ \Carbon\Carbon::parse($row->appointment_time)->format('H:i') }}',
-                    '{{ $row->status }}'
-                )" style="cursor:pointer;">
-                <td>{{ $row->appointment_id }}</td>
-                <td>{{ $row->patient_name }}</td>
-                <td>{{ $row->service_name }}</td>
-                <td>{{ $row->appointment_date }}</td>
-                <td>{{ \Carbon\Carbon::parse($row->appointment_time)->format('g:i A') }}</td>
-                <td><span class="badge {{ $cls }}">{{ ucfirst($row->status) }}</span></td>
-            </tr>
-            @empty
-            <tr>
-                <td colspan="6" style="text-align:center;color:#999;padding:32px;">
-                    No appointments found.
-                </td>
-            </tr>
-            @endforelse
-        </tbody>
-    </table>
-
-</div>
-
-<div id="bookingModal" class="bk-modal">
-    <div class="bk-modal-content" style="position:relative;">
-        <button class="bk-close" onclick="closeModal()">×</button>
-        <h3 class="bk-modal-title">Appointment Details</h3>
-
-        <div class="bk-row"><span>Patient</span><span id="m_patient"></span></div>
-        <div class="bk-row"><span>Service</span><span id="m_service"></span></div>
-        <div class="bk-row"><span>Date</span><span id="m_date"></span></div>
-        <div class="bk-row"><span>Time</span><span id="m_time"></span></div>
-        <div class="bk-row"><span>Status</span><span id="m_status"></span></div>
-
-        <div id="cancelSection" style="display:none; margin-top:14px;">
-            <button type="button" class="bk-cancel-btn" onclick="openCancelConfirm()">
-                ❌ Cancel Appointment
-            </button>
+{{-- ── Filter bar ── --}}
+    <div class="filter-bar">
+        <div class="service-search-wrap">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#aaa" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+            </svg>
+            <input
+                type="text"
+                id="serviceSearch"
+                class="service-search"
+                placeholder="Search service name…"
+                oninput="applyFilters()"
+                autocomplete="off"
+            >
         </div>
+        <span class="filter-count" id="serviceCount"></span>
+    </div>
 
-        <div id="rescheduleSection">
-            <hr class="bk-divider">
-            <p class="bk-reschedule-label">📅 Propose New Schedule</p>
-            <form method="POST" action="{{ route('doctor.bookings.reschedule') }}">
-                @csrf
-                <input type="hidden" name="appointment_id" id="modal_appt_id">
-                <div class="bk-form-row">
-                    <label>New Date</label>
-                    <input type="date" name="new_date" id="new_date"
-                           min="{{ now()->addDay()->toDateString() }}" required>
-                </div>
-                <div class="bk-form-row">
-                    <label>New Time</label>
-                    <input type="time" name="new_time" id="new_time" required>
-                </div>
-                <button type="submit" class="bk-reschedule-btn">
-                    📤 Send Reschedule Request
-                </button>
+    <div class="service-list">
+      @forelse ($services as $row)
+        @php $statusClass = $row->status === 'available' ? 'on' : 'off'; @endphp
+        <div class="service-card">
+          <img src="{{  $row->image }}"
+               alt="{{ $row->name }}"
+               onerror="this.src='{{ asset('uploads/default.png') }}'">
+          <h3>{{ $row->name }}</h3>
+          <p>{{ $row->description }}</p>
+          <p><strong>₱{{ $row->price }}</strong></p>
+          <p class="status {{ $statusClass }}">Status: {{ $row->status }}</p>
+          <div class="action-buttons">
+            <button class="edit-btn" onclick="openEditModal(
+              '{{ $row->service_id }}',
+              '{{ addslashes($row->name) }}',
+              '{{ addslashes($row->description) }}',
+              '{{ $row->price }}',
+              '{{ $row->status }}'
+            )">✏ Edit</button>
+
+            <form method="POST" action="{{ url('doctor/services/delete') }}" style="display:inline;"
+                  onsubmit="return confirm('Delete this service?');">
+              @csrf
+              <input type="hidden" name="service_id" value="{{ $row->service_id }}">
+              <button type="submit" class="delete-btn">🗑 Delete</button>
             </form>
+          </div>
         </div>
-
-        <p id="noRescheduleMsg" class="bk-no-action"></p>
-
-        <div id="cancelConfirm"
-             style="display:none; position:absolute; inset:0; background:rgba(0,0,0,0.45);
-                    border-radius:14px; z-index:10; align-items:center; justify-content:center;">
-            <div style="background:#fff; border-radius:12px; padding:28px 24px;
-                        max-width:300px; text-align:center; box-shadow:0 8px 32px rgba(0,0,0,0.18);">
-                <div style="font-size:2rem; margin-bottom:10px;">⚠️</div>
-                <p style="font-weight:700; font-size:15px; margin-bottom:6px;">Cancel Appointment?</p>
-                <p style="font-size:13px; color:#666; margin-bottom:16px;">
-                    Please select a reason. This determines whether the slot will be offered to waiting patients.
-                </p>
-
-                <select id="cancelReasonSelect"
-                        style="width:100%;padding:9px 12px;border:1.5px solid #ddd;border-radius:8px;
-                               font-size:13px;margin-bottom:6px;outline:none;font-family:inherit;">
-                    <option value="">— Select reason —</option>
-                    <optgroup label="Doctor Side (slot removed)">
-                        <option value="doctor_unavailable">Doctor unavailable that day</option>
-                        <option value="doctor_emergency">Doctor emergency</option>
-                    </optgroup>
-                    <optgroup label="Patient Side (slot re-opens)">
-                        <option value="patient_request">Patient requested cancellation</option>
-                        <option value="patient_noshow">Patient no-show</option>
-                        <option value="other">Other</option>
-                    </optgroup>
-                </select>
-
-                <p id="cancelReasonHint"
-                   style="font-size:11.5px;color:#aaa;margin-bottom:16px;min-height:32px;
-                          text-align:left;padding:0 2px;">
-                    Select a reason above to continue.
-                </p>
-
-                <div style="display:flex; gap:10px; justify-content:center;">
-                    <button onclick="closeCancelConfirm()"
-                            style="padding:8px 20px; border-radius:8px; border:1px solid #ddd;
-                                   background:#f5f5f5; cursor:pointer; font-family:inherit; font-size:13px;">
-                        Go Back
-                    </button>
-                    <form method="POST" action="{{ route('doctor.bookings.cancel') }}" style="margin:0;" id="cancelForm">
-                        @csrf
-                        <input type="hidden" name="appointment_id" id="cancel_appt_id">
-                        <input type="hidden" name="cancel_reason"  id="cancel_reason_input">
-                        <button type="button"
-                                onclick="submitCancel()"
-                                style="padding:8px 20px; border-radius:8px; border:none;
-                                       background:#dc2626; color:#fff; cursor:pointer;
-                                       font-family:inherit; font-size:13px; font-weight:600;">
-                            Yes, Cancel
-                        </button>
-                    </form>
-                </div>
-            </div>
-        </div>
-
+      @empty
+        <p style="text-align:center;color:#666;">No services added yet.</p>
+      @endforelse
     </div>
-</div>
+  </main>
 
-@endsection
+  {{-- ADD SERVICE MODAL --}}
+  <div id="addServiceModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Add New Service</h2>
+        <span class="close-btn" onclick="closeModal()">&times;</span>
+      </div>
+      <div class="modal-body">
+        <form method="POST" action="{{ url('doctor/services/add') }}" enctype="multipart/form-data">
+          @csrf
+          <label>Service Name</label>
+          <input type="text" name="name" required>
+          <label>Description</label>
+          <textarea name="description" rows="4" required></textarea>
+          <label>Price</label>
+          <input type="number" name="price" step="0.01" required>
+          <label>Upload Image</label>
+          <input type="file" name="image" accept="image/*">
+          <label>Status</label>
+          <select name="status">
+            <option value="available">Available</option>
+            <option value="not available">Not Available</option>
+          </select>
+          <label>Products Used in This Service</label>
+          @foreach($products as $p)
+            <div class="product-check">
+              <input type="checkbox" name="products[]" value="{{ $p->product_id }}" id="p_{{ $p->product_id }}">
+              <label for="p_{{ $p->product_id }}">{{ $p->product_name }}</label>
+              Qty: <input type="number" name="qty_{{ $p->product_id }}" min="1" value="1" style="width:60px;">
+            </div>
+          @endforeach
+          <button type="submit">Add Service</button>
+        </form>
+      </div>
+    </div>
+  </div>
 
-@push('scripts')
-<script>
-let activeTab = '{{ $activeFilter }}';
+  {{-- EDIT SERVICE MODAL --}}
+  <div id="editServiceModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Edit Service</h2>
+        <span class="close-btn" onclick="closeEditModal()">&times;</span>
+      </div>
+      <div class="modal-body">
+        <form method="POST" action="{{ url('doctor/services/update') }}" enctype="multipart/form-data">
+          @csrf
+          <input type="hidden" name="service_id" id="edit_id">
+          <label>Service Name</label>
+          <input type="text" name="name" id="edit_name" required>
+          <label>Description</label>
+          <textarea name="description" id="edit_description" rows="4" required></textarea>
+          <label>Price</label>
+          <input type="number" name="price" id="edit_price" step="0.01" required>
+          <label>Change Image (optional)</label>
+          <input type="file" name="image" accept="image/*">
+          <label>Status</label>
+          <select name="status" id="edit_status">
+            <option value="available">Available</option>
+            <option value="not available">Not Available</option>
+          </select>
+          <button type="submit">Save Changes</button>
+        </form>
+      </div>
+    </div>
+  </div>
 
-function filterTable(status, btn) {
-    activeTab = status;
-    document.querySelectorAll('.filter-tabs button').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    applyFilters();
-}
-
-function applyFilters() {
-    const q      = document.getElementById('q').value.toLowerCase().trim();
-    const from   = document.getElementById('dateFrom').value;
-    const to     = document.getElementById('dateTo').value;
-    let visible  = 0;
-    const rows   = document.querySelectorAll('#bookingsTable tbody tr[data-status]');
-
-    rows.forEach(tr => {
-        const matchTab  = activeTab === 'all' || tr.dataset.status === activeTab;
-        const text      = tr.innerText.toLowerCase();
-        const matchQ    = !q    || text.includes(q);
-        const matchFrom = !from || tr.dataset.date >= from;
-        const matchTo   = !to   || tr.dataset.date <= to;
-        const show      = matchTab && matchQ && matchFrom && matchTo;
-        tr.style.display = show ? '' : 'none';
-        if (show) visible++;
-    });
-
-    const total = rows.length;
-    document.getElementById('resultCount').textContent =
-        visible === total ? `${total} appointments` : `${visible} of ${total}`;
-}
-
-function resetFilters() {
-    document.getElementById('q').value        = '';
-    document.getElementById('dateFrom').value = '';
-    document.getElementById('dateTo').value   = '';
-    activeTab = 'all';
-    document.querySelectorAll('.filter-tabs button')
-        .forEach((b, i) => b.classList.toggle('active', i === 0));
-    applyFilters();
-}
-
-function openModal(id, patient, service, date, time, status) {
-    document.getElementById('bookingModal').style.display = 'flex';
-    document.getElementById('m_patient').innerText = patient;
-    document.getElementById('m_service').innerText = service;
-    document.getElementById('m_date').innerText    = date;
-    document.getElementById('m_time').innerText    = formatTime(time);
-    document.getElementById('m_status').innerText  = status;
-    document.getElementById('modal_appt_id').value  = id;
-    document.getElementById('cancel_appt_id').value = id;
-
-    document.getElementById('new_date').value = date;
-    document.getElementById('new_time').value = time;
-    document.getElementById('cancelConfirm').style.display = 'none';
-
-    const canAct = (status === 'pending' || status === 'approved');
-    document.getElementById('rescheduleSection').style.display = canAct ? 'block' : 'none';
-    document.getElementById('cancelSection').style.display     = canAct ? 'block' : 'none';
-    document.getElementById('noRescheduleMsg').textContent     = canAct
-        ? '' : 'Actions are only available for pending or approved appointments.';
-}
-
-function closeModal() {
-    document.getElementById('cancelConfirm').style.display = 'none';
-    document.getElementById('bookingModal').style.display  = 'none';
-}
-
-function openCancelConfirm() {
-    document.getElementById('cancelConfirm').style.display = 'flex';
-}
-
-function closeCancelConfirm() {
-    document.getElementById('cancelReasonSelect').value     = '';
-    document.getElementById('cancelReasonHint').textContent = 'Select a reason above to continue.';
-    document.getElementById('cancelReasonHint').style.color = '#aaa';
-    document.getElementById('cancelConfirm').style.display  = 'none';
-}
-
-function formatTime(t) {
-    if (!t) return '';
-    const [h, m] = t.split(':');
-    const hr = parseInt(h);
-    return (hr % 12 || 12) + ':' + m + ' ' + (hr < 12 ? 'AM' : 'PM');
-}
-
-function submitCancel() {
-    const reason = document.getElementById('cancelReasonSelect').value;
-    if (!reason) {
-        alert('Please select a cancellation reason before continuing.');
-        return;
-    }
-    document.getElementById('cancel_reason_input').value = reason;
-    document.getElementById('cancelForm').submit();
-}
-
-document.getElementById('cancelReasonSelect').addEventListener('change', function () {
-    const hint       = document.getElementById('cancelReasonHint');
-    const doctorSide = ['doctor_unavailable', 'doctor_emergency'];
-    if (!this.value) {
-        hint.style.color = '#aaa';
-        hint.textContent = 'Select a reason above to continue.';
-    } else if (doctorSide.includes(this.value)) {
-        hint.style.color = '#ef4444';
-        hint.textContent = '⛔ Waitlist will NOT be triggered — this slot will not be offered to waiting patients.';
-    } else {
-        hint.style.color = '#80a833';
-        hint.textContent = '✅ Waitlist WILL be triggered — the next waiting patient will be notified.';
-    }
-});
-
-window.onclick = e => {
-    if (e.target === document.getElementById('bookingModal')) closeModal();
-};
-
-window.addEventListener('DOMContentLoaded', function () {
-    applyFilters();
-
-    const params = new URLSearchParams(window.location.search);
-    const openId = params.get('open');
-    if (openId) {
-        const row = document.querySelector(`#bookingsTable tbody tr[data-id="${openId}"]`);
-        if (row) row.click();
-    }
-});
-</script>
-@endpush
+  <script>
+  const modal     = document.getElementById('addServiceModal');
+  const editModal = document.getElementById('editServiceModal');
+  function openModal()      { modal.style.display     = 'flex'; }
+  function closeModal()     { modal.style.display     = 'none'; }
+  function closeEditModal() { editModal.style.display = 'none'; }
+  function openEditModal(id, name, desc, price, status) {
+    document.getElementById('edit_id').value          = id;
+    document.getElementById('edit_name').value        = name;
+    document.getElementById('edit_description').value = desc;
+    document.getElementById('edit_price').value       = price;
+    document.getElementById('edit_status').value      = status;
+    editModal.style.display = 'flex';
+  }
+  window.onclick = function(e) {
+    if (e.target === modal)     closeModal();
+    if (e.target === editModal) closeEditModal();
+  };
+  </script>
+</body>
+</html>
