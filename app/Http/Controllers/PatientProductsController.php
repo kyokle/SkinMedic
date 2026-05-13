@@ -1,4 +1,5 @@
 <?php
+// app/Http/Controllers/PatientProductsController.php
 namespace App\Http\Controllers;
 
 use App\Http\Controllers\SidebarDataController;
@@ -42,12 +43,19 @@ class PatientProductsController extends Controller
     // ─────────────────────────────────────────
     public function placeOrder(Request $request)
     {
-        $request->validate([
+        $validator = \Illuminate\Support\Facades\Validator::make($request->all(), [
             'items'          => 'required|string',
             'payment_method' => 'required|in:cash,gcash',
             'reference'      => 'required_if:payment_method,gcash|nullable|string|max:60',
             'payment_proof'  => 'required_if:payment_method,gcash|nullable|image|max:5120',
         ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => $validator->errors()->first(),
+            ], 422);
+        }
 
         $items         = json_decode($request->input('items'), true);
         $note          = $request->input('note', '');
@@ -56,7 +64,7 @@ class PatientProductsController extends Controller
         $userId        = session('user_id');
 
         if (empty($items) || !is_array($items)) {
-            return back()->with('error', 'Your cart is empty.');
+            return response()->json(['success' => false, 'message' => 'Your cart is empty.']);
         }
 
         // ── Upload GCash proof to Cloudinary ───────────────
@@ -64,7 +72,7 @@ class PatientProductsController extends Controller
         if ($paymentMethod === 'gcash' && $request->hasFile('payment_proof')) {
             try {
                 $uploaded = cloudinary()->uploadApi()->upload(
-                    $request->file('payment_proof')->getRealPath(),
+                    $request->file('payment_proof')->getPathname(),
                     ['folder' => 'online_payments']
                 );
                 $proofUrl = $uploaded['secure_url'];
@@ -74,7 +82,7 @@ class PatientProductsController extends Controller
                     'message' => $e->getMessage(),
                     'trace'   => $e->getTraceAsString(),
                 ]);
-                return back()->with('error', 'Failed to upload payment proof. Please try again.');
+                return response()->json(['success' => false, 'message' => 'Failed to upload payment proof. Please try again.']);
             }
         }
 

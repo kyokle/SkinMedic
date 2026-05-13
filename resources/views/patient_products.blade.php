@@ -500,7 +500,9 @@ function closeCheckoutModal(e) {
 }
 
 /* ── FORM SUBMIT ─────────────────────────────── */
-document.getElementById('checkoutForm').addEventListener('submit', function (e) {
+document.getElementById('checkoutForm').addEventListener('submit', async function (e) {
+    e.preventDefault(); // Always prevent default — we use fetch instead
+
     const isGcash = document.querySelector('input[name="payment_method"]:checked').value === 'gcash';
 
     // Validate GCash fields
@@ -508,32 +510,60 @@ document.getElementById('checkoutForm').addEventListener('submit', function (e) 
         const ref   = document.getElementById('gcashReference').value.trim();
         const proof = document.getElementById('gcashProofFile').files[0];
         if (!ref) {
-            e.preventDefault();
             showToast('Please enter your GCash reference number.');
             document.getElementById('gcashReference').focus();
             return;
         }
         if (!proof) {
-            e.preventDefault();
             showToast('Please upload your GCash payment screenshot.');
             return;
         }
     }
 
-    // Populate hidden fields
-    const subtotal = cart.reduce((s, i) => s + i.price * i.qty, 0);
-    const total    = isGcash ? subtotal + GCASH_FEE : subtotal;
+    // Disable button to prevent double submit
+    const btn = document.getElementById('confirmOrderBtn');
+    btn.disabled    = true;
+    btn.textContent = 'Placing Order…';
 
-    document.getElementById('checkoutItemsInput').value    = JSON.stringify(
-        cart.map(i => ({ id: i.id, name: i.name, price: i.price, qty: i.qty }))
-    );
-    document.getElementById('checkoutNoteInput').value     = document.getElementById('orderNote').value;
-    document.getElementById('checkoutPaymentInput').value  = isGcash ? 'gcash' : 'cash';
-    document.getElementById('checkoutReferenceInput').value = isGcash
-        ? document.getElementById('gcashReference').value.trim()
-        : '';
-    // payment_proof file input is already inside the form with name="payment_proof"
-    // no extra JS needed — browser includes it automatically on submit
+    // Build FormData
+    const fd = new FormData();
+    fd.append('_token',         document.querySelector('input[name="_token"]').value);
+    fd.append('items',          JSON.stringify(cart.map(i => ({ id: i.id, name: i.name, price: i.price, qty: i.qty }))));
+    fd.append('note',           document.getElementById('orderNote').value);
+    fd.append('payment_method', isGcash ? 'gcash' : 'cash');
+    fd.append('reference',      isGcash ? document.getElementById('gcashReference').value.trim() : '');
+
+    if (isGcash) {
+        const proofFile = document.getElementById('gcashProofFile').files[0];
+        if (proofFile) fd.append('payment_proof', proofFile);
+    }
+
+    try {
+        const response = await fetch('{{ route("patient.order.place") }}', {
+            method: 'POST',
+            body:   fd,
+            headers: { 'X-Requested-With': 'XMLHttpRequest' },
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            // Clear cart
+            localStorage.removeItem('skinmedic_cart');
+            cart = [];
+            saveCart();
+            // Redirect to orders page with success
+            window.location.href = data.redirect;
+        } else {
+            showToast(data.message || 'Something went wrong. Please try again.');
+            btn.disabled    = false;
+            btn.textContent = 'Confirm Order';
+        }
+    } catch (err) {
+        showToast('Network error. Please try again.');
+        btn.disabled    = false;
+        btn.textContent = 'Confirm Order';
+    }
 });
 
 /* ── SEARCH ──────────────────────────────────── */
