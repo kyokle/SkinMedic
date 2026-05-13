@@ -150,6 +150,22 @@
                     <option value="available">Available</option>
                     <option value="not available">Not Available</option>
                 </select>
+                <label>Products Used in This Service</label>
+@foreach ($products as $p)
+    @php
+        $currentQty = $serviceProducts[$editServiceId ?? 0][$p->product_id] ?? null;
+    @endphp
+    <div class="product-check" 
+         data-product-id="{{ $p->product_id }}"
+         data-product-name="{{ $p->product_name }}">
+        <input type="checkbox"
+               name="products[]"
+               value="{{ $p->product_id }}"
+               id="ep_{{ $p->product_id }}">
+        <label for="ep_{{ $p->product_id }}">{{ $p->product_name }}</label>
+        Qty: <input type="number" name="qty_{{ $p->product_id }}" min="1" value="1" style="width:60px;">
+    </div>
+@endforeach
                 <button type="submit">Save Changes</button>
             </form>
         </div>
@@ -157,6 +173,9 @@
 </div>
 
 <script>
+    // Service → products map from PHP
+    const serviceProductsMap = @json($serviceProducts);
+
     const modal     = document.getElementById('addServiceModal');
     const editModal = document.getElementById('editServiceModal');
 
@@ -170,6 +189,25 @@
         document.getElementById('edit_description').value = desc;
         document.getElementById('edit_price').value       = price;
         document.getElementById('edit_status').value      = status;
+
+        // ── Pre-check products and fill quantities ──
+        const linked = serviceProductsMap[id] || {};
+
+        document.querySelectorAll('#editServiceModal .product-check').forEach(row => {
+            const prodId   = row.getAttribute('data-product-id');
+            const checkbox = row.querySelector('input[type="checkbox"]');
+            const qtyInput = row.querySelector('input[type="number"]');
+
+            if (linked[prodId] !== undefined) {
+                checkbox.checked  = true;
+                qtyInput.value    = linked[prodId];
+            } else {
+                checkbox.checked  = false;
+                qtyInput.value    = 1;
+            }
+        });
+        // ───────────────────────────────────────────
+
         editModal.style.display = 'flex';
     }
 
@@ -191,9 +229,7 @@
             if (show) visible++;
         });
 
-        const noMsg = document.getElementById('noServicesMsg');
-        noMsg.style.display = visible === 0 ? 'block' : 'none';
-
+        document.getElementById('noServicesMsg').style.display = visible === 0 ? 'block' : 'none';
         const countEl = document.getElementById('serviceCount');
         countEl.textContent = query ? `${visible} of ${cards.length} service(s)` : '';
     }
