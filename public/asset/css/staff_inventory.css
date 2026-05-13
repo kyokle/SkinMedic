@@ -277,20 +277,20 @@
     .add-btn    { padding: 5px 10px; font-size: 0.78rem; }
 }
 
-/* ── Deduct button ── */
-.deduct-btn {
-    background: #e8f0fe;
-    color: #3b5bdb;
-    border: 1.5px solid #b3c6f7;
-    border-radius: 6px;
-    padding: 5px 12px;
-    font-size: 0.78rem;
+/* ── Manage button ── */
+.manage-btn {
+    background: #f0f7e6;
+    color: #4a7c1f;
+    border: 1.5px solid #c3e08a;
+    border-radius: 8px;
+    padding: 6px 14px;
+    font-size: 0.82rem;
     cursor: pointer;
-    font-weight: 500;
-    transition: background .15s;
+    font-weight: 600;
+    transition: all .15s;
     white-space: nowrap;
 }
-.deduct-btn:hover { background: #d0e0ff; }
+.manage-btn:hover { background: #e0f0c8; border-color: #80a833; }
 
 /* ── Modal overlay ── */
 .modal-overlay {
@@ -301,29 +301,47 @@
     z-index: 999;
     justify-content: center;
     align-items: center;
+    padding: 20px;
 }
 
 /* ── Modal box ── */
 .modal-box {
     background: #fff;
-    border-radius: 14px;
-    padding: 28px 32px;
-    width: 440px;
+    border-radius: 16px;
+    padding: 28px 28px 24px;
+    width: 500px;
     max-width: 95vw;
     position: relative;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    box-shadow: 0 12px 40px rgba(0,0,0,0.18);
+}
+
+.modal-product-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.modal-product-icon {
+    font-size: 2rem;
+    background: #f0f7e6;
+    border-radius: 10px;
+    width: 52px; height: 52px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
 }
 
 .modal-box h3 {
-    margin: 0 0 4px;
-    font-size: 1rem;
+    margin: 0 0 3px;
+    font-size: 1.05rem;
+    font-weight: 700;
     color: #1a1f16;
 }
 
 .deduct-current {
     font-size: 0.82rem;
     color: #888;
-    margin: 0 0 14px;
+    margin: 0;
 }
 
 .modal-close {
@@ -335,92 +353,149 @@
 }
 .modal-close:hover { color: #333; }
 
-/* ── Modal mode toggle ── */
-.modal-toggle-row {
+/* ── Manage tabs ── */
+.manage-tabs {
     display: flex;
-    gap: 8px;
-    margin-bottom: 12px;
+    gap: 6px;
+    margin-bottom: 18px;
+    flex-wrap: wrap;
 }
 
-.modal-toggle-btn {
+.manage-tab {
     flex: 1;
-    padding: 8px 12px;
-    border: 1.5px solid #d4edb3;
+    min-width: 80px;
+    padding: 8px 10px;
+    border: 1.5px solid #e0e8cc;
     border-radius: 8px;
     background: #f9fff2;
-    color: #555;
-    font-size: 0.85rem;
-    font-weight: 500;
+    color: #6b7260;
+    font-size: 0.8rem;
+    font-weight: 600;
     font-family: inherit;
     cursor: pointer;
     transition: all .15s;
+    white-space: nowrap;
 }
 
-.modal-toggle-btn.active {
-    background: #80a833;
-    border-color: #80a833;
-    color: #fff;
-    font-weight: 600;
+.manage-tab:hover { border-color: #80a833; color: #4a7c1f; }
+.manage-tab.active { background: #80a833; border-color: #80a833; color: #fff; }
+
+.manage-tab.tab-danger         { border-color: #ffcccc; color: #c0392b; background: #fff5f5; }
+.manage-tab.tab-danger:hover   { background: #ffe0e0; border-color: #e07070; }
+.manage-tab.tab-danger.active  { background: #c0392b; border-color: #c0392b; color: #fff; }
+
+/* ── Panel hints ── */
+.manage-panel { animation: fadePanel .15s ease; }
+
+@keyframes fadePanel { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+
+.panel-hint {
+    border-radius: 8px;
+    padding: 11px 14px;
+    font-size: 0.82rem;
+    line-height: 1.55;
+    margin-bottom: 16px;
 }
 
-.modal-toggle-btn:not(.active):hover {
-    border-color: #80a833;
-    color: #80a833;
+.panel-hint-add    { background: #f0f7e6; border-left: 3px solid #80a833; color: #3a5c10; }
+.panel-hint-deduct { background: #fff8e6; border-left: 3px solid #f0c040; color: #7a5c00; }
+.panel-hint-set    { background: #eef5ff; border-left: 3px solid #4a90d9; color: #1a3c6e; }
+.panel-hint-remove { background: #fff0f0; border-left: 3px solid #e53e3e; color: #7a0000; }
+
+/* ── Form fields ── */
+.modal-field-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 16px;
 }
 
-.mode-hint {
-    font-size: 0.8rem;
-    color: #888;
-    margin: 0 0 16px;
-    font-style: italic;
-}
-
-/* ── Deduct form rows ── */
-.deduct-row {
+.modal-field {
     display: flex;
     flex-direction: column;
     gap: 5px;
     margin-bottom: 14px;
 }
 
-.deduct-row label {
+.modal-field label {
     font-size: 0.78rem;
-    font-weight: 600;
-    color: #555;
+    font-weight: 700;
+    color: #444;
     text-transform: uppercase;
     letter-spacing: .4px;
 }
 
-.deduct-row input,
-.deduct-row select {
-    padding: 9px 12px;
+.modal-field input {
+    padding: 10px 12px;
     border: 1.5px solid #ddd;
     border-radius: 8px;
-    font-size: 0.9rem;
+    font-size: 0.92rem;
     outline: none;
     transition: border-color .2s;
+    font-family: inherit;
 }
 
-.deduct-row input:focus,
-.deduct-row select:focus { border-color: #80a833; }
+.modal-field input:focus { border-color: #80a833; }
 
-.qty-hint {
+.field-hint {
     font-size: 0.75rem;
-    color: #aaa;
-    margin-top: 2px;
+    color: #999;
 }
 
-.save-deduct-btn {
+/* ── Action buttons ── */
+.modal-action-btn {
     width: 100%;
-    background: #80a833;
-    color: #fff;
+    padding: 12px;
     border: none;
-    padding: 11px;
-    border-radius: 8px;
-    font-size: 0.9rem;
-    font-weight: 600;
+    border-radius: 9px;
+    font-size: 0.92rem;
+    font-weight: 700;
+    font-family: inherit;
     cursor: pointer;
-    margin-top: 6px;
-    transition: background .2s;
+    margin-top: 4px;
+    transition: background .2s, opacity .2s;
 }
-.save-deduct-btn:hover { background: #6b9228; }
+
+.btn-add    { background: #80a833; color: #fff; }
+.btn-add:hover    { background: #6b9228; }
+
+.btn-deduct { background: #e6a817; color: #fff; }
+.btn-deduct:hover { background: #c98f10; }
+
+.btn-set    { background: #4a90d9; color: #fff; }
+.btn-set:hover    { background: #3478c0; }
+
+.btn-remove { background: #c0392b; color: #fff; }
+.btn-remove:hover:not(:disabled) { background: #a93226; }
+.btn-remove:disabled { opacity: .45; cursor: not-allowed; }
+
+/* ── Remove confirm checkbox ── */
+.remove-confirm-block {
+    background: #fff5f5;
+    border: 1.5px solid #ffcccc;
+    border-radius: 8px;
+    padding: 12px 14px;
+    margin-bottom: 14px;
+}
+
+.remove-confirm-label {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    font-size: 0.85rem;
+    color: #7a0000;
+    cursor: pointer;
+    line-height: 1.5;
+}
+
+.remove-confirm-label input[type="checkbox"] {
+    margin-top: 2px;
+    flex-shrink: 0;
+    accent-color: #c0392b;
+    width: 16px; height: 16px;
+}
+
+@media (max-width: 540px) {
+    .modal-field-row { grid-template-columns: 1fr; }
+    .manage-tab { font-size: 0.72rem; padding: 7px 6px; }
+}
