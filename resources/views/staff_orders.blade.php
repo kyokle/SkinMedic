@@ -117,7 +117,7 @@
                 </td>
                 <td>
                     <span class="badge status-{{ $order->status }}">
-                        {{ ucfirst($order->status) }}
+                        {{ ['processing' => 'Packing', 'ready_for_pickup' => 'Ready for Pick-up'][$order->status] ?? ucfirst($order->status) }}
                     </span>
                 </td>
                 <td>{{ \Carbon\Carbon::parse($order->created_at)->format('M d, Y') }}</td>
