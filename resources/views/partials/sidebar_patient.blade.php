@@ -48,6 +48,11 @@
             <span class="ni">🧴</span> Products
         </a>
 
+        <a href="{{ route('patient.orders') }}"
+           class="{{ request()->routeIs('patient.orders') ? 'active' : '' }}">
+            <span class="ni">🛍</span> My Orders
+        </a>
+
         <a href="{{ route('patient.bookings') }}"
            class="{{ request()->routeIs('patient.bookings') ? 'active' : '' }}">
             <span class="ni">🧾</span> My Bookings

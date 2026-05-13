@@ -21,6 +21,7 @@ use App\Http\Controllers\PatientProfileController;
 use App\Http\Controllers\PatientReviewsController;
 use App\Http\Controllers\PatientAR_Skin_AnalysisController;
 use App\Http\Controllers\PatientProductsController;
+use App\Http\Controllers\PatientOrdersController;
 
 use App\Http\Controllers\DoctorPageController;
 use App\Http\Controllers\DoctorBookingsController;
@@ -53,16 +54,12 @@ Route::get('/login',            [IndexController::class, 'index'])->name('login'
 Route::post('/login',           [IndexController::class, 'login']);
 Route::post('/admin-login',     [IndexController::class, 'adminLogin']);
 Route::post('/signup',          [IndexController::class, 'signup']);
-Route::get('/products', [ProductController::class, 'index'])->name('products.index');
 Route::post('/forgot-password', [IndexController::class, 'forgotPassword']);
 Route::post('/verify-otp',      [IndexController::class, 'verifyResetOtp']);
 Route::post('/reset-password',  [IndexController::class, 'resetPassword']);
 Route::get('/logout',           [AuthController::class,  'logout'])->name('logout');
-Route::get('/book-appointment', [BookAppointmentController::class, 'show'])->name('book.appointment.show');
-Route::post('/book-appointment', [BookAppointmentController::class, 'store'])->name('book.appointment.store');
 Route::get('/services', [IndexController::class, 'services'])->name('services.index');
-Route::get('/get-available-times', [BookAppointmentController::class, 'getAvailableTimes']);
-Route::post('/appointments/check-slot', [BookAppointmentController::class, 'checkSlot'])->name('appointments.checkSlot');
+
 Route::get('/test-mail', function () {
     Mail::to('jlouise1425@gmail.com')->send(new TestMail());
     return '✅ Email sent! Check your Mailtrap inbox.';
@@ -82,6 +79,15 @@ Route::get('/verify-email/{token}', function ($token) {
     return redirect('/')->with('success', 'Email verified! You can now log in.');
 })->name('verify.email');
 Route::post('/verify-email-otp', [IndexController::class, 'verifyEmailOtp'])->name('verify.email.otp');
+
+// Book Appointment
+Route::get('/book-appointment', [BookAppointmentController::class, 'show'])->name('book.appointment.show');
+Route::post('/book-appointment', [BookAppointmentController::class, 'store'])->name('book.appointment.store');
+Route::get('/get-available-times', [BookAppointmentController::class, 'getAvailableTimes']);
+Route::post('/appointments/check-slot', [BookAppointmentController::class, 'checkSlot'])->name('appointments.checkSlot');
+
+// Products
+Route::get('/products', [ProductController::class, 'index'])->name('products.index');
 
 // Review
 Route::post('/reviews',          [ReviewController::class, 'store'])->name('reviews.store');
@@ -112,6 +118,10 @@ Route::get('/patient/products', [PatientProductsController::class, 'index'])
 // Place order (called from checkout form)
 Route::post('/patient/order/place', [PatientProductsController::class, 'placeOrder'])
     ->name('patient.order.place');
+
+// Patient Orders (My Orders page)
+Route::get('/patient/orders', [PatientOrdersController::class, 'index'])
+    ->name('patient.orders');
 
 // ── Patient Profile ──────────────────────────────────
 Route::get('/patient/profile',                  [PatientProfileController::class,  'index'])->name('patient.profile');
