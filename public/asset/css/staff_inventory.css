@@ -58,6 +58,12 @@
     color: #7a0000;
 }
 
+.alert-block.success {
+    background: #f0fdf4;
+    border-left: 4px solid #4caf50;
+    color: #1b5e20;
+}
+
 /* ── Table wrapper ── */
 .table-wrapper {
     background: #fff;
@@ -167,135 +173,29 @@
 
 .add-btn:hover { background: #629b2a; }
 
-/* ── Responsive ── */
-@media (max-width: 1024px) {
-    .main { padding: 24px 20px; }
-}
-
-@media (max-width: 768px) {
-    .main         { padding: 16px 14px; margin-left: 0; }
-    .topbar       { flex-direction: column; align-items: flex-start; gap: 10px; }
-    .topbar h2    { font-size: 1.3rem; }
-    .alert-block  { font-size: 0.85rem; padding: 10px 12px; }
-
-    .inventory-table th,
-    .inventory-table td { font-size: 0.82rem; padding: 10px; }
-
-    .input-date { width: 115px; }
-}
-
-@media (max-width: 480px) {
-    .main { padding: 12px 10px; }
-    .topbar h2 { font-size: 1.1rem; }
-
-    .inventory-table th,
-    .inventory-table td { font-size: 0.75rem; padding: 8px; }
-
-    .input-qty  { width: 48px; }
-    .input-date { width: 105px; }
-    .add-btn    { padding: 5px 10px; font-size: 0.78rem; }
-}
-
-/* Deduct button */
-.deduct-btn {
-    background: #e8f0fe;
-    color: #3b5bdb;
-    border: 1.5px solid #b3c6f7;
-    border-radius: 6px;
-    padding: 5px 12px;
-    font-size: 0.78rem;
-    cursor: pointer;
-    font-weight: 500;
-    transition: background .15s;
-    white-space: nowrap;
-}
-.deduct-btn:hover { background: #d0e0ff; }
-
-/* Modal overlay */
-.modal-overlay {
-    display: none;
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,0.5);
-    z-index: 999;
-    justify-content: center;
-    align-items: center;
-}
-
-/* Modal box */
-.modal-box {
-    background: #fff;
-    border-radius: 14px;
-    padding: 28px 32px;
-    width: 420px;
-    max-width: 95vw;
-    position: relative;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-}
-.modal-box h3 {
-    margin: 0 0 4px;
-    font-size: 1rem;
-    color: #1a1f16;
-}
-.deduct-current {
-    font-size: 0.82rem;
-    color: #888;
-    margin: 0 0 18px;
-}
-.modal-close {
-    position: absolute;
-    top: 14px; right: 18px;
-    background: none; border: none;
-    font-size: 22px; color: #999;
-    cursor: pointer; line-height: 1;
-}
-.modal-close:hover { color: #333; }
-
-.deduct-row {
+/* ── Inline validation error ── */
+.inline-error {
     display: flex;
     flex-direction: column;
-    gap: 5px;
-    margin-bottom: 14px;
+    gap: 2px;
+    margin-top: 5px;
 }
-.deduct-row label {
-    font-size: 0.78rem;
-    font-weight: 600;
-    color: #555;
-    text-transform: uppercase;
-    letter-spacing: .4px;
-}
-.deduct-row input,
-.deduct-row select {
-    padding: 9px 12px;
-    border: 1.5px solid #ddd;
-    border-radius: 8px;
-    font-size: 0.9rem;
-    outline: none;
-    transition: border-color .2s;
-}
-.deduct-row input:focus,
-.deduct-row select:focus { border-color: #80a833; }
 
-.save-deduct-btn {
-    width: 100%;
-    background: #80a833;
-    color: #fff;
-    border: none;
-    padding: 11px;
-    border-radius: 8px;
-    font-size: 0.9rem;
-    font-weight: 600;
-    cursor: pointer;
-    margin-top: 6px;
-    transition: background .2s;
+.inline-error span {
+    font-size: 0.75rem;
+    color: #dc2626;
+    background: #fff5f5;
+    border-radius: 4px;
+    padding: 2px 6px;
 }
-.save-deduct-btn:hover { background: #6b9228; }
-/* ── Search filter bar ── */
+
+/* ── Search + filter bar ── */
 .search-bar-wrapper {
     display: flex;
     align-items: center;
     gap: 10px;
     margin-bottom: 16px;
+    flex-wrap: wrap;
 }
 
 .inventory-search {
@@ -314,6 +214,24 @@
     border-color: #80a833;
 }
 
+/* ── Status filter dropdown ── */
+.status-filter-select {
+    padding: 8px 12px;
+    border: 1px solid #d4edb3;
+    border-radius: 8px;
+    font-family: inherit;
+    font-size: 14px;
+    background: #f9fff2;
+    color: #444;
+    outline: none;
+    cursor: pointer;
+    transition: border-color .2s;
+}
+
+.status-filter-select:focus {
+    border-color: #80a833;
+}
+
 .search-count {
     font-size: 13px;
     color: #888;
@@ -325,3 +243,184 @@
     padding: 24px;
     font-style: italic;
 }
+
+/* ── Responsive ── */
+@media (max-width: 1024px) {
+    .main { padding: 24px 20px; }
+}
+
+@media (max-width: 768px) {
+    .main         { padding: 16px 14px; margin-left: 0; }
+    .topbar       { flex-direction: column; align-items: flex-start; gap: 10px; }
+    .topbar h2    { font-size: 1.3rem; }
+    .alert-block  { font-size: 0.85rem; padding: 10px 12px; }
+
+    .inventory-table th,
+    .inventory-table td { font-size: 0.82rem; padding: 10px; }
+
+    .input-date { width: 115px; }
+
+    .inventory-search { width: 100%; }
+    .status-filter-select { width: 100%; }
+    .search-bar-wrapper { flex-direction: column; align-items: stretch; }
+}
+
+@media (max-width: 480px) {
+    .main { padding: 12px 10px; }
+    .topbar h2 { font-size: 1.1rem; }
+
+    .inventory-table th,
+    .inventory-table td { font-size: 0.75rem; padding: 8px; }
+
+    .input-qty  { width: 48px; }
+    .input-date { width: 105px; }
+    .add-btn    { padding: 5px 10px; font-size: 0.78rem; }
+}
+
+/* ── Deduct button ── */
+.deduct-btn {
+    background: #e8f0fe;
+    color: #3b5bdb;
+    border: 1.5px solid #b3c6f7;
+    border-radius: 6px;
+    padding: 5px 12px;
+    font-size: 0.78rem;
+    cursor: pointer;
+    font-weight: 500;
+    transition: background .15s;
+    white-space: nowrap;
+}
+.deduct-btn:hover { background: #d0e0ff; }
+
+/* ── Modal overlay ── */
+.modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 999;
+    justify-content: center;
+    align-items: center;
+}
+
+/* ── Modal box ── */
+.modal-box {
+    background: #fff;
+    border-radius: 14px;
+    padding: 28px 32px;
+    width: 440px;
+    max-width: 95vw;
+    position: relative;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+}
+
+.modal-box h3 {
+    margin: 0 0 4px;
+    font-size: 1rem;
+    color: #1a1f16;
+}
+
+.deduct-current {
+    font-size: 0.82rem;
+    color: #888;
+    margin: 0 0 14px;
+}
+
+.modal-close {
+    position: absolute;
+    top: 14px; right: 18px;
+    background: none; border: none;
+    font-size: 22px; color: #999;
+    cursor: pointer; line-height: 1;
+}
+.modal-close:hover { color: #333; }
+
+/* ── Modal mode toggle ── */
+.modal-toggle-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.modal-toggle-btn {
+    flex: 1;
+    padding: 8px 12px;
+    border: 1.5px solid #d4edb3;
+    border-radius: 8px;
+    background: #f9fff2;
+    color: #555;
+    font-size: 0.85rem;
+    font-weight: 500;
+    font-family: inherit;
+    cursor: pointer;
+    transition: all .15s;
+}
+
+.modal-toggle-btn.active {
+    background: #80a833;
+    border-color: #80a833;
+    color: #fff;
+    font-weight: 600;
+}
+
+.modal-toggle-btn:not(.active):hover {
+    border-color: #80a833;
+    color: #80a833;
+}
+
+.mode-hint {
+    font-size: 0.8rem;
+    color: #888;
+    margin: 0 0 16px;
+    font-style: italic;
+}
+
+/* ── Deduct form rows ── */
+.deduct-row {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    margin-bottom: 14px;
+}
+
+.deduct-row label {
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: #555;
+    text-transform: uppercase;
+    letter-spacing: .4px;
+}
+
+.deduct-row input,
+.deduct-row select {
+    padding: 9px 12px;
+    border: 1.5px solid #ddd;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    outline: none;
+    transition: border-color .2s;
+}
+
+.deduct-row input:focus,
+.deduct-row select:focus { border-color: #80a833; }
+
+.qty-hint {
+    font-size: 0.75rem;
+    color: #aaa;
+    margin-top: 2px;
+}
+
+.save-deduct-btn {
+    width: 100%;
+    background: #80a833;
+    color: #fff;
+    border: none;
+    padding: 11px;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    margin-top: 6px;
+    transition: background .2s;
+}
+.save-deduct-btn:hover { background: #6b9228; }
