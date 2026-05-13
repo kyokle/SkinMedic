@@ -166,6 +166,9 @@ body {
 .summary-card.teal   .card-value { color: #0f766e; }
 .card-sub { font-size: 0.78rem; margin-top: 4px; opacity: 0.65; }
 
+.sub-menu        { visibility: hidden; opacity: 0; pointer-events: none; transition: opacity .15s; }
+.sub-menu.open   { visibility: visible; opacity: 1; pointer-events: auto; }
+
 /* ── Daily chart ── */
 .chart-card {
     background: #fff;

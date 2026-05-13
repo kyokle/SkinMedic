@@ -179,10 +179,11 @@
         </tfoot>
     </table>
 
-    {{-- Daily Breakdown --}}
-    @if($dailyBreakdown->isNotEmpty())
-    <p class="section-title">📅 Daily Breakdown</p>
-    <p class="period-note">Walk-in sales only · {{ $dailyBreakdown->count() }} active day(s)</p>
+    {{-- ── Period Breakdown (context-aware) ── --}}
+
+@if($periodType === 'daily')
+    <p class="section-title">📅 Daily Summary</p>
+    <p class="period-note">{{ $dateFrom }}{{ $dateFrom !== $dateTo ? ' → '.$dateTo : '' }}</p>
     <table>
         <thead>
             <tr><th>Date</th><th>Day</th><th class="r">Transactions</th><th class="r">Revenue (₱)</th><th class="r">Avg per Txn</th></tr>
@@ -191,10 +192,10 @@
             @foreach($dailyBreakdown as $day)
             <tr>
                 <td>{{ $day->date }}</td>
-                <td>{{ \Carbon\Carbon::parse($day->date)->format('D') }}</td>
+                <td>{{ \Carbon\Carbon::parse($day->date)->format('l') }}</td>
                 <td class="r">{{ number_format($day->transactions) }}</td>
                 <td class="r">₱{{ number_format($day->revenue, 2) }}</td>
-                <td class="r">₱{{ $day->transactions > 0 ? number_format($day->revenue / $day->transactions, 2) : '0.00' }}</td>
+                <td class="r">₱{{ $day->transactions > 0 ? number_format($day->revenue / $day->transactions, 2) : '—' }}</td>
             </tr>
             @endforeach
         </tbody>
@@ -207,12 +208,9 @@
             </tr>
         </tfoot>
     </table>
-    @endif
 
-    {{-- Weekly Breakdown --}}
-    @if($weeklyBreakdown->isNotEmpty())
-    <p class="section-title">📆 Weekly Breakdown</p>
-    <p class="period-note">Walk-in sales grouped by calendar week (Mon–Sun)</p>
+@elseif($periodType === 'weekly')
+    <p class="section-title">📆 Weekly Breakdown (Mon–Sun)</p>
     <table>
         <thead>
             <tr><th>Week</th><th>Date Range</th><th class="r">Transactions</th><th class="r">Revenue (₱)</th><th class="r">Avg per Txn</th></tr>
@@ -224,7 +222,7 @@
                 <td>{{ $week->week_start }} → {{ $week->week_end }}</td>
                 <td class="r">{{ number_format($week->transactions) }}</td>
                 <td class="r">₱{{ number_format($week->revenue, 2) }}</td>
-                <td class="r">₱{{ $week->transactions > 0 ? number_format($week->revenue / $week->transactions, 2) : '0.00' }}</td>
+                <td class="r">₱{{ $week->transactions > 0 ? number_format($week->revenue / $week->transactions, 2) : '—' }}</td>
             </tr>
             @endforeach
         </tbody>
@@ -237,37 +235,75 @@
             </tr>
         </tfoot>
     </table>
-    @endif
 
-    {{-- Monthly Breakdown --}}
-    @if($monthlyBreakdown->isNotEmpty())
-    <p class="section-title">🗓 Monthly Breakdown</p>
-    <p class="period-note">Walk-in sales grouped by month</p>
+@elseif($periodType === 'monthly')
+    <p class="section-title">🗓 Monthly Breakdown — by Week</p>
+    <p class="period-note">{{ \Carbon\Carbon::parse($dateFrom)->format('F Y') }}</p>
+    @php
+        // Group daily data into Week 1–4 of the month
+        $weekGroups = collect();
+        foreach ($dailyBreakdown as $day) {
+            $dom  = (int) \Carbon\Carbon::parse($day->date)->format('j');
+            $wNum = min(4, (int) ceil($dom / 7));   // week 1–4
+            if (!$weekGroups->has($wNum)) {
+                $weekGroups->put($wNum, ['label' => 'Week '.$wNum, 'transactions' => 0, 'revenue' => 0]);
+            }
+            $entry = $weekGroups->get($wNum);
+            $entry['transactions'] += $day->transactions;
+            $entry['revenue']      += $day->revenue;
+            $weekGroups->put($wNum, $entry);
+        }
+        $weekGroups = $weekGroups->sortKeys();
+    @endphp
     <table>
         <thead>
-            <tr><th>Month</th><th class="r">Transactions</th><th class="r">Revenue (₱)</th><th class="r">Avg per Txn</th><th class="r">vs Prior Month</th></tr>
+            <tr><th>Period</th><th class="r">Transactions</th><th class="r">Revenue (₱)</th><th class="r">Avg per Txn</th></tr>
         </thead>
         <tbody>
-            @foreach($monthlyBreakdown as $i => $month)
+            @foreach($weekGroups as $week)
+            <tr>
+                <td>{{ $week['label'] }}</td>
+                <td class="r">{{ number_format($week['transactions']) }}</td>
+                <td class="r">₱{{ number_format($week['revenue'], 2) }}</td>
+                <td class="r">₱{{ $week['transactions'] > 0 ? number_format($week['revenue'] / $week['transactions'], 2) : '—' }}</td>
+            </tr>
+            @endforeach
+        </tbody>
+        <tfoot>
+            <tr>
+                <td>Total</td>
+                <td class="r">{{ number_format($dailyBreakdown->sum('transactions')) }}</td>
+                <td class="r">₱{{ number_format($dailyBreakdown->sum('revenue'), 2) }}</td>
+                <td class="r"></td>
+            </tr>
+        </tfoot>
+    </table>
+
+@elseif($periodType === 'yearly')
+    <p class="section-title">📊 Yearly Breakdown — by Quarter</p>
+    @php
+        $quarters = [
+            'Q1 (Jan–Mar)' => ['01','02','03'],
+            'Q2 (Apr–Jun)' => ['04','05','06'],
+            'Q3 (Jul–Sep)' => ['07','08','09'],
+            'Q4 (Oct–Dec)' => ['10','11','12'],
+        ];
+    @endphp
+    <table>
+        <thead>
+            <tr><th>Quarter</th><th class="r">Transactions</th><th class="r">Revenue (₱)</th><th class="r">Avg per Txn</th></tr>
+        </thead>
+        <tbody>
+            @foreach($quarters as $label => $months)
             @php
-                $prior = $i > 0 ? $monthlyBreakdown[$i - 1]->revenue : null;
-                $diff  = $prior ? $month->revenue - $prior : null;
-                $pct   = ($prior && $prior > 0) ? ($diff / $prior * 100) : null;
+                $qTxn = $monthlyBreakdown->filter(fn($m) => in_array(substr($m->month_key, 5, 2), $months))->sum('transactions');
+                $qRev = $monthlyBreakdown->filter(fn($m) => in_array(substr($m->month_key, 5, 2), $months))->sum('revenue');
             @endphp
             <tr>
-                <td>{{ $month->month_label }}</td>
-                <td class="r">{{ number_format($month->transactions) }}</td>
-                <td class="r">₱{{ number_format($month->revenue, 2) }}</td>
-                <td class="r">₱{{ $month->transactions > 0 ? number_format($month->revenue / $month->transactions, 2) : '0.00' }}</td>
-                <td class="r">
-                    @if($pct !== null)
-                        <span class="{{ $pct >= 0 ? 'trend-up' : 'trend-down' }}">
-                            {{ $pct >= 0 ? '▲' : '▼' }} {{ abs(round($pct, 1)) }}%
-                        </span>
-                    @else
-                        <span style="color:#ccc;">—</span>
-                    @endif
-                </td>
+                <td>{{ $label }}</td>
+                <td class="r">{{ number_format($qTxn) }}</td>
+                <td class="r">₱{{ number_format($qRev, 2) }}</td>
+                <td class="r">₱{{ $qTxn > 0 ? number_format($qRev / $qTxn, 2) : '—' }}</td>
             </tr>
             @endforeach
         </tbody>
@@ -277,11 +313,10 @@
                 <td class="r">{{ number_format($monthlyBreakdown->sum('transactions')) }}</td>
                 <td class="r">₱{{ number_format($monthlyBreakdown->sum('revenue'), 2) }}</td>
                 <td class="r"></td>
-                <td class="r"></td>
             </tr>
         </tfoot>
     </table>
-    @endif
+@endif
 
     {{-- Grand Total --}}
     <div class="grand">

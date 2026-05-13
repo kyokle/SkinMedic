@@ -84,7 +84,7 @@
             <button class="quick-btn {{ str_starts_with($activePreset ?? '', 'm') ? 'active' : '' }}"
                     onclick="this.parentElement.querySelector('.sub-menu').classList.toggle('open')"
                     type="button">Monthly ▾</button>
-            <div class="sub-menu" style="display:none;position:absolute;top:38px;left:0;background:#fff;border:1px solid #ddd;border-radius:10px;box-shadow:0 4px 16px rgba(0,0,0,.1);z-index:200;padding:8px;display:grid;grid-template-columns:repeat(4,1fr);gap:4px;min-width:200px;">
+            <div class="sub-menu" style="position:absolute;top:38px;left:0;background:#fff;border:1px solid #ddd;border-radius:10px;box-shadow:0 4px 16px rgba(0,0,0,.1);z-index:200;padding:8px;display:grid;grid-template-columns:repeat(4,1fr);gap:4px;min-width:200px;">
                 @foreach($monthPresets as $key => [$label, $from, $to])
                 <a href="{{ route('admin.reports.sales', ['date_from' => $from, 'date_to' => $to]) }}"
                    class="quick-btn {{ $activePreset === $key ? 'active' : '' }}" style="height:28px;font-size:0.75rem;justify-content:center;">{{ $label }}</a>
@@ -97,7 +97,7 @@
             <button class="quick-btn {{ str_starts_with($activePreset ?? '', 'q') ? 'active' : '' }}"
                     onclick="this.parentElement.querySelector('.sub-menu').classList.toggle('open')"
                     type="button">Quarterly ▾</button>
-            <div class="sub-menu" style="display:none;position:absolute;top:38px;left:0;background:#fff;border:1px solid #ddd;border-radius:10px;box-shadow:0 4px 16px rgba(0,0,0,.1);z-index:200;padding:8px;display:flex;gap:4px;min-width:180px;">
+            <div class="sub-menu" style="position:absolute;top:38px;left:0;background:#fff;border:1px solid #ddd;border-radius:10px;box-shadow:0 4px 16px rgba(0,0,0,.1);z-index:200;padding:8px;display:flex;gap:4px;min-width:180px;">
                 @foreach($quarterPresets as $key => [$label, $from, $to])
                 <a href="{{ route('admin.reports.sales', ['date_from' => $from, 'date_to' => $to]) }}"
                    class="quick-btn {{ $activePreset === $key ? 'active' : '' }}" style="height:28px;font-size:0.75rem;flex:1;justify-content:center;">{{ $label }}</a>
@@ -264,67 +264,135 @@
     </div>{{-- /tables-grid --}}
 
     {{-- ── Top performers ── --}}
-    <div class="tables-grid">
+<div class="tables-grid">
 
-        {{-- Top Products by Revenue (visual bars) --}}
-        <div class="report-card">
-            <div class="report-card-header">
-                <p class="section-label">🏆 Top Products</p>
-                <div style="display:flex;align-items:center;gap:10px;">
-                    <span class="section-meta">by revenue</span>
-                    @if($productRows->count() > 5)
-                    <button class="view-all-btn" onclick="openModal('modal-top-products')">View All ({{ $productRows->count() }})</button>
-                    @endif
-                </div>
+    {{-- Top Products by Revenue (visual bars) --}}
+    <div class="report-card">
+        <div class="report-card-header">
+            <p class="section-label">🏆 Top Products</p>
+            <div style="display:flex;align-items:center;gap:10px;">
+                <span class="section-meta">by revenue</span>
+                <button class="view-all-btn" onclick="openModal('modal-top-products')">
+                    View All ({{ $allProducts->count() }})
+                </button>
             </div>
-            @php $topProducts = $productRows->take(5); $maxPRev = $topProducts->max('total_revenue') ?: 1; @endphp
-            @if($topProducts->isEmpty())
-                <p class="empty-state">No data.</p>
-            @else
-                <div style="padding: 10px 0 6px;">
-                    @foreach($topProducts as $row)
-                    <div class="top-bar-row">
-                        <span class="top-bar-name">{{ Str::limit($row->name, 28) }}</span>
-                        <div class="top-bar-track">
-                            <div class="top-bar-fill" style="width:{{ round($row->total_revenue / $maxPRev * 100) }}%"></div>
-                        </div>
-                        <span class="top-bar-val">₱{{ number_format($row->total_revenue, 0) }}</span>
-                    </div>
-                    @endforeach
-                </div>
-            @endif
         </div>
-
-        {{-- Top Services by Revenue (visual bars) --}}
-        <div class="report-card">
-            <div class="report-card-header">
-                <p class="section-label">🏆 Top Services</p>
-                <div style="display:flex;align-items:center;gap:10px;">
-                    <span class="section-meta">by revenue</span>
-                    @if($serviceRows->count() > 5)
-                    <button class="view-all-btn" onclick="openModal('modal-top-services')">View All ({{ $serviceRows->count() }})</button>
-                    @endif
+        @php $topProducts = $productRows->take(5); $maxPRev = $topProducts->max('total_revenue') ?: 1; @endphp
+        @if($topProducts->isEmpty())
+            <p class="empty-state">No data.</p>
+        @else
+            <div style="padding: 10px 0 6px;">
+                @foreach($topProducts as $row)
+                <div class="top-bar-row">
+                    <span class="top-bar-name">{{ Str::limit($row->name, 28) }}</span>
+                    <div class="top-bar-track">
+                        <div class="top-bar-fill" style="width:{{ round($row->total_revenue / $maxPRev * 100) }}%"></div>
+                    </div>
+                    <span class="top-bar-val">₱{{ number_format($row->total_revenue, 0) }}</span>
                 </div>
+                @endforeach
             </div>
-            @php $topServices = $serviceRows->take(5); $maxSRev = $topServices->max('total_revenue') ?: 1; @endphp
-            @if($topServices->isEmpty())
-                <p class="empty-state">No data.</p>
-            @else
-                <div style="padding: 10px 0 6px;">
-                    @foreach($topServices as $row)
-                    <div class="top-bar-row">
-                        <span class="top-bar-name">{{ Str::limit($row->service_name, 28) }}</span>
-                        <div class="top-bar-track">
-                            <div class="top-bar-fill" style="width:{{ round($row->total_revenue / $maxSRev * 100) }}%"></div>
-                        </div>
-                        <span class="top-bar-val">₱{{ number_format($row->total_revenue, 0) }}</span>
-                    </div>
-                    @endforeach
-                </div>
-            @endif
-        </div>
-
+        @endif
     </div>
+
+    {{-- Top Services by Revenue (visual bars) --}}
+    <div class="report-card">
+        <div class="report-card-header">
+            <p class="section-label">🏆 Top Services</p>
+            <div style="display:flex;align-items:center;gap:10px;">
+                <span class="section-meta">by revenue</span>
+                <button class="view-all-btn" onclick="openModal('modal-top-services')">
+                    View All ({{ $allServices->count() }})
+                </button>
+            </div>
+        </div>
+        @php $topServices = $serviceRows->take(5); $maxSRev = $topServices->max('total_revenue') ?: 1; @endphp
+        @if($topServices->isEmpty())
+            <p class="empty-state">No data.</p>
+        @else
+            <div style="padding: 10px 0 6px;">
+                @foreach($topServices as $row)
+                <div class="top-bar-row">
+                    <span class="top-bar-name">{{ Str::limit($row->service_name, 28) }}</span>
+                    <div class="top-bar-track">
+                        <div class="top-bar-fill" style="width:{{ round($row->total_revenue / $maxSRev * 100) }}%"></div>
+                    </div>
+                    <span class="top-bar-val">₱{{ number_format($row->total_revenue, 0) }}</span>
+                </div>
+                @endforeach
+            </div>
+        @endif
+    </div>
+
+</div>{{-- /tables-grid --}}
+
+{{-- ── View All: Products Modal ── --}}
+<div class="modal-overlay" id="modal-top-products">
+    <div class="modal-box">
+        <div class="modal-head">
+            <h3>🏆 All Products</h3>
+            <button class="modal-close" onclick="closeModal('modal-top-products')">✕</button>
+        </div>
+        <div class="modal-body">
+            <table class="report-table">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Product</th>
+                        <th class="text-right">Unit Price</th>
+                        <th class="text-right">Qty Sold</th>
+                        <th class="text-right">Revenue</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach($allProducts as $i => $row)
+                    <tr>
+                        <td class="row-num">{{ $i + 1 }}</td>
+                        <td>{{ $row->name }}</td>
+                        <td class="text-right">₱{{ number_format($row->selling_price, 2) }}</td>
+                        <td class="text-right">{{ $row->total_qty > 0 ? number_format($row->total_qty) : '—' }}</td>
+                        <td class="text-right fw-bold">{{ $row->total_revenue > 0 ? '₱'.number_format($row->total_revenue, 2) : '—' }}</td>
+                    </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+{{-- ── View All: Services Modal ── --}}
+<div class="modal-overlay" id="modal-top-services">
+    <div class="modal-box">
+        <div class="modal-head">
+            <h3>🏆 All Services</h3>
+            <button class="modal-close" onclick="closeModal('modal-top-services')">✕</button>
+        </div>
+        <div class="modal-body">
+            <table class="report-table">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Service</th>
+                        <th class="text-right">Price</th>
+                        <th class="text-right">Sessions</th>
+                        <th class="text-right">Revenue</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach($allServices as $i => $row)
+                    <tr>
+                        <td class="row-num">{{ $i + 1 }}</td>
+                        <td>{{ $row->service_name }}</td>
+                        <td class="text-right">₱{{ number_format($row->price, 2) }}</td>
+                        <td class="text-right">{{ $row->total_count > 0 ? number_format($row->total_count) : '—' }}</td>
+                        <td class="text-right fw-bold">{{ $row->total_revenue > 0 ? '₱'.number_format($row->total_revenue, 2) : '—' }}</td>
+                    </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
 
     {{-- ── Payment Transactions table ── --}}
     <div class="tables-grid full">
