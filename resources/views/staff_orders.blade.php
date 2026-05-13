@@ -304,25 +304,25 @@ function openModal(id) {
     }
 
     // GCash proof image
-    const proofSection        = document.getElementById('proofSection');
-    const proofMissingSection = document.getElementById('proofMissingSection');
+const proofSection        = document.getElementById('proofSection');
+const proofMissingSection = document.getElementById('proofMissingSection');
 
-    if (order.payment_method === 'gcash') {
-        if (order.payment_proof) {
-            proofSection.style.display        = '';
-            proofMissingSection.style.display = 'none';
-            const proofImg = document.getElementById('m_proof_img');
-proofImg.src = order.payment_proof;
-proofImg.style.cursor = 'zoom-in';
-proofImg.onclick = () => openLightbox(order.payment_proof);
-        } else {
-            proofSection.style.display        = 'none';
-            proofMissingSection.style.display = '';
-        }
+if (order.payment_method === 'gcash') {
+    if (order.payment_proof) {
+        proofSection.style.display        = '';
+        proofMissingSection.style.display = 'none';
+        const proofImg = document.getElementById('m_proof_img');  // ← changed
+        proofImg.src = order.payment_proof;                        // ← changed
+        proofImg.style.cursor = 'zoom-in';                        // ← changed
+        proofImg.onclick = () => openLightbox(order.payment_proof); // ← changed
     } else {
         proofSection.style.display        = 'none';
-        proofMissingSection.style.display = 'none';
+        proofMissingSection.style.display = '';
     }
+} else {
+    proofSection.style.display        = 'none';
+    proofMissingSection.style.display = 'none';
+}
 
     // Items
     document.getElementById('m_items').innerHTML = order.items.map(item => `
