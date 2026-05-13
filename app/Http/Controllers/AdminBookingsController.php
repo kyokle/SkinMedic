@@ -13,6 +13,7 @@ class AdminBookingsController extends Controller
 {
     use SidebarDataController;
 
+    // ── Auto-complete helper ──────────────────────────────────
     private function autoComplete(): void
     {
         $expired = DB::table('appointments')
@@ -36,6 +37,73 @@ class AdminBookingsController extends Controller
         }
     }
 
+    // ── Auto-cancel helper ───────────────────────────────────
+    private function autoCancel(): void
+    {
+        $nowManila = \Carbon\Carbon::now('Asia/Manila');
+
+        $expired = DB::table('appointments')
+            ->where('status', 'pending')
+            ->where(function ($query) use ($nowManila) {
+                $query->where('appointment_date', '<', $nowManila->toDateString())
+                      ->orWhere(function ($q) use ($nowManila) {
+                          $q->where('appointment_date', '=', $nowManila->toDateString())
+                            ->where('appointment_time', '<', $nowManila->format('H:i:s'));
+                      });
+            })
+            ->get();
+
+        foreach ($expired as $appt) {
+            DB::table('appointments')
+                ->where('appointment_id', $appt->appointment_id)
+                ->update([
+                    'status'        => 'cancelled',
+                    'cancel_reason' => 'expired_no_approval',
+                    'updated_at'    => now(),
+                ]);
+
+            // Notify patient
+            NotificationHelper::send(
+                $appt->user_id,
+                'Appointment Cancelled',
+                "Your appointment on {$appt->appointment_date} at {$appt->appointment_time} was automatically cancelled because it was not approved before the scheduled time.",
+                'cancelled',
+                $appt->appointment_id
+            );
+
+            // Notify doctor
+            $doctor = DB::table('doctor')->where('doctor_id', $appt->doctor_id)->first();
+            if ($doctor && $doctor->user_id) {
+                NotificationHelper::send(
+                    $doctor->user_id,
+                    'Appointment Auto-Cancelled',
+                    "Appointment #{$appt->appointment_id} on {$appt->appointment_date} at {$appt->appointment_time} was automatically cancelled (no approval before scheduled time).",
+                    'cancelled',
+                    $appt->appointment_id
+                );
+            }
+
+            // Notify admin/admin
+            $adminStaff = DB::table('users')->whereIn('role', ['admin', 'staff'])->get();
+            foreach ($adminStaff as $u) {
+                NotificationHelper::send(
+                    $u->user_id,
+                    'Appointment Auto-Cancelled',
+                    "Appointment #{$appt->appointment_id} on {$appt->appointment_date} at {$appt->appointment_time} was automatically cancelled (no approval before scheduled time).",
+                    'cancelled',
+                    $appt->appointment_id
+                );
+            }
+
+            // Free the slot for waitlisted patients
+            WaitlistController::notifyNext(
+                $appt->appointment_date,
+                $appt->appointment_time
+            );
+        }
+    }
+
+    // ── FIFO deduction helper ─────────────────────────────────
     private function deductInventory(int $appointmentId, int $serviceId): void
     {
         $serviceProducts = DB::table('service_products')
@@ -93,19 +161,21 @@ class AdminBookingsController extends Controller
         }
     }
 
+    // ── GET /admin/bookings ───────────────────────────────────
     public function index(Request $request)
     {
-        if (!in_array(Session::get('role'), ['admin', 'staff'])) {
+        if (!in_array(Session::get('role'), ['staff', 'admin'])) {
             return redirect()->route('index');
         }
 
         $this->autoComplete();
+        $this->autoCancel();
 
         $bookings = DB::table('appointments as a')
             ->leftJoin('services as s', 'a.service_id', '=', 's.service_id')
             ->leftJoin('users as p',    'a.user_id',    '=', 'p.user_id')
-            ->leftJoin('doctor as doc',  'a.doctor_id',  '=', 'doc.doctor_id')
-            ->leftJoin('users as d',     'doc.user_id',  '=', 'd.user_id')
+            ->leftJoin('doctor as doc',  'a.doctor_id',     '=', 'doc.doctor_id')
+            ->leftJoin('users as d',     'doc.user_id',     '=', 'd.user_id')
             ->selectRaw("
                 a.appointment_id,
                 s.name AS service_name,
@@ -121,15 +191,21 @@ class AdminBookingsController extends Controller
 
         $activeFilter = $request->query('filter', 'all');
 
+        $doctors = DB::table('users')
+            ->where('role', 'doctor')
+            ->orderBy('firstName')
+            ->get();
+
         return view('admin_bookings', array_merge(
-            $this->sidebarData(),
-            compact('bookings', 'activeFilter')
-        ));
+    $this->sidebarData(),
+    compact('bookings', 'activeFilter', 'doctors')
+    ));
     }
 
+    // ── POST /admin/bookings/update-status ────────────────────
     public function updateStatus(Request $request)
     {
-        if (!in_array(Session::get('role'), ['admin', 'staff'])) {
+        if (!in_array(Session::get('role'), ['staff', 'admin'])) {
             return redirect()->route('index');
         }
 
@@ -140,6 +216,68 @@ class AdminBookingsController extends Controller
 
         if ($appt->status === 'cancelled') {
             return back()->with('error', 'This booking was already cancelled.');
+        }
+
+        // ── Guard: block approving/completing a past pending appointment ──
+        if ($appt->status === 'pending' && in_array($status, ['approved', 'completed'])) {
+            $apptDateTime = \Carbon\Carbon::parse(
+                $appt->appointment_date . ' ' . $appt->appointment_time,
+                'Asia/Manila'
+            );
+
+            if ($apptDateTime->isPast()) {
+                DB::table('appointments')
+                    ->where('appointment_id', $id)
+                    ->update([
+                        'status'        => 'cancelled',
+                        'cancel_reason' => 'expired_no_approval',
+                        'updated_at'    => now(),
+                    ]);
+
+                // Notify patient
+                $patient = DB::table('users')->where('user_id', $appt->user_id)->first();
+                if ($patient) {
+                    NotificationHelper::send(
+                        $patient->user_id,
+                        'Appointment Cancelled',
+                        "Your appointment on {$appt->appointment_date} at {$appt->appointment_time} was automatically cancelled because it was not approved before the scheduled time.",
+                        'cancelled',
+                        $id
+                    );
+                }
+
+                // Notify doctor
+                $doctor = DB::table('doctor')->where('doctor_id', $appt->doctor_id)->first();
+                if ($doctor && $doctor->user_id) {
+                    NotificationHelper::send(
+                        $doctor->user_id,
+                        'Appointment Auto-Cancelled',
+                        "Appointment #{$id} on {$appt->appointment_date} at {$appt->appointment_time} was automatically cancelled (no approval before scheduled time).",
+                        'cancelled',
+                        $id
+                    );
+                }
+
+                // Notify admin/staff
+                $adminStaff = DB::table('users')->whereIn('role', ['admin', 'staff'])->get();
+                foreach ($adminStaff as $u) {
+                    NotificationHelper::send(
+                        $u->user_id,
+                        'Appointment Auto-Cancelled',
+                        "Appointment #{$id} on {$appt->appointment_date} at {$appt->appointment_time} was automatically cancelled (no approval before scheduled time).",
+                        'cancelled',
+                        $id
+                    );
+                }
+
+                // Free up the slot for waitlisted patients
+                WaitlistController::notifyNext(
+                    $appt->appointment_date,
+                    $appt->appointment_time
+                );
+
+                return back()->with('error', 'This appointment already passed without approval and has been automatically cancelled.');
+            }
         }
 
         DB::table('appointments')
@@ -214,6 +352,15 @@ class AdminBookingsController extends Controller
                 $appt->appointment_date,
                 $appt->appointment_time
             );
+        }
+
+        // After completing an appointment, redirect to walk-in sale
+        // with patient and appointment pre-filled for billing
+        if ($status === 'completed') {
+            return redirect()->route('admin.walkin', [
+                'from_appointment' => $id,
+                'patient_id'       => $appt->user_id,
+            ])->with('from_booking', 'Appointment completed — patient details pre-filled for billing.');
         }
 
         return redirect()->route('admin.bookings');
