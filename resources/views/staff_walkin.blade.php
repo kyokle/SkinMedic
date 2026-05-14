@@ -220,23 +220,23 @@
                     </tr>
                 </thead>
                 <tbody id="salesBody">
-                    @foreach($recentSales as $rs)
-                    <tr class="sale-row"
-                        data-patient="{{ strtolower($rs->patient_name) }}"
-                        data-staff="{{ strtolower($rs->staff_name) }}"
-                        data-payment="{{ $rs->payment_method }}"
-                        data-date="{{ \Carbon\Carbon::parse($rs->created_at)->format('Y-m-d') }}">
-                        <td>{{ $rs->sale_id }}</td>
-                        <td>{{ $rs->patient_name }}</td>
-                        <td>{{ $rs->staff_name }}</td>
-                        <td>₱{{ number_format($rs->total_amount, 2) }}</td>
-                        <td><span class="pay-badge {{ $rs->payment_method }}">{{ strtoupper($rs->payment_method) }}</span></td>
-                        <td>{{ \Carbon\Carbon::parse($rs->created_at)->format('M j, Y g:i A') }}</td>
-                        <td>
-                            <a href="{{ session('role') === 'admin' ? route('admin.walkin.receipt', $rs->sale_id) : route('staff.walkin.receipt', $rs->sale_id) }}" class="receipt-link">Receipt</a>
-                        </td>
-                    </tr>
-                    @endforeach
+@foreach($recentSales as $rs)
+<tr class="sale-row"
+    data-patient="{{ strtolower($rs->patient_name) }}"
+    data-staff="{{ strtolower($rs->staff_name) }}"
+    data-payment="{{ $rs->payment_method }}"
+    data-date="{{ \Carbon\Carbon::parse($rs->created_at)->format('Y-m-d') }}">
+    <td data-label="#">{{ $rs->sale_id }}</td>
+    <td data-label="Patient">{{ $rs->patient_name }}</td>
+    <td data-label="Staff">{{ $rs->staff_name }}</td>
+    <td data-label="Total">₱{{ number_format($rs->total_amount, 2) }}</td>
+    <td data-label="Payment"><span class="pay-badge {{ $rs->payment_method }}">{{ strtoupper($rs->payment_method) }}</span></td>
+    <td data-label="Date">{{ \Carbon\Carbon::parse($rs->created_at)->format('M j, Y g:i A') }}</td>
+    <td>
+        <a href="..." class="receipt-link">Receipt</a>
+    </td>
+</tr>
+@endforeach
                 </tbody>
             </table>
             <p id="noResults" style="display:none;text-align:center;color:#aaa;padding:20px;">No sales match your filters.</p>
