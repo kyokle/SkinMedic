@@ -978,9 +978,87 @@
     margin-bottom: 8px;
 }
 /* ── Mobile: Recent Sales cards instead of table ── */
+/* ── Responsive ── */
+@media (max-width: 1024px) {
+    .walkin-grid { grid-template-columns: 1fr; }
+    .walkin-wrap { padding: 24px 20px; }
+}
+
 @media (max-width: 768px) {
 
-    /* Force the table wrapper to not clip */
+    /* ── Fix page wrapper ── */
+    .walkin-wrap {
+        margin-left: 0 !important;
+        width: 100% !important;
+        padding: 12px 14px;
+        box-sizing: border-box;
+    }
+
+    /* ── Topbar ── */
+    .topbar {
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+
+    .topbar > div:last-child {
+        width: 100%;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    .date-box { display: none; }
+
+    .toggle-tabs {
+        width: 100%;
+    }
+
+    .tab-btn {
+        flex: 1;
+        justify-content: center;
+    }
+
+    /* ── Form layout ── */
+    .service-line-grid { grid-template-columns: 1fr; }
+
+    /* ── Receipt ── */
+    .receipt-card { padding: 24px 20px; }
+    .receipt-info-grid { grid-template-columns: 1fr; }
+    .receipt-totals { max-width: 100%; }
+
+    /* ── History panel — full width ── */
+    .history-panel {
+        width: 100% !important;
+        box-sizing: border-box;
+        border-radius: 10px;
+        overflow: hidden;
+    }
+
+    /* ── Filters stack vertically ── */
+    .history-filters {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 8px;
+        padding: 12px 14px;
+    }
+
+    .hf-search-wrap {
+        min-width: unset;
+        width: 100%;
+        box-sizing: border-box;
+    }
+
+    .hf-select {
+        width: 100%;
+        box-sizing: border-box;
+    }
+
+    .hf-clear {
+        width: 100%;
+        text-align: center;
+        box-sizing: border-box;
+    }
+
+    /* ── Table → card layout ── */
     .history-table-wrap {
         overflow-x: visible;
     }
@@ -998,25 +1076,28 @@
         display: flex;
         flex-direction: column;
         gap: 10px;
-        padding: 10px 14px;
+        padding: 12px 14px 16px;
+        width: 100%;
+        box-sizing: border-box;
     }
 
     .history-table-wrap .recent-table tr.sale-row {
-        display: grid;
-        grid-template-columns: 1fr;
+        display: block;
         border: 1px solid #eef0ec;
         border-radius: 10px;
         background: #fff;
         box-shadow: 0 1px 4px rgba(0,0,0,0.05);
         overflow: hidden;
         width: 100%;
+        box-sizing: border-box;
     }
 
-    /* Hide sale ID column */
+    /* Hide sale # cell */
     .history-table-wrap .recent-table td:nth-child(1) {
-        display: none;
+        display: none !important;
     }
 
+    /* All cells become label-value rows */
     .history-table-wrap .recent-table td {
         display: flex !important;
         justify-content: space-between;
@@ -1027,17 +1108,16 @@
         color: #333;
         width: 100%;
         box-sizing: border-box;
-        /* Reset any table-cell defaults */
-        float: none;
     }
 
-    .history-table-wrap .recent-table td:nth-last-child(1) {
+    /* Receipt link row */
+    .history-table-wrap .recent-table td:last-child {
         border-bottom: none;
         justify-content: flex-end;
         background: #fafafa;
-        padding: 9px 14px;
     }
 
+    /* Label injected via ::before from data-label */
     .history-table-wrap .recent-table td::before {
         content: attr(data-label);
         font-size: 0.72rem;
@@ -1050,33 +1130,20 @@
         white-space: nowrap;
     }
 
-    .history-table-wrap .recent-table td:nth-last-child(1)::before {
+    .history-table-wrap .recent-table td:last-child::before {
         display: none;
     }
 
+    /* Receipt link styled as pill button */
     .receipt-link {
         display: inline-block;
-        padding: 6px 14px;
+        padding: 6px 16px;
         background: #f0f7e6;
         border: 1.5px solid #b5d97a;
         border-radius: 7px;
         font-size: 0.82rem;
-    }
-
-    /* Stack filters vertically */
-    .history-filters {
-        flex-direction: column;
-        align-items: stretch;
-        gap: 8px;
-        padding: 12px 14px;
-    }
-
-    .hf-search-wrap {
-        min-width: unset;
-        width: 100%;
-    }
-
-    .hf-select {
-        width: 100%;
+        color: #80a833;
+        font-weight: 700;
+        text-decoration: none;
     }
 }
