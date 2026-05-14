@@ -125,6 +125,8 @@ Route::post('/patient/order/place', [PatientProductsController::class, 'placeOrd
 Route::get('/patient/orders', [PatientOrdersController::class, 'index'])
     ->name('patient.orders');
 
+    Route::post('/patient/orders/cancel', [StaffOrdersController::class, 'patientCancel'])->name('patient.orders.cancel');
+
 // ── Patient Profile ──────────────────────────────────
 Route::get('/patient/profile',                  [PatientProfileController::class,  'index'])->name('patient.profile');
 Route::post('/patient/profile/upload-pic',      [PatientProfileController::class,  'uploadPic'])->name('patient.profile.upload-pic');

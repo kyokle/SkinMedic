@@ -40,13 +40,13 @@
 
     {{-- ── STATUS TABS ── --}}
     <div class="filter-tabs">
-        <button class="{{ $activeFilter === 'all'       ? 'active' : '' }}" onclick="setTab('all',       this)">All</button>
-        <button class="{{ $activeFilter === 'pending'   ? 'active' : '' }}" onclick="setTab('pending',   this)">Pending</button>
-        <button class="{{ $activeFilter === 'confirmed' ? 'active' : '' }}" onclick="setTab('confirmed', this)">Confirmed</button>
-        <button class="{{ $activeFilter === 'packing'   ? 'active' : '' }}" onclick="setTab('processing',   this)">Packing</button>
-        <button class="{{ $activeFilter === 'ready'     ? 'active' : '' }}" onclick="setTab('ready_for_pickup',     this)">Ready for Pick-up</button>
-        <button class="{{ $activeFilter === 'completed' ? 'active' : '' }}" onclick="setTab('completed', this)">Completed</button>
-        <button class="{{ $activeFilter === 'cancelled' ? 'active' : '' }}" onclick="setTab('cancelled', this)">Cancelled</button>
+        <button class="{{ $activeFilter === 'all'              ? 'active' : '' }}" onclick="setTab('all',              this)">All</button>
+        <button class="{{ $activeFilter === 'pending'          ? 'active' : '' }}" onclick="setTab('pending',          this)">Pending</button>
+        <button class="{{ $activeFilter === 'confirmed'        ? 'active' : '' }}" onclick="setTab('confirmed',        this)">Confirmed</button>
+        <button class="{{ $activeFilter === 'processing'       ? 'active' : '' }}" onclick="setTab('processing',       this)">Packing</button>
+        <button class="{{ $activeFilter === 'ready_for_pickup' ? 'active' : '' }}" onclick="setTab('ready_for_pickup', this)">Ready for Pick-up</button>
+        <button class="{{ $activeFilter === 'completed'        ? 'active' : '' }}" onclick="setTab('completed',        this)">Completed</button>
+        <button class="{{ $activeFilter === 'cancelled'        ? 'active' : '' }}" onclick="setTab('cancelled',        this)">Cancelled</button>
     </div>
 
     {{-- ── SEARCH BAR ── --}}
@@ -192,16 +192,31 @@
                 <div class="status-timeline" id="modalTimeline"></div>
             </div>
 
-            {{-- Action buttons --}}
+            {{-- Cancellation reason (shown only when cancelled) --}}
+            <div id="cancelReasonSection" class="modal-section" style="display:none">
+                <p class="section-label">Cancellation Details</p>
+                <div class="cancel-reason-box">
+                    <strong>Reason</strong>
+                    <span id="m_cancel_reason"></span>
+                </div>
+                <div id="cancelNotesRow" class="cancel-reason-box" style="display:none;margin-top:8px;">
+                    <strong>Notes</strong>
+                    <span id="m_cancel_notes"></span>
+                </div>
+            </div>
+
+            {{-- Action buttons (staff) --}}
             <form method="POST"
                   action="{{ session('role') === 'admin'
                       ? route('admin.orders.update-status')
                       : route('staff.orders.update-status') }}"
                   id="orderStatusForm">
                 @csrf
-                <input type="hidden" name="order_id"    id="form_order_id">
-                <input type="hidden" name="status"      id="form_status">
-                <input type="hidden" name="pay_status"  id="form_pay_status">
+                <input type="hidden" name="order_id"      id="form_order_id">
+                <input type="hidden" name="status"        id="form_status">
+                <input type="hidden" name="pay_status"    id="form_pay_status">
+                <input type="hidden" name="cancel_reason" id="form_cancel_reason">
+                <input type="hidden" name="cancel_notes"  id="form_cancel_notes">
 
                 <div id="actionArea" class="action-area"></div>
             </form>
@@ -332,6 +347,28 @@ function openModal(id) {
         </div>
     `).join('');
 
+    // Cancellation reason section
+    const cancelSection  = document.getElementById('cancelReasonSection');
+    const cancelNotesRow = document.getElementById('cancelNotesRow');
+    if (order.status === 'cancelled' && order.cancel_reason) {
+        const reasonLabels = {
+            'out_of_stock':     'Out of stock',
+            'duplicate_order':  'Duplicate order',
+            'patient_request':  'Patient request',
+            'other':            'Other',
+        };
+        document.getElementById('m_cancel_reason').textContent = reasonLabels[order.cancel_reason] || order.cancel_reason;
+        cancelSection.style.display = '';
+        if (order.cancel_notes) {
+            document.getElementById('m_cancel_notes').textContent = order.cancel_notes;
+            cancelNotesRow.style.display = '';
+        } else {
+            cancelNotesRow.style.display = 'none';
+        }
+    } else {
+        cancelSection.style.display = 'none';
+    }
+
     // Timeline
     renderTimeline(order.status);
 
@@ -347,8 +384,8 @@ function closeModal() {
 
 /* ── LIGHTBOX ── */
 function openLightbox(src) {
-    document.getElementById('imgLightboxSrc').src    = src;
-    document.getElementById('imgLightbox').style.display = 'flex'; // ← use style.display, not classList
+    document.getElementById('imgLightboxSrc').src        = src;
+    document.getElementById('imgLightbox').style.display = 'flex';
     document.body.style.overflow = 'hidden';
 }
 
@@ -394,7 +431,7 @@ function renderTimeline(currentStatus) {
     }).join('');
 }
 
-/* ── ACTION BUTTONS ── */
+/* ── ACTION BUTTONS (staff) ── */
 function renderActions(status, paymentMethod, paymentStatus) {
     const area = document.getElementById('actionArea');
     let html = '';
@@ -410,12 +447,42 @@ function renderActions(status, paymentMethod, paymentStatus) {
                     : 'Confirm this order to start processing.'}
             </p>
             <div class="action-buttons">
-                <button type="button" class="btn-confirm" onclick="submitAction('confirmed', '${paymentMethod === 'gcash' ? 'paid' : ''}')">
+                <button type="button" class="btn-confirm"
+                        onclick="submitAction('confirmed', '${paymentMethod === 'gcash' ? 'paid' : ''}')">
                     ${confirmLabel}
                 </button>
-                <button type="button" class="btn-cancel" onclick="submitAction('cancelled', '')">
+                <button type="button" class="btn-cancel" onclick="showCancelPanel(this)">
                     ✕ Cancel Order
                 </button>
+            </div>
+            <div id="cancelPanel" class="cancel-panel" style="display:none;margin-top:12px;">
+                <p>⚠ Please select a reason for cancellation:</p>
+                <div>
+                    <label for="cp_reason">Reason <span style="color:#c0392b">*</span></label>
+                    <select id="cp_reason">
+                        <option value="">— Select reason —</option>
+                        <option value="out_of_stock">Out of stock</option>
+                        <option value="duplicate_order">Duplicate order</option>
+                        <option value="patient_request">Patient request</option>
+                        <option value="other">Other</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="cp_notes">Notes (optional)</label>
+                    <textarea id="cp_notes" placeholder="Add any additional details…"></textarea>
+                </div>
+                <div class="cancel-panel-buttons">
+                    <button type="button" class="btn-cancel"
+                            style="flex:1"
+                            onclick="confirmCancelSubmit()">
+                        ✕ Confirm Cancellation
+                    </button>
+                    <button type="button" class="reset-btn"
+                            style="flex:1"
+                            onclick="hideCancelPanel()">
+                        Go Back
+                    </button>
+                </div>
             </div>`;
     } else if (status === 'confirmed') {
         html = `
@@ -424,9 +491,38 @@ function renderActions(status, paymentMethod, paymentStatus) {
                 <button type="button" class="btn-pack" onclick="submitAction('processing', '')">
                     📦 Start Packing
                 </button>
-                <button type="button" class="btn-cancel" onclick="submitAction('cancelled', '')">
+                <button type="button" class="btn-cancel" onclick="showCancelPanel(this)">
                     ✕ Cancel Order
                 </button>
+            </div>
+            <div id="cancelPanel" class="cancel-panel" style="display:none;margin-top:12px;">
+                <p>⚠ Please select a reason for cancellation:</p>
+                <div>
+                    <label for="cp_reason">Reason <span style="color:#c0392b">*</span></label>
+                    <select id="cp_reason">
+                        <option value="">— Select reason —</option>
+                        <option value="out_of_stock">Out of stock</option>
+                        <option value="duplicate_order">Duplicate order</option>
+                        <option value="patient_request">Patient request</option>
+                        <option value="other">Other</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="cp_notes">Notes (optional)</label>
+                    <textarea id="cp_notes" placeholder="Add any additional details…"></textarea>
+                </div>
+                <div class="cancel-panel-buttons">
+                    <button type="button" class="btn-cancel"
+                            style="flex:1"
+                            onclick="confirmCancelSubmit()">
+                        ✕ Confirm Cancellation
+                    </button>
+                    <button type="button" class="reset-btn"
+                            style="flex:1"
+                            onclick="hideCancelPanel()">
+                        Go Back
+                    </button>
+                </div>
             </div>`;
     } else if (status === 'processing') {
         html = `
@@ -435,9 +531,38 @@ function renderActions(status, paymentMethod, paymentStatus) {
                 <button type="button" class="btn-ready" onclick="submitAction('ready_for_pickup', '')">
                     🏪 Mark as Ready for Pick-up
                 </button>
-                <button type="button" class="btn-cancel" onclick="submitAction('cancelled', '')">
+                <button type="button" class="btn-cancel" onclick="showCancelPanel(this)">
                     ✕ Cancel Order
                 </button>
+            </div>
+            <div id="cancelPanel" class="cancel-panel" style="display:none;margin-top:12px;">
+                <p>⚠ Please select a reason for cancellation:</p>
+                <div>
+                    <label for="cp_reason">Reason <span style="color:#c0392b">*</span></label>
+                    <select id="cp_reason">
+                        <option value="">— Select reason —</option>
+                        <option value="out_of_stock">Out of stock</option>
+                        <option value="duplicate_order">Duplicate order</option>
+                        <option value="patient_request">Patient request</option>
+                        <option value="other">Other</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="cp_notes">Notes (optional)</label>
+                    <textarea id="cp_notes" placeholder="Add any additional details…"></textarea>
+                </div>
+                <div class="cancel-panel-buttons">
+                    <button type="button" class="btn-cancel"
+                            style="flex:1"
+                            onclick="confirmCancelSubmit()">
+                        ✕ Confirm Cancellation
+                    </button>
+                    <button type="button" class="reset-btn"
+                            style="flex:1"
+                            onclick="hideCancelPanel()">
+                        Go Back
+                    </button>
+                </div>
             </div>`;
     } else if (status === 'ready_for_pickup') {
         html = `
@@ -452,6 +577,32 @@ function renderActions(status, paymentMethod, paymentStatus) {
     }
 
     area.innerHTML = html;
+}
+
+/* ── CANCEL PANEL HELPERS ── */
+function showCancelPanel(btn) {
+    btn.style.display = 'none';
+    const panel = document.getElementById('cancelPanel');
+    if (panel) panel.style.display = 'flex';
+}
+
+function hideCancelPanel() {
+    const panel = document.getElementById('cancelPanel');
+    if (panel) panel.style.display = 'none';
+    // restore the cancel button
+    const cancelBtns = document.querySelectorAll('#actionArea .btn-cancel');
+    cancelBtns.forEach(b => b.style.display = '');
+}
+
+function confirmCancelSubmit() {
+    const reason = document.getElementById('cp_reason')?.value;
+    if (!reason) {
+        alert('Please select a cancellation reason.');
+        return;
+    }
+    document.getElementById('form_cancel_reason').value = reason;
+    document.getElementById('form_cancel_notes').value  = document.getElementById('cp_notes')?.value || '';
+    submitAction('cancelled', '');
 }
 
 function submitAction(status, payStatus) {

@@ -6,6 +6,159 @@
 @push('styles')
     <link rel="stylesheet" href="{{ asset('asset/css/patient_orders.css') }}">
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,300&family=Fraunces:ital,wght@0,700;1,500&display=swap" rel="stylesheet">
+    <style>
+        /* ── INLINE CANCEL PANEL ── */
+        .cancel-trigger-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 7px 14px;
+            border-radius: 8px;
+            border: 1.5px solid #f5c2c7;
+            background: #fff5f6;
+            color: #c0392b;
+            font-size: 0.78rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background 0.18s, border-color 0.18s;
+        }
+        .cancel-trigger-btn:hover {
+            background: #fce8ea;
+            border-color: #e57373;
+        }
+        .cancel-trigger-btn svg {
+            flex-shrink: 0;
+        }
+
+        /* Panel wrapper — hidden by default */
+        .cancel-panel {
+            display: none;
+            flex-direction: column;
+            gap: 12px;
+            margin-top: 14px;
+            padding: 16px 18px;
+            border-radius: 10px;
+            border: 1.5px solid #f5c2c7;
+            background: #fff9f9;
+            animation: panelSlideIn 0.2s ease;
+        }
+        .cancel-panel.open {
+            display: flex;
+        }
+        @keyframes panelSlideIn {
+            from { opacity: 0; transform: translateY(-6px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        .cancel-panel-title {
+            font-size: 0.82rem;
+            font-weight: 600;
+            color: #b91c1c;
+            margin: 0 0 2px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .cancel-panel label {
+            font-size: 0.78rem;
+            font-weight: 500;
+            color: #555;
+            margin-bottom: 4px;
+            display: block;
+        }
+
+        .cancel-panel select,
+        .cancel-panel textarea {
+            width: 100%;
+            box-sizing: border-box;
+            border-radius: 7px;
+            border: 1.4px solid #e2c4c4;
+            background: #fff;
+            font-size: 0.8rem;
+            color: #333;
+            padding: 8px 11px;
+            outline: none;
+            font-family: inherit;
+            transition: border-color 0.15s;
+        }
+        .cancel-panel select:focus,
+        .cancel-panel textarea:focus {
+            border-color: #e57373;
+        }
+        .cancel-panel textarea {
+            resize: vertical;
+            min-height: 68px;
+        }
+
+        .cancel-panel-actions {
+            display: flex;
+            gap: 8px;
+            justify-content: flex-end;
+            flex-wrap: wrap;
+        }
+
+        .cancel-back-btn {
+            padding: 7px 16px;
+            border-radius: 8px;
+            border: 1.4px solid #ddd;
+            background: #fff;
+            color: #555;
+            font-size: 0.78rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+        .cancel-back-btn:hover {
+            background: #f5f5f5;
+        }
+
+        .cancel-confirm-btn {
+            padding: 7px 16px;
+            border-radius: 8px;
+            border: none;
+            background: #c0392b;
+            color: #fff;
+            font-size: 0.78rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.15s, opacity 0.15s;
+        }
+        .cancel-confirm-btn:hover {
+            background: #a93226;
+        }
+        .cancel-confirm-btn:disabled {
+            opacity: 0.55;
+            cursor: not-allowed;
+        }
+
+        /* ── CANCELLATION DETAILS BOX (on cancelled orders) ── */
+        .cancellation-details {
+            margin-top: 14px;
+            padding: 13px 16px;
+            border-radius: 10px;
+            border: 1.4px solid #f5c2c7;
+            background: #fff5f6;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .cancellation-details-title {
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: #b91c1c;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 4px;
+        }
+        .cancellation-detail-row {
+            font-size: 0.8rem;
+            color: #555;
+        }
+        .cancellation-detail-row strong {
+            color: #333;
+        }
+    </style>
 @endpush
 
 @section('content')
@@ -173,12 +326,81 @@
                         🧾 View Proof
                     </button>
                 @endif
+
+                {{-- ── CANCEL TRIGGER — only for pending / confirmed ── --}}
+                @if(in_array($order->status, ['pending', 'confirmed']))
+                    <button class="cancel-trigger-btn"
+                            onclick="toggleCancelPanel({{ $order->id }}, this)"
+                            id="cancel-trigger-{{ $order->id }}">
+                        <svg viewBox="0 0 20 20" fill="none" width="13" height="13">
+                            <circle cx="10" cy="10" r="8" stroke="currentColor" stroke-width="1.5"/>
+                            <path d="M7 7l6 6M13 7l-6 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                        </svg>
+                        Cancel Order
+                    </button>
+                @endif
+
                 <div class="order-total-wrap">
                     <span class="total-label">Total</span>
                     <span class="total-amount">₱{{ number_format($order->total, 2) }}</span>
                 </div>
             </div>
         </div>
+
+        {{-- ── INLINE CANCEL PANEL ── --}}
+        @if(in_array($order->status, ['pending', 'confirmed']))
+        <div class="cancel-panel" id="cancel-panel-{{ $order->id }}">
+            <p class="cancel-panel-title">
+                <svg viewBox="0 0 20 20" fill="none" width="14" height="14">
+                    <circle cx="10" cy="10" r="8" stroke="currentColor" stroke-width="1.5"/>
+                    <path d="M10 6v4.5M10 13.5v.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                </svg>
+                Cancel Order #{{ $order->id }}
+            </p>
+
+            <form method="POST" action="{{ route('patient.orders.cancel', $order->id) }}"
+                  id="cancel-form-{{ $order->id }}"
+                  onsubmit="return confirmCancel({{ $order->id }})">
+                @csrf
+                @method('PATCH')
+
+                <div>
+                    <label for="cancel-reason-{{ $order->id }}">Reason for cancellation <span style="color:#c0392b">*</span></label>
+                    <select name="cancel_reason"
+                            id="cancel-reason-{{ $order->id }}"
+                            required
+                            onchange="updateCancelBtn({{ $order->id }}, this.value)">
+                        <option value="" disabled selected>Select a reason…</option>
+                        <option value="changed_mind">I changed my mind</option>
+                        <option value="wrong_item">Ordered the wrong item</option>
+                        <option value="found_better_price">Found a better price elsewhere</option>
+                        <option value="too_long">Taking too long</option>
+                        <option value="duplicate_order">Duplicate order</option>
+                        <option value="other">Other</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label for="cancel-notes-{{ $order->id }}">Additional notes <span style="color:#aaa;font-weight:400">(optional)</span></label>
+                    <textarea name="cancel_notes"
+                              id="cancel-notes-{{ $order->id }}"
+                              placeholder="Tell us more (optional)…"
+                              maxlength="500"></textarea>
+                </div>
+
+                <div class="cancel-panel-actions">
+                    <button type="button" class="cancel-back-btn"
+                            onclick="toggleCancelPanel({{ $order->id }})">
+                        ← Back
+                    </button>
+                    <button type="submit" class="cancel-confirm-btn" disabled
+                            id="cancel-submit-{{ $order->id }}">
+                        Confirm Cancellation
+                    </button>
+                </div>
+            </form>
+        </div>
+        @endif
 
         {{-- Order Status Timeline --}}
         <div class="order-timeline">
@@ -214,6 +436,34 @@
                 @endforeach
             @endif
         </div>
+
+        {{-- ── CANCELLATION DETAILS (visible on cancelled orders) ── --}}
+        @if($order->status === 'cancelled' && ($order->cancel_reason || $order->cancel_notes))
+        <div class="cancellation-details">
+            <p class="cancellation-details-title">✕ Cancellation Details</p>
+            @if($order->cancel_reason)
+            <p class="cancellation-detail-row">
+                <strong>Reason:</strong>
+                @php
+                    $reasonLabels = [
+                        'changed_mind'       => 'I changed my mind',
+                        'wrong_item'         => 'Ordered the wrong item',
+                        'found_better_price' => 'Found a better price elsewhere',
+                        'too_long'           => 'Taking too long',
+                        'duplicate_order'    => 'Duplicate order',
+                        'other'              => 'Other',
+                    ];
+                @endphp
+                {{ $reasonLabels[$order->cancel_reason] ?? ucfirst(str_replace('_', ' ', $order->cancel_reason)) }}
+            </p>
+            @endif
+            @if($order->cancel_notes)
+            <p class="cancellation-detail-row">
+                <strong>Notes:</strong> {{ $order->cancel_notes }}
+            </p>
+            @endif
+        </div>
+        @endif
 
     </div>
     @empty
@@ -298,6 +548,47 @@ function closeProof(e) {
     if (!e || e.target === document.getElementById('proofLightbox')) {
         document.getElementById('proofLightbox').style.display = 'none';
     }
+}
+
+/* ── CANCEL PANEL ── */
+
+/**
+ * Toggle the inline cancel panel for a given order.
+ * Closes any other open panels first.
+ */
+function toggleCancelPanel(orderId, triggerBtn) {
+    const panel   = document.getElementById('cancel-panel-' + orderId);
+    const trigger = triggerBtn || document.getElementById('cancel-trigger-' + orderId);
+    const isOpen  = panel.classList.contains('open');
+
+    // Close all open panels first
+    document.querySelectorAll('.cancel-panel.open').forEach(p => p.classList.remove('open'));
+
+    if (!isOpen) {
+        panel.classList.add('open');
+        // Scroll panel into view smoothly
+        setTimeout(() => panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 50);
+    }
+}
+
+/**
+ * Enable/disable the submit button based on whether a reason is selected.
+ */
+function updateCancelBtn(orderId, value) {
+    const btn = document.getElementById('cancel-submit-' + orderId);
+    btn.disabled = !value;
+}
+
+/**
+ * Final confirmation before submitting the cancel form.
+ */
+function confirmCancel(orderId) {
+    const reason = document.getElementById('cancel-reason-' + orderId).value;
+    if (!reason) {
+        alert('Please select a cancellation reason.');
+        return false;
+    }
+    return confirm('Are you sure you want to cancel this order? This cannot be undone.');
 }
 </script>
 @endpush

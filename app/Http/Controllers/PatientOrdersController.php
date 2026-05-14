@@ -44,4 +44,48 @@ class PatientOrdersController extends Controller
             compact('orders')
         ));
     }
+
+    // ─────────────────────────────────────────
+    // PATCH  /patient/orders/{id}/cancel
+    // ─────────────────────────────────────────
+    public function cancel(Request $request, $id)
+    {
+        $userId = session('user_id');
+
+        // Validate inputs
+        $request->validate([
+            'cancel_reason' => 'required|in:changed_mind,wrong_item,found_better_price,too_long,duplicate_order,other',
+            'cancel_notes'  => 'nullable|string|max:500',
+        ]);
+
+        // Find the order and make sure it belongs to this patient
+        $order = DB::table('orders')
+            ->where('id', $id)
+            ->where('user_id', $userId)
+            ->first();
+
+        if (!$order) {
+            return redirect()->route('patient.orders')
+                ->with('error', 'Order not found.');
+        }
+
+        // Only pending or confirmed orders can be cancelled
+        if (!in_array($order->status, ['pending', 'confirmed'])) {
+            return redirect()->route('patient.orders')
+                ->with('error', 'This order can no longer be cancelled.');
+        }
+
+        // Update the order
+        DB::table('orders')
+            ->where('id', $id)
+            ->update([
+                'status'        => 'cancelled',
+                'cancel_reason' => $request->cancel_reason,
+                'cancel_notes'  => $request->cancel_notes,
+                'updated_at'    => now(),
+            ]);
+
+        return redirect()->route('patient.orders')
+            ->with('success', 'Order #' . $id . ' has been cancelled.');
+    }
 }

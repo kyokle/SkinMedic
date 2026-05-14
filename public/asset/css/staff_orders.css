@@ -507,6 +507,82 @@ body {
 }
 .proof-img-wrap img:hover { opacity: 0.85; }
 
+/* ── CANCEL PANEL (inline in action area) ────── */
+.cancel-panel {
+    background: #fff8f8;
+    border: 1.5px solid #ffb3b3;
+    border-radius: 10px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.cancel-panel p {
+    font-size: 13px;
+    font-weight: 600;
+    color: #c0392b;
+    margin: 0;
+}
+
+.cancel-panel select,
+.cancel-panel textarea {
+    width: 100%;
+    border: 1.5px solid #e0e8cc;
+    border-radius: 8px;
+    padding: 9px 12px;
+    font-family: inherit;
+    font-size: 13px;
+    color: #1e2318;
+    background: #fff;
+    outline: none;
+    resize: vertical;
+}
+
+.cancel-panel select:focus,
+.cancel-panel textarea:focus {
+    border-color: #c0392b;
+}
+
+.cancel-panel textarea {
+    min-height: 72px;
+}
+
+.cancel-panel label {
+    font-size: 11.5px;
+    font-weight: 600;
+    color: #6b7260;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    display: block;
+    margin-bottom: 4px;
+}
+
+.cancel-panel-buttons {
+    display: flex;
+    gap: 8px;
+}
+
+/* ── CANCEL REASON DISPLAY (in cancelled modal) ─ */
+.cancel-reason-box {
+    background: #fff8f8;
+    border: 1.5px solid #ffb3b3;
+    border-radius: 8px;
+    padding: 12px 14px;
+    font-size: 13px;
+    color: #7a1a1a;
+    line-height: 1.5;
+}
+
+.cancel-reason-box strong {
+    display: block;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    color: #c0392b;
+    margin-bottom: 4px;
+}
+
 /* ── RESPONSIVE ──────────────────────────────── */
 @media (max-width: 768px) {
     .main          { margin-left: 0; padding: 20px 16px 60px; }

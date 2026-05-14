@@ -31,6 +31,8 @@ class StaffOrdersController extends Controller
                 'orders.payment_status',
                 'orders.payment_proof',
                 'orders.reference',
+                'orders.cancel_reason',
+                'orders.cancel_notes',
                 'orders.created_at',
                 'orders.updated_at',
                 DB::raw("CONCAT(users.firstName, ' ', users.lastName) as patient_name")
@@ -65,9 +67,11 @@ class StaffOrdersController extends Controller
     public function updateStatus(Request $request)
     {
         $request->validate([
-            'order_id'   => 'required|integer',
-            'status'     => 'required|in:confirmed,processing,ready_for_pickup,completed,cancelled',
-            'pay_status' => 'nullable|in:paid,unpaid',
+            'order_id'      => 'required|integer',
+            'status'        => 'required|in:confirmed,processing,ready_for_pickup,completed,cancelled',
+            'pay_status'    => 'nullable|in:paid,unpaid',
+            'cancel_reason' => 'nullable|string|max:100',
+            'cancel_notes'  => 'nullable|string|max:500',
         ]);
 
         $orderId   = (int) $request->input('order_id');
@@ -85,6 +89,11 @@ class StaffOrdersController extends Controller
 
         if ($payStatus) {
             $update['payment_status'] = $payStatus;
+        }
+
+        if ($status === 'cancelled') {
+            $update['cancel_reason'] = $request->input('cancel_reason');
+            $update['cancel_notes']  = $request->input('cancel_notes') ?: null;
         }
 
         DB::table('orders')->where('id', $orderId)->update($update);
@@ -120,5 +129,48 @@ class StaffOrdersController extends Controller
             'cancelled'        => '✕ Order Cancelled',
             default            => '🛍 Order Update',
         };
+    }
+
+    // ─────────────────────────────────────────
+    // POST /patient/orders/cancel
+    // ─────────────────────────────────────────
+    public function patientCancel(Request $request)
+    {
+        $request->validate([
+            'order_id'      => 'required|integer',
+            'cancel_reason' => 'required|string|max:100',
+            'cancel_notes'  => 'nullable|string|max:500',
+        ]);
+
+        $orderId = (int) $request->input('order_id');
+        $userId  = (int) \Illuminate\Support\Facades\Session::get('user_id');
+
+        $order = DB::table('orders')
+            ->where('id', $orderId)
+            ->where('user_id', $userId)
+            ->first();
+
+        if (!$order || !in_array($order->status, ['pending', 'confirmed'])) {
+            return back()->with('error', 'This order cannot be cancelled.');
+        }
+
+        DB::table('orders')->where('id', $orderId)->update([
+            'status'        => 'cancelled',
+            'cancel_reason' => $request->input('cancel_reason'),
+            'cancel_notes'  => $request->input('cancel_notes') ?: null,
+            'updated_at'    => now(),
+        ]);
+
+        $msg      = '✕ Your order #' . $orderId . ' has been cancelled by you.';
+        $staffMsg = 'A patient has cancelled order #' . $orderId . '. Reason: ' . $request->input('cancel_reason') . '.';
+
+        NotificationHelper::send($userId, '✕ Order Cancelled', $msg);
+
+        $adminStaff = DB::table('users')->whereIn('role', ['admin', 'staff'])->get();
+        foreach ($adminStaff as $u) {
+            NotificationHelper::send($u->user_id, '✕ Order Cancelled by Patient', $staffMsg);
+        }
+
+        return back()->with('success', 'Your order has been cancelled.');
     }
 }
