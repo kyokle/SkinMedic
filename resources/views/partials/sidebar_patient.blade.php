@@ -45,7 +45,7 @@
 
         <a href="{{ route('patient.products') }}"
            class="{{ request()->routeIs('patient.products') ? 'active' : '' }}">
-            <span class="ni">🧴</span> Products
+            <span class="ni">🧴</span> Shop
         </a>
 
         <a href="{{ route('patient.orders') }}"
