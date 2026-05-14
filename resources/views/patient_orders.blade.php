@@ -110,9 +110,9 @@
             @foreach($order->items as $item)
             <div class="order-item-row">
                 <div class="oi-img-wrap">
-                    @if($item->image && $item->image !== 'default.png')
+                    @if($item->image)
                         <img src="{{ $item->image }}" alt="{{ $item->product_name }}"
-     onerror="this.src='{{ asset('uploads/default.png') }}'">
+                             onerror="this.style.display='none'">
                     @else
                         <div class="oi-img-placeholder">
                             <svg viewBox="0 0 24 24" fill="none" width="16" height="16" opacity=".3">

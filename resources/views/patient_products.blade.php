@@ -57,7 +57,7 @@
             {{-- Image --}}
             <div class="card-img-wrap">
                 @if($p->image)
-    <img src="{{ asset('storage/' . $p->image) }}"
+    <img src="{{ $p->image }}"
          alt="{{ $p->product_name }}"
          onerror="this.style.display='none'; this.parentElement.querySelector('.card-img-placeholder') && (this.parentElement.querySelector('.card-img-placeholder').style.display='flex')">
                 @else
@@ -110,7 +110,7 @@
                                         {{ $p->product_id }},
                                         '{{ addslashes($p->product_name) }}',
                                         {{ $p->selling_price }},
-                                        '{{ $p->image ? asset('storage/'.$p->image) : '' }}'
+                                        '{{ $p->image ?? '' }}'
                                     )">
                                 Add to Cart
                             </button>
