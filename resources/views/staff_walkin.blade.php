@@ -233,7 +233,7 @@
     <td data-label="Payment"><span class="pay-badge {{ $rs->payment_method }}">{{ strtoupper($rs->payment_method) }}</span></td>
     <td data-label="Date">{{ \Carbon\Carbon::parse($rs->created_at)->format('M j, Y g:i A') }}</td>
     <td>
-        <a href="..." class="receipt-link">Receipt</a>
+        <a href="{{ route('staff.walkin.receipt', $rs->sale_id) }}" class="receipt-link">Receipt</a>
     </td>
 </tr>
 @endforeach
