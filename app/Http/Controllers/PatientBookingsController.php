@@ -30,7 +30,8 @@ class PatientBookingsController extends Controller
         DB::raw("CONCAT(d.firstName, ' ', d.lastName) AS doctor_name"),
         'a.appointment_date',
         'a.appointment_time',
-        'a.status'
+        'a.status',
+        'a.cancel_reason'
     );
 
         if ($activeFilter !== 'all') {

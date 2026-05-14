@@ -82,7 +82,8 @@
                     '{{ addslashes($row->doctor_name ?? '') }}',
                     '{{ $row->appointment_date }}',
                     '{{ \Carbon\Carbon::parse($row->appointment_time)->format('H:i') }}',
-                    '{{ $row->status }}'
+                    '{{ $row->status }}',
+                    '{{ addslashes($row->cancel_reason ?? '') }}'
                 )"
                 style="cursor:pointer;">
                 <td>{{ $row->appointment_id }}</td>
@@ -156,6 +157,16 @@
                     border-bottom:1px solid #f3f3f3;font-size:0.86rem;">
             <span style="color:#888;font-weight:500;">Status</span>
             <span id="pm_status" style="font-weight:600;"></span>
+        </div>
+
+        {{-- Cancel Reason Row (only shown for cancelled appointments) --}}
+        <div id="pm_cancelReasonRow"
+             style="display:none;padding:8px 0;border-bottom:1px solid #f3f3f3;font-size:0.86rem;">
+            <div style="display:flex;justify-content:space-between;">
+                <span style="color:#888;font-weight:500;">Reason</span>
+                <span id="pm_cancelReason"
+                      style="font-weight:600;color:#dc2626;text-align:right;max-width:60%;"></span>
+            </div>
         </div>
 
         {{-- Cancel Button --}}
@@ -309,7 +320,7 @@ function applyFilters() {
     });
 }
 
-function openPatientModal(id, service, doctor, date, time, status) {
+function openPatientModal(id, service, doctor, date, time, status, cancelReason) {
     document.getElementById('patientModal').style.display = 'flex';
     document.getElementById('pm_service').innerText  = service;
     document.getElementById('pm_doctor').innerText   = doctor ? 'Dr. ' + doctor : 'Not Assigned';
@@ -321,6 +332,22 @@ function openPatientModal(id, service, doctor, date, time, status) {
     document.getElementById('pm_new_date').value     = date;
     document.getElementById('pm_new_time').value     = time;
     document.getElementById('pm_cancelConfirm').style.display = 'none';
+
+    // Cancel reason row
+    const reasonRow = document.getElementById('pm_cancelReasonRow');
+    const reasonEl  = document.getElementById('pm_cancelReason');
+    if (status === 'cancelled' && cancelReason) {
+        const labels = {
+            patient_request: 'Cancelled by you',
+            doctor_request:  'Cancelled by doctor',
+            no_show:         'No-show',
+        };
+        reasonEl.textContent    = labels[cancelReason] || cancelReason;
+        reasonRow.style.display = 'block';
+    } else {
+        reasonRow.style.display = 'none';
+        reasonEl.textContent    = '';
+    }
 
     const canAct = (status === 'pending' || status === 'approved');
     document.getElementById('pm_rescheduleSection').style.display = canAct ? 'block' : 'none';

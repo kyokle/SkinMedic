@@ -209,8 +209,9 @@ class StaffBookingsController extends Controller
             return redirect()->route('index');
         }
 
-        $id     = (int) $request->input('appointment_id');
-        $status = $request->input('status');
+        $id           = (int) $request->input('appointment_id');
+        $status       = $request->input('status');
+        $cancelReason = trim($request->input('cancel_reason', ''));
 
         $appt = DB::table('appointments')->where('appointment_id', $id)->first();
 
@@ -280,9 +281,14 @@ class StaffBookingsController extends Controller
             }
         }
 
+        $updatePayload = ['status' => $status, 'updated_at' => now()];
+        if ($status === 'cancelled' && $cancelReason !== '') {
+            $updatePayload['cancel_reason'] = $cancelReason;
+        }
+
         DB::table('appointments')
             ->where('appointment_id', $id)
-            ->update(['status' => $status]);
+            ->update($updatePayload);
 
         if ($status === 'completed') {
             $alreadyDeducted = DB::table('inventory_logs')
@@ -303,10 +309,14 @@ class StaffBookingsController extends Controller
                 ->update(['is_rescheduled' => false]);
         }
 
+        $reasonSuffix = ($status === 'cancelled' && $cancelReason !== '')
+            ? " Reason: {$cancelReason}"
+            : '';
+
         $patientMessages = [
             'approved'  => $isRescheduled ? 'Your rescheduled appointment has been approved.' : 'Your appointment has been approved.',
             'completed' => 'Your appointment has been marked as completed.',
-            'cancelled' => 'Your appointment has been cancelled.',
+            'cancelled' => 'Your appointment has been cancelled.' . $reasonSuffix,
         ];
         $patientTypes = [
             'approved'  => 'upcoming',
@@ -317,7 +327,7 @@ class StaffBookingsController extends Controller
         $staffMessages = [
             'approved'  => 'An appointment has been approved.',
             'completed' => 'An appointment has been marked as completed.',
-            'cancelled' => 'An appointment has been cancelled.',
+            'cancelled' => 'An appointment has been cancelled.' . $reasonSuffix,
         ];
         $staffTypes = [
             'approved'  => 'booking',
