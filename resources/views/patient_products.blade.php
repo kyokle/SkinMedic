@@ -425,6 +425,54 @@ function clearCart() {
     renderCart();
 }
 
+function renderCart() {
+    const container = document.getElementById('cartItems');
+    const footer    = document.getElementById('cartFooter');
+
+    if (!cart.length) {
+        footer.style.display = 'none';
+        container.innerHTML  = `
+            <div class="cart-empty" id="cartEmpty" style="display:flex">
+                <svg viewBox="0 0 48 48" fill="none" width="44" height="44" opacity=".3">
+                    <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <line x1="3" y1="6" x2="21" y2="6" stroke="currentColor" stroke-width="2"/>
+                </svg>
+                <p>Your cart is empty</p>
+            </div>`;
+        return;
+    }
+
+    footer.style.display = 'block';
+
+    const subtotal = cart.reduce((s, i) => s + i.price * i.qty, 0);
+    document.getElementById('cartSubtotal').textContent  = '₱' + subtotal.toFixed(2);
+    document.getElementById('cartTotal').textContent     = '₱' + subtotal.toFixed(2);
+    document.getElementById('cartItemCount').textContent = cart.reduce((s, i) => s + i.qty, 0);
+
+    container.innerHTML = cart.map(item => `
+        <div class="cart-item" data-id="${item.id}">
+            <div class="ci-img-wrap">
+                ${item.image
+                    ? `<img src="${item.image}" class="ci-img" alt="${item.name}" onerror="this.style.display='none'">`
+                    : `<div class="ci-img-placeholder"></div>`}
+            </div>
+            <div class="ci-info">
+                <p class="ci-name">${item.name}</p>
+                <p class="ci-price">₱${item.price.toFixed(2)} each</p>
+                <div class="ci-controls">
+                    <div class="qty-stepper small">
+                        <button class="qty-btn" onclick="updateCartQty(${item.id}, -1)">−</button>
+                        <span class="qty-val">${item.qty}</span>
+                        <button class="qty-btn" onclick="updateCartQty(${item.id}, 1)">+</button>
+                    </div>
+                    <span class="ci-subtotal">₱${(item.price * item.qty).toFixed(2)}</span>
+                </div>
+            </div>
+            <button class="ci-remove" onclick="removeFromCart(${item.id})" title="Remove">✕</button>
+        </div>
+    `).join('');
+}
+
 /* ── CART PANEL TOGGLE ───────────────────────── */
 function toggleCart() {
     const overlay = document.getElementById('cartOverlay');
