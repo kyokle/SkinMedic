@@ -7,6 +7,8 @@
 @push('styles')
 <link rel="stylesheet" href="{{ asset('asset/css/staff_walkin.css') }}">
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=Fraunces:wght@700&display=swap" rel="stylesheet">
+{{-- Tom Select --}}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.css">
 @endpush
 
 @section('content')
@@ -75,7 +77,7 @@
                 <div class="card">
                     <div class="card-title">👤 Patient</div>
                     <select name="user_id" id="patientSelect" required class="full-select">
-                        <option value="">— Select registered patient —</option>
+                        <option value="">— Search or select patient —</option>
                         @foreach($patients as $p)
                             <option value="{{ $p->user_id }}" {{ old('user_id') == $p->user_id ? 'selected' : '' }}>
                                 {{ $p->firstName }} {{ $p->lastName }} ({{ $p->email }})
@@ -92,8 +94,8 @@
                     <div class="card-title">🛍 Products</div>
                     <div id="productLines">
                         <div class="product-line" data-index="0">
-                            <select name="items[0][product_id]" class="prod-select" onchange="updateLinePrice(this)">
-                                <option value="">— Select product —</option>
+                            <select name="items[0][product_id]" class="prod-select" id="prodSelect_0">
+                                <option value="">— Search product —</option>
                                 @foreach($products as $prod)
                                     <option value="{{ $prod->product_id }}"
                                             data-price="{{ $prod->selling_price }}"
@@ -105,7 +107,7 @@
                                 @endforeach
                             </select>
                             <input type="number" name="items[0][quantity]" class="qty-input"
-                                   min="1" value="1" placeholder="Qty" onchange="recalcTotal()">
+                                   min="1" value="1" placeholder="Qty" oninput="recalcTotal()">
                             <span class="line-price">₱0.00</span>
                             <button type="button" class="remove-line" onclick="removeLine(this)" title="Remove">✕</button>
                         </div>
@@ -185,10 +187,9 @@
         </div>{{-- /walkin-grid --}}
     </form>
 
-    {{-- Recent Sales Panel (inside walkin-wrap so topbar/padding is shared) --}}
+    {{-- Recent Sales Panel --}}
     <div id="historyPanel" class="history-panel" style="display:none;">
 
-        {{-- Search & Filter bar --}}
         <div class="history-filters">
             <div class="hf-search-wrap">
                 <span class="hf-icon">🔍</span>
@@ -301,41 +302,104 @@
 
 
 @push('scripts')
+{{-- Tom Select JS --}}
+<script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
+
 <script>
-// Data passed from PHP as JSON
-const PRODUCTS = {!! json_encode($products->map(function($p) { return ['id' => $p->product_id, 'name' => $p->product_name, 'price' => $p->selling_price, 'stock' => $p->quantity]; })->values()) !!};
-const SERVICES = {!! json_encode($services->map(function($s) { return ['id' => $s->service_id, 'name' => $s->name, 'price' => $s->price]; })->values()) !!};
-const DOCTORS  = {!! json_encode($doctors->map(function($d) { return ['id' => $d->user_id, 'name' => $d->firstName . ' ' . $d->lastName]; })->values()) !!};
-const TODAY    = "{{ now()->toDateString() }}";
-const PREFILL_PATIENT     = {{ request('patient_id', 'null') }};
-const FROM_APPOINTMENT_ID = {{ request('from_appointment', 'null') }};
-const PREFILL_SERVICE = {!! json_encode($prefillService) !!};
+// ── PHP → JS data ──────────────────────────────────────────
+const PRODUCTS = {!! json_encode($products->map(function($p) {
+    return ['id' => $p->product_id, 'name' => $p->product_name, 'price' => $p->selling_price, 'stock' => $p->quantity];
+})->values()) !!};
+
+const SERVICES = {!! json_encode($services->map(function($s) {
+    return ['id' => $s->service_id, 'name' => $s->name, 'price' => $s->price];
+})->values()) !!};
+
+const DOCTORS = {!! json_encode($doctors->map(function($d) {
+    return ['id' => $d->user_id, 'name' => $d->firstName . ' ' . $d->lastName];
+})->values()) !!};
+
+const TODAY                = "{{ now()->toDateString() }}";
+const PREFILL_PATIENT      = {{ request('patient_id', 'null') }};
+const FROM_APPOINTMENT_ID  = {{ request('from_appointment', 'null') }};
+const PREFILL_SERVICE      = {!! json_encode($prefillService) !!};
 
 let productIndex = 1;
 let serviceIndex = 0;
 let grandTotal   = 0;
 
-// ── Option builders ───────────────────────────────────────
-function productOptionsHTML() {
-    return '<option value="">— Select product —</option>' +
-        PRODUCTS.map(p => `<option value="${p.id}" data-price="${p.price}" data-stock="${p.stock}">${p.name} (₱${parseFloat(p.price).toFixed(2)}) — ${p.stock} in stock</option>`).join('');
-}
-function serviceOptionsHTML() {
-    return '<option value="">— Select service —</option>' +
-        SERVICES.map(s => `<option value="${s.id}" data-price="${s.price}">${s.name} (₱${parseFloat(s.price).toFixed(2)})</option>`).join('');
-}
-function doctorOptionsHTML() {
-    return '<option value="">— Select doctor —</option>' +
-        DOCTORS.map(d => `<option value="${d.id}">${d.name}</option>`).join('');
+// ── Tom Select instances registry ─────────────────────────
+// Stores { selectEl: TomSelect instance } so we can destroy/read them
+const tsInstances = new WeakMap();
+
+// ── Tom Select factory ────────────────────────────────────
+/**
+ * Initialise Tom Select on a <select> element.
+ * @param {HTMLSelectElement} el
+ * @param {object} extraOpts  – merged into TomSelect options
+ */
+function initTS(el, extraOpts = {}) {
+    if (tsInstances.has(el)) return tsInstances.get(el); // already initialised
+
+    const ts = new TomSelect(el, {
+        allowEmptyOption: true,
+        placeholder: el.dataset.placeholder || 'Search…',
+        maxOptions: 200,
+        ...extraOpts,
+    });
+
+    tsInstances.set(el, ts);
+    return ts;
 }
 
-// ── Products ─────────────────────────────────────────────
+/**
+ * Destroy and re-create a TomSelect on el with new <option> HTML.
+ * Used when we build product/service lines dynamically.
+ */
+function reinitTS(el, optionsHTML, extraOpts = {}) {
+    if (tsInstances.has(el)) {
+        tsInstances.get(el).destroy();
+        tsInstances.delete(el);
+    }
+    el.innerHTML = optionsHTML;
+    return initTS(el, extraOpts);
+}
+
+// ── Option HTML builders (plain <option> strings) ─────────
+function productOptionsHTML() {
+    return '<option value="">— Search product —</option>' +
+        PRODUCTS.map(p =>
+            `<option value="${p.id}" data-price="${p.price}" data-stock="${p.stock}">` +
+            `${p.name} (₱${parseFloat(p.price).toFixed(2)}) — ${p.stock} in stock` +
+            `</option>`
+        ).join('');
+}
+
+function serviceOptionsHTML() {
+    return '<option value="">— Search service —</option>' +
+        SERVICES.map(s =>
+            `<option value="${s.id}" data-price="${s.price}">` +
+            `${s.name} (₱${parseFloat(s.price).toFixed(2)})` +
+            `</option>`
+        ).join('');
+}
+
+function doctorOptionsHTML() {
+    return '<option value="">— Select doctor —</option>' +
+        DOCTORS.map(d =>
+            `<option value="${d.id}">${d.name}</option>`
+        ).join('');
+}
+
+// ── Products ──────────────────────────────────────────────
 function addProductLine() {
     const div = document.createElement('div');
     div.className = 'product-line';
     div.dataset.index = productIndex;
+
+    const selId = `prodSelect_${productIndex}`;
     div.innerHTML = `
-        <select name="items[${productIndex}][product_id]" class="prod-select" onchange="updateLinePrice(this)">
+        <select name="items[${productIndex}][product_id]" class="prod-select" id="${selId}">
             ${productOptionsHTML()}
         </select>
         <input type="number" name="items[${productIndex}][quantity]" class="qty-input"
@@ -343,17 +407,29 @@ function addProductLine() {
         <span class="line-price">₱0.00</span>
         <button type="button" class="remove-line" onclick="removeLine(this)" title="Remove">✕</button>
     `;
+
     document.getElementById('productLines').appendChild(div);
+
+    // Init Tom Select on the new select
+    const sel = div.querySelector('.prod-select');
+    const ts  = initTS(sel);
+    ts.on('change', () => updateLinePriceByEl(sel));
+
     productIndex++;
 }
 
 function removeLine(btn) {
-    btn.closest('.product-line').remove();
+    const line = btn.closest('.product-line');
+    const sel  = line.querySelector('.prod-select');
+    if (sel && tsInstances.has(sel)) tsInstances.get(sel).destroy();
+    line.remove();
     recalcTotal();
 }
 
-function updateLinePrice(sel) {
-    const opt   = sel.options[sel.selectedIndex];
+function updateLinePriceByEl(sel) {
+    const ts    = tsInstances.get(sel);
+    const val   = ts ? ts.getValue() : sel.value;
+    const opt   = sel.querySelector(`option[value="${val}"]`);
     const price = parseFloat(opt?.dataset?.price || 0);
     const line  = sel.closest('.product-line');
     const qty   = parseInt(line.querySelector('.qty-input').value) || 1;
@@ -361,34 +437,47 @@ function updateLinePrice(sel) {
     recalcTotal();
 }
 
-// ── Services ─────────────────────────────────────────────
-function addServiceLine() {
+// Legacy helper kept for inline onchange="" on first static line (overridden below)
+function updateLinePrice(sel) { updateLinePriceByEl(sel); }
+
+// ── Services ──────────────────────────────────────────────
+function addServiceLine(prefill = null) {
     const div = document.createElement('div');
-    div.className = 'service-line';
+    div.className = 'service-line' + (prefill ? ' prefilled' : '');
     div.dataset.index = serviceIndex;
+
+    const svcId = `svcSelect_${serviceIndex}`;
+    const docId = `docSelect_${serviceIndex}`;
+
     div.innerHTML = `
         <div class="service-line-grid">
             <div class="svc-field">
-                <label>Service</label>
-                <select name="services[${serviceIndex}][service_id]" class="svc-select" onchange="updateSvcPrice(this)">
+                <label>Service${prefill ? ' <span class="prefill-tag">from appointment</span>' : ''}</label>
+                <select name="services[${serviceIndex}][service_id]"
+                        class="svc-select${prefill ? ' prefilled-field' : ''}"
+                        id="${svcId}">
                     ${serviceOptionsHTML()}
                 </select>
             </div>
             <div class="svc-field">
                 <label>Doctor</label>
-                <select name="services[${serviceIndex}][doctor_id]" class="svc-doctor" onchange="checkSlot(this)">
+                <select name="services[${serviceIndex}][doctor_id]"
+                        class="svc-doctor${prefill ? ' prefilled-field' : ''}"
+                        id="${docId}">
                     ${doctorOptionsHTML()}
                 </select>
             </div>
             <div class="svc-field">
                 <label>Date</label>
                 <input type="date" name="services[${serviceIndex}][appointment_date]"
-                       class="svc-date" min="${TODAY}" onchange="checkSlot(this)">
+                       class="svc-date${prefill ? ' prefilled-field' : ''}"
+                       min="${TODAY}" onchange="checkSlot(this)">
             </div>
             <div class="svc-field">
                 <label>Time</label>
                 <input type="time" name="services[${serviceIndex}][appointment_time]"
-                       class="svc-time" onchange="checkSlot(this)">
+                       class="svc-time${prefill ? ' prefilled-field' : ''}"
+                       onchange="checkSlot(this)">
             </div>
             <div class="svc-field svc-price-field">
                 <label>Price</label>
@@ -396,49 +485,105 @@ function addServiceLine() {
             </div>
             <div class="svc-slot-status"></div>
         </div>
-        <button type="button" class="remove-line svc-remove" onclick="removeServiceLine(this)" title="Remove">✕</button>
+        <button type="button" class="remove-line svc-remove"
+                onclick="removeServiceLine(this)" title="Remove">✕</button>
     `;
+
     document.getElementById('serviceLines').appendChild(div);
+
+    // Init Tom Select on service select
+    const svcSel = div.querySelector('.svc-select');
+    const svcTS  = initTS(svcSel, { placeholder: 'Search service…' });
+    svcTS.on('change', () => {
+        updateSvcPriceByEl(svcSel);
+        checkSlotFromLine(div);
+    });
+    if (prefill?.service_id) {
+        svcTS.setValue(String(prefill.service_id), true);
+        updateSvcPriceByEl(svcSel);
+    }
+    if (prefill) svcTS.wrapper.classList.add('prefilled-ts');
+
+    // Init Tom Select on doctor select
+    const docSel = div.querySelector('.svc-doctor');
+    const docTS  = initTS(docSel, { placeholder: 'Select doctor…' });
+    docTS.on('change', () => checkSlotFromLine(div));
+    if (prefill?.doctor_user_id) {
+        docTS.setValue(String(prefill.doctor_user_id), true);
+    }
+    if (prefill) docTS.wrapper.classList.add('prefilled-ts');
+
+    // Fill date/time if prefilling
+    if (prefill?.appointment_date) div.querySelector('.svc-date').value = prefill.appointment_date;
+    if (prefill?.appointment_time) div.querySelector('.svc-time').value = prefill.appointment_time.substring(0, 5);
+
+    // Hidden appointment id for prefill
+    if (prefill?.appointment_id) {
+        const hidden = document.createElement('input');
+        hidden.type  = 'hidden';
+        hidden.name  = `services[${serviceIndex}][existing_appointment_id]`;
+        hidden.value = prefill.appointment_id;
+        div.appendChild(hidden);
+    }
+
     serviceIndex++;
     recalcTotal();
+
+    // Pre-fill note
+    if (prefill) {
+        const note = document.createElement('p');
+        note.className = 'prefill-note';
+        note.innerHTML = `✅ Service pre-filled from Appointment #${prefill.appointment_id} — you can edit or remove it.`;
+        document.getElementById('serviceLines').insertBefore(note, div);
+    }
 }
 
 function removeServiceLine(btn) {
-    btn.closest('.service-line').remove();
+    const line   = btn.closest('.service-line');
+    const svcSel = line.querySelector('.svc-select');
+    const docSel = line.querySelector('.svc-doctor');
+    if (svcSel && tsInstances.has(svcSel)) tsInstances.get(svcSel).destroy();
+    if (docSel && tsInstances.has(docSel)) tsInstances.get(docSel).destroy();
+
+    // Also remove preceding prefill-note if present
+    const prev = line.previousElementSibling;
+    if (prev && prev.classList.contains('prefill-note')) prev.remove();
+
+    line.remove();
     recalcTotal();
 }
 
-function updateSvcPrice(sel) {
-    const opt   = sel.options[sel.selectedIndex];
+function updateSvcPriceByEl(sel) {
+    const val   = tsInstances.has(sel) ? tsInstances.get(sel).getValue() : sel.value;
+    const opt   = sel.querySelector(`option[value="${val}"]`);
     const price = parseFloat(opt?.dataset?.price || 0);
     sel.closest('.service-line').querySelector('.svc-price-display').textContent = '₱' + price.toFixed(2);
     recalcTotal();
 }
 
 // ── Slot checker ─────────────────────────────────────────
-function checkSlot(el) {
-    const line    = el.closest('.service-line');
-    const doctor  = line.querySelector('.svc-doctor')?.value;
-    const date    = line.querySelector('.svc-date')?.value;
-    const time    = line.querySelector('.svc-time')?.value;
-    const service = line.querySelector('.svc-select')?.value;
-    const status  = line.querySelector('.svc-slot-status');
+function checkSlotFromLine(line) {
+    // Get values, accounting for Tom Select
+    const docSel   = line.querySelector('.svc-doctor');
+    const svcSel   = line.querySelector('.svc-select');
+    const doctor   = tsInstances.has(docSel) ? tsInstances.get(docSel).getValue() : docSel?.value;
+    const service  = tsInstances.has(svcSel) ? tsInstances.get(svcSel).getValue() : svcSel?.value;
+    const date     = line.querySelector('.svc-date')?.value;
+    const time     = line.querySelector('.svc-time')?.value;
+    const status   = line.querySelector('.svc-slot-status');
 
     if (!doctor || !date || !time) { status.textContent = ''; return; }
 
-    status.textContent = 'Checking...';
+    status.textContent = 'Checking…';
     status.className   = 'svc-slot-status checking';
 
-    // Use the existing /get-available-times route — already filters by doctor's schedule
     fetch(`/get-available-times?doctor_id=${doctor}&date=${date}&service_id=${service}`)
         .then(r => r.json())
         .then(slots => {
             const timeShort = time.substring(0, 5);
-
             const slot = slots.find(s => s.time === timeShort);
 
             if (!slot) {
-                // Time not in doctor's available slots at all
                 status.textContent = '✕ Outside doctor\'s schedule';
                 status.className   = 'svc-slot-status taken';
             } else if (slot.taken) {
@@ -452,6 +597,9 @@ function checkSlot(el) {
         .catch(() => { status.textContent = ''; });
 }
 
+// Backwards compat for inline onchange on date/time inputs
+function checkSlot(el) { checkSlotFromLine(el.closest('.service-line')); }
+
 // ── Totals ────────────────────────────────────────────────
 function recalcTotal() {
     let total = 0;
@@ -460,34 +608,36 @@ function recalcTotal() {
     document.querySelectorAll('.product-line').forEach(line => {
         const sel   = line.querySelector('.prod-select');
         const qty   = parseInt(line.querySelector('.qty-input')?.value) || 0;
-        const opt   = sel?.options[sel.selectedIndex];
+        const val   = tsInstances.has(sel) ? tsInstances.get(sel).getValue() : sel?.value;
+        const opt   = sel?.querySelector(`option[value="${val}"]`);
         const price = parseFloat(opt?.dataset?.price || 0);
+
         line.querySelector('.line-price').textContent = '₱' + (price * qty).toFixed(2);
-        if (sel?.value && qty > 0) {
+
+        if (val && qty > 0) {
             total += price * qty;
-            lines.push({ name: opt.text.split('(')[0].trim() + ' ×' + qty, amount: price * qty });
+            lines.push({ name: (opt?.text || '').split('(')[0].trim() + ' ×' + qty, amount: price * qty });
         }
     });
 
     document.querySelectorAll('.service-line').forEach(line => {
-        const sel         = line.querySelector('.svc-select');
-        const opt         = sel?.options[sel.selectedIndex];
-        const price       = parseFloat(opt?.dataset?.price || 0);
-        const isPrefilled = !!line.querySelector('input[name*="existing_appointment_id"]');
-        if (sel?.value) {
+        const sel   = line.querySelector('.svc-select');
+        const val   = tsInstances.has(sel) ? tsInstances.get(sel).getValue() : sel?.value;
+        const opt   = sel?.querySelector(`option[value="${val}"]`);
+        const price = parseFloat(opt?.dataset?.price || 0);
+
+        if (val) {
             total += price;
-            lines.push({ name: '💆 ' + opt.text.split('(')[0].trim(), amount: price });
+            lines.push({ name: '💆 ' + (opt?.text || '').split('(')[0].trim(), amount: price });
         }
     });
 
     grandTotal = total;
     document.getElementById('totalDisplay').textContent = '₱' + total.toFixed(2);
     document.getElementById('summaryLines').innerHTML = lines.length
-        ? lines.map(l => l.addon
-            ? `<div class="summary-row"><span>${l.name}</span><span style="color:#888;font-style:italic;font-size:0.8rem;">Billed on completion</span></div>`
-            : `<div class="summary-row"><span>${l.name}</span><span>₱${l.amount.toFixed(2)}</span></div>`
-          ).join('')
+        ? lines.map(l => `<div class="summary-row"><span>${l.name}</span><span>₱${l.amount.toFixed(2)}</span></div>`).join('')
         : '<p class="empty-summary">No items added yet.</p>';
+
     calcChange();
 }
 
@@ -510,37 +660,51 @@ function calcChange() {
 
 // ── Confirmation modal ────────────────────────────────────
 function confirmSale() {
-    const patient = document.getElementById('patientSelect').value;
-    if (!patient) { alert('Please select a patient.'); return false; }
-    const hasProduct = [...document.querySelectorAll('.prod-select')].some(s => s.value);
-    const hasService = [...document.querySelectorAll('.svc-select')].some(s => s.value);
+    // Validate patient (Tom Select)
+    const patientTS  = tsInstances.get(document.getElementById('patientSelect'));
+    const patientVal = patientTS ? patientTS.getValue() : document.getElementById('patientSelect').value;
+    if (!patientVal) { alert('Please select a patient.'); return false; }
+
+    const hasProduct = [...document.querySelectorAll('.prod-select')].some(s => {
+        return tsInstances.has(s) ? !!tsInstances.get(s).getValue() : !!s.value;
+    });
+    const hasService = [...document.querySelectorAll('.svc-select')].some(s => {
+        return tsInstances.has(s) ? !!tsInstances.get(s).getValue() : !!s.value;
+    });
     if (!hasProduct && !hasService) { alert('Add at least one product or service.'); return false; }
 
-    const lines = [];
+    const lineHtml = [];
+
     document.querySelectorAll('.product-line').forEach(line => {
-        const sel = line.querySelector('.prod-select');
-        const qty = parseInt(line.querySelector('.qty-input')?.value) || 0;
-        const opt = sel?.options[sel.selectedIndex];
+        const sel   = line.querySelector('.prod-select');
+        const val   = tsInstances.has(sel) ? tsInstances.get(sel).getValue() : sel?.value;
+        const qty   = parseInt(line.querySelector('.qty-input')?.value) || 0;
+        const opt   = sel?.querySelector(`option[value="${val}"]`);
         const price = parseFloat(opt?.dataset?.price || 0);
-        if (sel?.value && qty > 0)
-            lines.push(`<div class="cm-row"><span>${opt.text.split('(')[0].trim()} ×${qty}</span><span>₱${(price*qty).toFixed(2)}</span></div>`);
-    });
-    document.querySelectorAll('.service-line').forEach(line => {
-        const sel         = line.querySelector('.svc-select');
-        const opt         = sel?.options[sel.selectedIndex];
-        const price       = parseFloat(opt?.dataset?.price || 0);
-        const isPrefilled = !!line.querySelector('input[name*="existing_appointment_id"]');
-        if (sel?.value) {
-            lines.push(`<div class="cm-row"><span>💆 ${opt.text.split('(')[0].trim()}</span><span>₱${price.toFixed(2)}</span></div>`);
-        }
+        if (val && qty > 0)
+            lineHtml.push(`<div class="cm-row"><span>${(opt?.text || '').split('(')[0].trim()} ×${qty}</span><span>₱${(price * qty).toFixed(2)}</span></div>`);
     });
 
-    const patientSel = document.getElementById('patientSelect');
-    document.getElementById('cm-patient').textContent = patientSel.options[patientSel.selectedIndex].text.split('(')[0].trim();
-    document.getElementById('cm-items').innerHTML   = lines.join('');
+    document.querySelectorAll('.service-line').forEach(line => {
+        const sel   = line.querySelector('.svc-select');
+        const val   = tsInstances.has(sel) ? tsInstances.get(sel).getValue() : sel?.value;
+        const opt   = sel?.querySelector(`option[value="${val}"]`);
+        const price = parseFloat(opt?.dataset?.price || 0);
+        if (val)
+            lineHtml.push(`<div class="cm-row"><span>💆 ${(opt?.text || '').split('(')[0].trim()}</span><span>₱${price.toFixed(2)}</span></div>`);
+    });
+
+    // Patient display name
+    const patientEl  = document.getElementById('patientSelect');
+    const patientOpt = patientEl.querySelector(`option[value="${patientVal}"]`);
+    document.getElementById('cm-patient').textContent = (patientOpt?.text || '').split('(')[0].trim();
+
+    document.getElementById('cm-items').innerHTML   = lineHtml.join('');
     document.getElementById('cm-total').textContent = '₱' + grandTotal.toFixed(2);
+
     const method = document.querySelector('input[name="payment_method"]:checked')?.value || '';
     document.getElementById('cm-payment').textContent = method.toUpperCase();
+
     const tendered  = parseFloat(document.getElementById('amountTendered')?.value) || 0;
     const changeRow = document.getElementById('cm-change-row');
     if (method === 'cash' && tendered > 0) {
@@ -550,6 +714,7 @@ function confirmSale() {
     } else {
         changeRow.style.display = 'none';
     }
+
     document.getElementById('confirmModal').style.display = 'flex';
     return false;
 }
@@ -566,11 +731,10 @@ function closeCM(event) {
 
 // ── Tab toggle ────────────────────────────────────────────
 function switchTab(tab) {
-    const saleForm    = document.getElementById('walkinForm');
-    const saleGrid    = document.querySelector('.walkin-grid');
+    const saleGrid     = document.querySelector('.walkin-grid');
     const historyPanel = document.getElementById('historyPanel');
-    const tabSale     = document.getElementById('tabSale');
-    const tabHistory  = document.getElementById('tabHistory');
+    const tabSale      = document.getElementById('tabSale');
+    const tabHistory   = document.getElementById('tabHistory');
 
     if (tab === 'sale') {
         saleGrid.style.display     = 'grid';
@@ -616,133 +780,42 @@ function clearFilters() {
     filterSales();
 }
 
+// ── Init on DOM ready ─────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
- 
-    // Populate the first product line with JS-built options
-    const firstSelect = document.querySelector('.prod-select');
-    if (firstSelect) firstSelect.innerHTML = productOptionsHTML();
- 
-    // ── Auto-select patient if redirected from a completed booking ──
+
+    // ── 1. Patient Tom Select ──
+    const patientEl = document.getElementById('patientSelect');
+    const patientTS = initTS(patientEl, {
+        placeholder: 'Search patient by name or email…',
+        searchField: ['text'],   // searches the option text (name + email)
+    });
+
+    // Auto-select patient if redirected from booking
     if (PREFILL_PATIENT) {
-        const patientSel = document.getElementById('patientSelect');
-        if (patientSel) {
-            patientSel.value = PREFILL_PATIENT;
-            patientSel.style.borderColor = '#80a833';
-            patientSel.style.background  = '#f0f7e6';
-        }
+        patientTS.setValue(String(PREFILL_PATIENT), true);
+        patientTS.wrapper.style.borderColor = '#80a833';
     }
- 
-    // ── Auto-populate service from completed appointment ──
-    // PREFILL_SERVICE is passed from PHP via WalkinSaleController@index
-    // It contains the service, doctor, date, and time from the appointment
+
+    // ── 2. First product line Tom Select ──
+    const firstProdSel = document.querySelector('#prodSelect_0');
+    if (firstProdSel) {
+        // Replace server-rendered options with JS-built ones (so data-* attrs are consistent)
+        firstProdSel.innerHTML = productOptionsHTML();
+        const ts = initTS(firstProdSel, { placeholder: 'Search product…' });
+        ts.on('change', () => updateLinePriceByEl(firstProdSel));
+    }
+
+    // ── 3. Prefill service from appointment ──
     if (PREFILL_SERVICE) {
-        prefillFromAppointment(PREFILL_SERVICE);
+        addServiceLine(PREFILL_SERVICE);
     }
- 
+
+    // ── 4. Default payment toggle ──
     const defaultPay = document.querySelector('input[name="payment_method"]:checked');
     if (defaultPay) toggleTendered(defaultPay);
+
     recalcTotal();
 });
- 
-// ── Prefill service add-on from appointment data ──────────
-function prefillFromAppointment(svc) {
-    // Build a new service line (same as addServiceLine() but pre-filled)
-    const div = document.createElement('div');
-    div.className = 'service-line prefilled';
-    div.dataset.index = serviceIndex;
- 
-    div.innerHTML = `
-        <div class="service-line-grid">
-            <div class="svc-field">
-                <label>Service <span class="prefill-tag">from appointment</span></label>
-                <select name="services[${serviceIndex}][service_id]"
-                        class="svc-select prefilled-field"
-                        onchange="updateSvcPrice(this)">
-                    ${serviceOptionsHTML()}
-                </select>
-            </div>
-            <div class="svc-field">
-                <label>Doctor</label>
-                <select name="services[${serviceIndex}][doctor_id]"
-                        class="svc-doctor prefilled-field"
-                        onchange="checkSlot(this)">
-                    ${doctorOptionsHTML()}
-                </select>
-            </div>
-            <div class="svc-field">
-                <label>Date</label>
-                <input type="date"
-                       name="services[${serviceIndex}][appointment_date]"
-                       class="svc-date prefilled-field"
-                       min="${TODAY}"
-                       onchange="checkSlot(this)">
-            </div>
-            <div class="svc-field">
-                <label>Time</label>
-                <input type="time"
-                       name="services[${serviceIndex}][appointment_time]"
-                       class="svc-time prefilled-field"
-                       onchange="checkSlot(this)">
-            </div>
-            <div class="svc-field svc-price-field">
-                <label>Price</label>
-                <span class="svc-price-display">₱0.00</span>
-            </div>
-            <div class="svc-slot-status"></div>
-        </div>
-        <button type="button" class="remove-line svc-remove"
-                onclick="removeServiceLine(this)" title="Remove">✕</button>
-    `;
- 
-    document.getElementById('serviceLines').appendChild(div);
-
-    // Add hidden field to mark this as already-completed (no re-booking needed)
-const hiddenAppt = document.createElement('input');
-hiddenAppt.type  = 'hidden';
-hiddenAppt.name  = `services[${serviceIndex}][existing_appointment_id]`;
-hiddenAppt.value = svc.appointment_id;
-div.appendChild(hiddenAppt);
- 
-    // Now set the values
-    const svcSelect    = div.querySelector('.svc-select');
-    const doctorSelect = div.querySelector('.svc-doctor');
-    const dateInput    = div.querySelector('.svc-date');
-    const timeInput    = div.querySelector('.svc-time');
-    const priceDisplay = div.querySelector('.svc-price-display');
- 
-    // Set service
-    if (svc.service_id) {
-        svcSelect.value = svc.service_id;
-        // Trigger price update
-        const selOpt = svcSelect.options[svcSelect.selectedIndex];
-        const price  = parseFloat(selOpt?.dataset?.price || svc.service_price || 0);
-        priceDisplay.textContent = '₱' + price.toFixed(2);
-    }
- 
-    // Set doctor
-    if (svc.doctor_user_id) {
-        doctorSelect.value = svc.doctor_user_id;
-    }
- 
-    // Set date
-    if (svc.appointment_date) {
-        dateInput.value = svc.appointment_date;
-    }
- 
-    // Set time (format HH:mm)
-    if (svc.appointment_time) {
-        timeInput.value = svc.appointment_time.substring(0, 5);
-    }
- 
-    serviceIndex++;
-    recalcTotal();
- 
-    // Show a subtle note that this came from the appointment
-    const note = document.createElement('p');
-    note.className = 'prefill-note';
-    note.innerHTML = `✅ Service pre-filled from Appointment #${svc.appointment_id} — you can edit or remove it.`;
-    document.getElementById('serviceLines').insertBefore(note, div);
-}
 </script>
 @endpush
 
