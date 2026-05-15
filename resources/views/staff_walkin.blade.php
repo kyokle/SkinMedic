@@ -460,14 +460,8 @@ function recalcTotal() {
         const price       = parseFloat(opt?.dataset?.price || 0);
         const isPrefilled = !!line.querySelector('input[name*="existing_appointment_id"]');
         if (sel?.value) {
-            if (isPrefilled) {
-                // Prefilled (completed appointment) — this IS billed now
-                total += price;
-                lines.push({ name: '💆 ' + opt.text.split('(')[0].trim(), amount: price });
-            } else {
-                // New add-on — booked for future, NOT charged now
-                lines.push({ name: '💆 ' + opt.text.split('(')[0].trim(), amount: null, addon: true });
-            }
+            total += price;
+            lines.push({ name: '💆 ' + opt.text.split('(')[0].trim(), amount: price });
         }
     });
 
@@ -522,13 +516,7 @@ function confirmSale() {
         const price       = parseFloat(opt?.dataset?.price || 0);
         const isPrefilled = !!line.querySelector('input[name*="existing_appointment_id"]');
         if (sel?.value) {
-            if (isPrefilled) {
-                // Prefilled (completed appointment) — billed now
-                lines.push(`<div class="cm-row"><span>💆 ${opt.text.split('(')[0].trim()}</span><span>₱${price.toFixed(2)}</span></div>`);
-            } else {
-                // New add-on — future appointment, not charged now
-                lines.push(`<div class="cm-row"><span>💆 ${opt.text.split('(')[0].trim()}</span><span style="color:#888;font-style:italic;">Billed on completion</span></div>`);
-            }
+            lines.push(`<div class="cm-row"><span>💆 ${opt.text.split('(')[0].trim()}</span><span>₱${price.toFixed(2)}</span></div>`);
         }
     });
 

@@ -180,10 +180,7 @@ class WalkinSaleController extends Controller
                     $price = $service->price ?? 0;
 
                     // Prefilled (completed appointment) IS billed now — patient is paying for it.
-                    // New add-ons are NOT billed now — they'll be billed when completed later.
-                    if ($isExisting) {
-                        $subtotal += $price;
-                    }
+                    $subtotal += $price;
 
                     $serviceRows[] = [
                         'service'                => $service,
@@ -271,7 +268,7 @@ class WalkinSaleController extends Controller
                     'service_id'       => $row['service']->service_id,
                     'appointment_date' => $row['appointment_date'],
                     'appointment_time' => $row['appointment_time'],
-                    'status'           => 'approved',
+                    'status'           => 'completed',
                     'cancel_reason'    => null,
                     'is_rescheduled'   => 0,
                     'notes'            => 'Walk-in add-on via sale #' . $saleId,
@@ -329,20 +326,14 @@ class WalkinSaleController extends Controller
                 'a.appointment_time', DB::raw('CONCAT(d.firstName, " ", d.lastName) as doctor_name'))
             ->where('ss.sale_id', $id)->get();
 
-        // Separate the pre-filled (already-completed) appointment from
-        // new add-on services so the receipt can display them differently
-        // and avoids charging the patient twice for the prefilled service.
-        $prefilledService = $serviceItems->firstWhere('is_prefilled', 1);
-        $addonServices    = $serviceItems->where('is_prefilled', 0)->values();
-
         $change = null;
         if ($sale->payment_method === 'cash' && $sale->amount_tendered !== null) {
             $change = $sale->amount_tendered - $sale->total_amount;
         }
 
         return view('staff_walkin_receipt', array_merge(
-            $this->sidebarData(),
-            compact('sale', 'productItems', 'prefilledService', 'addonServices', 'change')
+        $this->sidebarData(),
+        compact('sale', 'productItems', 'serviceItems', 'change')
         ));
     }
 
