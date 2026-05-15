@@ -1,5 +1,0 @@
-[phases.setup]
-aptPkgs = ["apache2", "libapache2-mod-php"]
-
-[start]
-cmd = "php artisan schedule:work & apache2ctl -D FOREGROUND"
