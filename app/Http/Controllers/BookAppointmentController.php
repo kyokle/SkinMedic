@@ -154,10 +154,10 @@ class BookAppointmentController extends Controller
 
         // AM: 8am–11am | PM: 12nn–7pm
         $allSlots = [
-            '08:00', '09:00', '10:00', '11:00',
-            '12:00', '13:00', '14:00', '17:00',
-            '18:00', '19:00',
-        ];
+    '08:00', '09:00', '10:00', '11:00',
+    '12:00', '13:00', '14:00', '15:00', '16:00', '17:00',
+    '18:00', '19:00',
+];
 
         // Filter by AM/PM preference
         if ($preference === 'AM') {
