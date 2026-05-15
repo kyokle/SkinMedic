@@ -529,7 +529,7 @@ function confirmSale() {
     const tendered  = parseFloat(document.getElementById('amountTendered')?.value) || 0;
     const changeRow = document.getElementById('cm-change-row');
     if (method === 'cash' && tendered > 0) {
-        changeRow.style.display = 'flex';
+        changeRow.style.display = 'block';
         document.getElementById('cm-tendered').textContent = '₱' + tendered.toFixed(2);
         document.getElementById('cm-change').textContent   = '₱' + Math.max(0, tendered - grandTotal).toFixed(2);
     } else {
