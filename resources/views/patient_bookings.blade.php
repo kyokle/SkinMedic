@@ -43,22 +43,21 @@
     </div>
 
     {{-- Search & Date Range Row --}}
-    <div class="search-range-bar">
-        <div class="search-box">
-            <span class="search-icon">🔍</span>
-            <input type="text" id="searchInput" placeholder="Search by service, doctor, or appointment #…"
-                   oninput="applyFilters()">
-        </div>
-        <div class="range-tabs">
-            @foreach(['daily', 'weekly', 'monthly', 'yearly'] as $range)
-            <button class="range-btn" data-range="{{ $range }}"
-                    onclick="setRange('{{ $range }}', this)">
-                {{ ucfirst($range) }}
-            </button>
-            @endforeach
-            <button class="range-btn" data-range="all" onclick="setRange('all', this)">All Time</button>
-        </div>
-    </div>
+    <div class="search-bar">
+    <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none"
+         stroke="#aaa" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+         style="flex-shrink:0">
+        <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+    </svg>
+    <input type="text" id="searchInput" placeholder="Search by service, doctor, or appointment #…"
+           oninput="applyFilters()">
+    <label for="dateFrom">From</label>
+    <input type="date" id="dateFrom" style="width:132px" onchange="applyFilters()">
+    <label for="dateTo">To</label>
+    <input type="date" id="dateTo" style="width:132px" onchange="applyFilters()">
+    <button class="reset-btn" onclick="resetFilters()">↺ Reset</button>
+    <span class="result-count" id="resultCount"></span>
+</div>
 
     <table id="bookingsTable">
         <thead>
@@ -75,7 +74,8 @@
             @forelse($appointments as $row)
             @php $cls = strtolower($row->status); @endphp
             <tr data-status="{{ $row->status }}"
-                data-id="{{ $row->appointment_id }}"
+            data-id="{{ $row->appointment_id }}"
+            data-date="{{ $row->appointment_date }}"
                 onclick="openPatientModal(
                     '{{ $row->appointment_id }}',
                     '{{ addslashes($row->service_name) }}',
@@ -265,59 +265,38 @@ function filterTable(status, btn) {
     applyFilters();
 }
 
-function setRange(range, btn) {
-    document.querySelectorAll('.range-btn').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    activeRange = range;
-    applyFilters();
+function applyFilters() {
+    const q     = document.getElementById('searchInput').value.toLowerCase().trim();
+    const from  = document.getElementById('dateFrom').value;
+    const to    = document.getElementById('dateTo').value;
+    let visible = 0;
+    const rows  = document.querySelectorAll('#bookingsTable tbody tr[data-status]');
+
+    rows.forEach(tr => {
+        const matchTab  = activeStatus === 'all' || tr.dataset.status === activeStatus;
+        const text      = tr.innerText.toLowerCase();
+        const matchQ    = !q    || text.includes(q);
+        const matchFrom = !from || tr.dataset.date >= from;
+        const matchTo   = !to   || tr.dataset.date <= to;
+        const show      = matchTab && matchQ && matchFrom && matchTo;
+        tr.style.display = show ? '' : 'none';
+        if (show) visible++;
+    });
+
+    const total = rows.length;
+    document.getElementById('resultCount').textContent =
+        visible === total ? `${total} appointments` : `${visible} of ${total}`;
 }
 
-function applyFilters() {
-    const query   = (document.getElementById('searchInput').value || '').toLowerCase().trim();
-    const now     = new Date();
-    const today   = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-
-    document.querySelectorAll('#bookingsTable tbody tr[data-status]').forEach(row => {
-        // 1. Status filter
-        if (activeStatus !== 'all' && row.dataset.status !== activeStatus) {
-            row.style.display = 'none'; return;
-        }
-
-        // 2. Date range filter
-        if (activeRange !== 'all') {
-            const rawDate = row.querySelector('td:nth-child(4)')?.textContent?.trim();
-            const rowDate = rawDate ? new Date(rawDate) : null;
-            if (!rowDate || isNaN(rowDate)) { row.style.display = 'none'; return; }
-
-            const rowDay = new Date(rowDate.getFullYear(), rowDate.getMonth(), rowDate.getDate());
-            let inRange  = false;
-
-            if (activeRange === 'daily') {
-                inRange = rowDay.getTime() === today.getTime();
-            } else if (activeRange === 'weekly') {
-                const weekStart = new Date(today);
-                weekStart.setDate(today.getDate() - today.getDay());
-                const weekEnd = new Date(weekStart);
-                weekEnd.setDate(weekStart.getDate() + 6);
-                inRange = rowDay >= weekStart && rowDay <= weekEnd;
-            } else if (activeRange === 'monthly') {
-                inRange = rowDate.getFullYear() === now.getFullYear()
-                       && rowDate.getMonth()    === now.getMonth();
-            } else if (activeRange === 'yearly') {
-                inRange = rowDate.getFullYear() === now.getFullYear();
-            }
-
-            if (!inRange) { row.style.display = 'none'; return; }
-        }
-
-        // 3. Search filter
-        if (query) {
-            const text = row.textContent.toLowerCase();
-            if (!text.includes(query)) { row.style.display = 'none'; return; }
-        }
-
-        row.style.display = '';
-    });
+// ADD this reset function:
+function resetFilters() {
+    document.getElementById('searchInput').value = '';
+    document.getElementById('dateFrom').value    = '';
+    document.getElementById('dateTo').value      = '';
+    activeStatus = 'all';
+    document.querySelectorAll('.filter-tabs button')
+        .forEach((b, i) => b.classList.toggle('active', i === 0));
+    applyFilters();
 }
 
 function openPatientModal(id, service, doctor, date, time, status, cancelReason) {
