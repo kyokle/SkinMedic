@@ -10,7 +10,7 @@ Artisan::command('inspire', function () {
 
 // ── Auto-cancel pending appointments that have passed without approval ──
 Schedule::command('appointments:cancel-expired')
-    ->everyFifteenMinutes()
+    ->everyMinute()
     ->timezone('Asia/Manila')
     ->withoutOverlapping()
     ->runInBackground();
