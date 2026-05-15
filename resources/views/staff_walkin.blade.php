@@ -417,22 +417,37 @@ function updateSvcPrice(sel) {
 
 // ── Slot checker ─────────────────────────────────────────
 function checkSlot(el) {
-    const line      = el.closest('.service-line');
-    const doctor    = line.querySelector('.svc-doctor')?.value;
-    const date      = line.querySelector('.svc-date')?.value;
-    const time      = line.querySelector('.svc-time')?.value;
-    const status    = line.querySelector('.svc-slot-status');
-    const existingId = line.querySelector('input[name*="existing_appointment_id"]')?.value || '';
+    const line    = el.closest('.service-line');
+    const doctor  = line.querySelector('.svc-doctor')?.value;
+    const date    = line.querySelector('.svc-date')?.value;
+    const time    = line.querySelector('.svc-time')?.value;
+    const service = line.querySelector('.svc-select')?.value;
+    const status  = line.querySelector('.svc-slot-status');
+
     if (!doctor || !date || !time) { status.textContent = ''; return; }
+
     status.textContent = 'Checking...';
     status.className   = 'svc-slot-status checking';
-    const url = `{{ session('role') === 'admin' ? route('admin.walkin.check-slot') : route('staff.walkin.check-slot') }}?doctor_id=${doctor}&date=${date}&time=${time}`
-              + (existingId ? `&exclude_appointment_id=${existingId}` : '');
-    fetch(url)
+
+    // Use the existing /get-available-times route — already filters by doctor's schedule
+    fetch(`/get-available-times?doctor_id=${doctor}&date=${date}&service_id=${service}`)
         .then(r => r.json())
-        .then(data => {
-            status.textContent = data.available ? '✓ Slot available' : '✕ Slot taken';
-            status.className   = 'svc-slot-status ' + (data.available ? 'available' : 'taken');
+        .then(slots => {
+            const timeShort = time.substring(0, 5);
+
+            const slot = slots.find(s => s.time === timeShort);
+
+            if (!slot) {
+                // Time not in doctor's available slots at all
+                status.textContent = '✕ Outside doctor\'s schedule';
+                status.className   = 'svc-slot-status taken';
+            } else if (slot.taken) {
+                status.textContent = '✕ Slot taken';
+                status.className   = 'svc-slot-status taken';
+            } else {
+                status.textContent = '✓ Slot available';
+                status.className   = 'svc-slot-status available';
+            }
         })
         .catch(() => { status.textContent = ''; });
 }
