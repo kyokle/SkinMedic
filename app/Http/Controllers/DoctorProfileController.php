@@ -10,40 +10,46 @@ class DoctorProfileController extends Controller
 {
     use SidebarDataController;
     public function show()
-    {
-        $userId = session('user_id');
+{
+    $userId = session('user_id');
 
-        $exists = DB::table('doctor')->where('user_id', $userId)->exists();
-        if (!$exists) {
-            DB::table('doctor')->insert(['user_id' => $userId]);
-        }
-
-        $doctor = DB::selectOne("
-            SELECT u.firstName, u.lastName, u.email, u.gender, u.phone_no, u.address,
-                   d.doctor_id, d.license_number, d.specialization,
-                   d.years_of_experience, d.consultation_fee,
-                   d.availability_schedule, d.profile_picture
-            FROM users u
-            LEFT JOIN doctor d ON u.user_id = d.user_id
-            WHERE u.user_id = ?
-        ", [$userId]);
-
-        $doctor = $doctor ? (array) $doctor : [
-            'firstName' => '', 'lastName' => '', 'email' => '', 'gender' => '',
-            'phone_no' => '', 'address' => '', 'doctor_id' => '',
-            'license_number' => '', 'specialization' => '',
-            'years_of_experience' => '', 'consultation_fee' => '',
-            'availability_schedule' => '', 'profile_picture' => '',
-        ];
-
-        $profilePic = !empty($doctor['profile_picture'])
-            ? $doctor['profile_picture']
-            : 'uploads/default.png';
-
-        $sidebarData = $this->sidebarData();
-
-        return view('doctor_profile', array_merge(compact('doctor', 'profilePic'), $sidebarData));
+    $exists = DB::table('doctor')->where('user_id', $userId)->exists();
+    if (!$exists) {
+        DB::table('doctor')->insert(['user_id' => $userId]);
     }
+
+    $doctor = DB::selectOne("
+        SELECT u.firstName, u.lastName, u.email, u.gender, u.phone_no, u.address,
+               d.doctor_id, d.license_number, d.specialization,
+               d.years_of_experience, d.consultation_fee,
+               d.availability_schedule, d.profile_picture
+        FROM users u
+        LEFT JOIN doctor d ON u.user_id = d.user_id
+        WHERE u.user_id = ?
+    ", [$userId]);
+
+    $doctor = $doctor ? (array) $doctor : [
+        'firstName' => '', 'lastName' => '', 'email' => '', 'gender' => '',
+        'phone_no' => '', 'address' => '', 'doctor_id' => '',
+        'license_number' => '', 'specialization' => '',
+        'years_of_experience' => '', 'consultation_fee' => '',
+        'availability_schedule' => '', 'profile_picture' => '',
+    ];
+
+    $profilePic = !empty($doctor['profile_picture'])
+        ? $doctor['profile_picture']
+        : 'uploads/default.png';
+
+    // ── ADD THIS ──
+    $specializations = ['Dermatologist', 'General Physician', 'Aesthetic Doctor'];
+
+    $sidebarData = $this->sidebarData();
+
+    return view('doctor_profile', array_merge(
+        compact('doctor', 'profilePic', 'specializations'), // ← add specializations
+        $sidebarData
+    ));
+}
 
     public function uploadPic(Request $request)
 {

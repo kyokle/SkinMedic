@@ -56,6 +56,13 @@
     <div class="form-group">
       <label>Select Doctor <span class="req">*</span></label>
       <select name="doctor_id" id="doctor_id" required>
+        <script>
+        const doctorSchedules = {
+        @foreach($doctors as $doc)
+        {{ $doc->doctor_id }}: @json($doc->availability_schedule),
+        @endforeach
+        };
+        </script>
         <option value="">— Choose a doctor —</option>
         @foreach($doctors as $doc)
           <option value="{{ $doc->doctor_id }}" {{ old('doctor_id') == $doc->doctor_id ? 'selected' : '' }}>

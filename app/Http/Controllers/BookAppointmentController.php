@@ -23,7 +23,7 @@ class BookAppointmentController extends Controller
 
         $doctors = DB::table('doctor')
                     ->join('users', 'doctor.user_id', '=', 'users.user_id')
-                    ->select('doctor.doctor_id', 'users.firstName', 'users.lastName')
+                    ->select('doctor.doctor_id', 'users.firstName', 'users.lastName', 'doctor.availability_schedule')
                     ->get();
 
         $isRegular     = (bool) $user->is_regular;

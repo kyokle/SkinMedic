@@ -99,7 +99,14 @@
                 </div>
                 <div class="form-row">
                     <label>Specialization</label>
-                    <input type="text" name="specialization" value="{{ $doctor['specialization'] }}">
+                    <select name="specialization">
+                    <option value="">— Select Specialization —</option>
+                    @foreach($specializations as $spec)
+                    <option value="{{ $spec }}" {{ $doctor['specialization'] === $spec ? 'selected' : '' }}>
+                    {{ $spec }}
+                    </option>
+                    @endforeach
+                    </select>
                 </div>
                 <div class="form-row">
                     <label>Years of Experience</label>
