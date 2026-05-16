@@ -102,23 +102,64 @@ class AdminSalesReportController extends Controller
             ->orderByDesc('total_revenue')
             ->get();
 
-        // ── Grand summary ─────────────────────────────────────
-        $grandTotal = $productTotals['revenue'] + $serviceTotals['revenue'];
-
-        // ── Payment method breakdown (walk-in only) ───────────
-        $paymentBreakdown = DB::table('walkin_sales')
-            ->select('payment_method', DB::raw('COUNT(*) as count'), DB::raw('SUM(total_amount) as total'))
+        // ── Payment method breakdown (walk-in + online combined) ──
+        $walkinPayments = DB::table('walkin_sales')
+            ->select(
+                DB::raw('LOWER(payment_method) as payment_method'),
+                DB::raw('COUNT(*) as count'),
+                DB::raw('SUM(total_amount) as total')
+            )
             ->whereBetween(DB::raw('DATE(created_at)'), [$dateFrom, $dateTo])
             ->where('status', 'completed')
+            ->groupBy(DB::raw('LOWER(payment_method)'));
+
+        $onlinePayments = DB::table('orders')
+            ->select(
+                DB::raw('LOWER(payment_method) as payment_method'),
+                DB::raw('COUNT(*) as count'),
+                DB::raw('SUM(total) as total')
+            )
+            ->whereBetween(DB::raw('DATE(created_at)'), [$dateFrom, $dateTo])
+            ->where('status', 'completed')
+            ->groupBy(DB::raw('LOWER(payment_method)'));
+
+        $paymentBreakdown = DB::table(
+                DB::raw("({$walkinPayments->toSql()} UNION ALL {$onlinePayments->toSql()}) as combined")
+            )
+            ->mergeBindings($walkinPayments)
+            ->mergeBindings($onlinePayments)
+            ->select(
+                'payment_method',
+                DB::raw('SUM(count) as count'),
+                DB::raw('SUM(total) as total')
+            )
             ->groupBy('payment_method')
+            ->orderByDesc('total')
             ->get();
 
-        // ── Daily revenue chart data ──────────────────────────
-        $dailyRevenue = DB::table('walkin_sales')
+        // ── Grand total (all payment methods, walk-in + online) ──
+        $grandTotal = $paymentBreakdown->sum('total');
+
+        // ── Daily revenue chart (walk-in + online combined) ───
+        $dailyWalkin = DB::table('walkin_sales')
             ->select(DB::raw('DATE(created_at) as date'), DB::raw('SUM(total_amount) as total'))
             ->whereBetween(DB::raw('DATE(created_at)'), [$dateFrom, $dateTo])
             ->where('status', 'completed')
-            ->groupBy(DB::raw('DATE(created_at)'))
+            ->groupBy(DB::raw('DATE(created_at)'));
+
+        $dailyOnline = DB::table('orders')
+            ->select(DB::raw('DATE(created_at) as date'), DB::raw('SUM(total) as total'))
+            ->whereBetween(DB::raw('DATE(created_at)'), [$dateFrom, $dateTo])
+            ->where('status', 'completed')
+            ->groupBy(DB::raw('DATE(created_at)'));
+
+        $dailyRevenue = DB::table(
+                DB::raw("({$dailyWalkin->toSql()} UNION ALL {$dailyOnline->toSql()}) as combined")
+            )
+            ->mergeBindings($dailyWalkin)
+            ->mergeBindings($dailyOnline)
+            ->select('date', DB::raw('SUM(total) as total'))
+            ->groupBy('date')
             ->orderBy('date')
             ->get()
             ->pluck('total', 'date');
@@ -127,6 +168,7 @@ class AdminSalesReportController extends Controller
         $activeDays        = $dailyRevenue->count();
         $avgDailyRevenue   = $activeDays > 0 ? $dailyRevenue->sum() / $activeDays : 0;
         $totalTransactions = $paymentBreakdown->sum('count');
+        $walkinGrandTotal  = $grandTotal;
 
         return view('admin_sales_report', array_merge(
             $this->sidebarData(),
@@ -134,7 +176,7 @@ class AdminSalesReportController extends Controller
                 'dateFrom', 'dateTo',
                 'productRows', 'productTotals',
                 'serviceRows', 'serviceTotals',
-                'grandTotal', 'paymentBreakdown', 'dailyRevenue',
+                'grandTotal', 'walkinGrandTotal', 'paymentBreakdown', 'dailyRevenue',
                 'activeDays', 'avgDailyRevenue', 'totalTransactions',
                 'allProducts', 'allServices'
             )
@@ -166,7 +208,6 @@ class AdminSalesReportController extends Controller
                 'Content-Disposition' => "attachment; filename=\"{$filename}.csv\"",
             ];
 
-            // All products with price (including zero-sales)
             $allProductsCsv = DB::table('products')
                 ->select('product_name as name', 'selling_price')
                 ->orderBy('product_name')
@@ -181,7 +222,6 @@ class AdminSalesReportController extends Controller
                     ];
                 });
 
-            // All services with price (including zero-sales)
             $allServicesCsv = DB::table('services')
                 ->select('name as service_name', 'price')
                 ->orderBy('name')
@@ -199,7 +239,6 @@ class AdminSalesReportController extends Controller
             $callback = function () use ($allProductsCsv, $allServicesCsv, $dateFrom, $dateTo) {
                 $out = fopen('php://output', 'w');
 
-                // UTF-8 BOM — fixes currency symbol corruption in Excel
                 fprintf($out, chr(0xEF) . chr(0xBB) . chr(0xBF));
 
                 fputcsv($out, ["SkinMedic - Sales Report"]);
@@ -207,7 +246,6 @@ class AdminSalesReportController extends Controller
                 fputcsv($out, ["Generated: " . now()->format('Y-m-d H:i')]);
                 fputcsv($out, []);
 
-                // ── Products ──────────────────────────────────
                 fputcsv($out, ["PRODUCT SALES"]);
                 fputcsv($out, ["#", "Product", "Unit", "Price (PHP)", "Qty Sold", "Total Revenue (PHP)"]);
                 foreach ($allProductsCsv as $i => $r) {
@@ -227,7 +265,6 @@ class AdminSalesReportController extends Controller
                 ]);
                 fputcsv($out, []);
 
-                // ── Services ──────────────────────────────────
                 fputcsv($out, ["SERVICE SALES"]);
                 fputcsv($out, ["#", "Service", "Unit", "Price (PHP)", "Total Sessions", "Total Revenue (PHP)"]);
                 foreach ($allServicesCsv as $i => $r) {
@@ -247,7 +284,6 @@ class AdminSalesReportController extends Controller
                 ]);
                 fputcsv($out, []);
 
-                // ── Grand Total ───────────────────────────────
                 $grand = $allProductsCsv->sum('total_revenue') + $allServicesCsv->sum('total_revenue');
                 fputcsv($out, ["GRAND TOTAL", "", "", "", "", number_format($grand, 2)]);
 
@@ -258,15 +294,44 @@ class AdminSalesReportController extends Controller
         }
 
         // ── PDF Export ────────────────────────────────────────
-        $paymentBreakdown = DB::table('walkin_sales')
-            ->select('payment_method', DB::raw('COUNT(*) as count'), DB::raw('SUM(total_amount) as total'))
+
+        // Payment breakdown (walk-in + online combined)
+        $walkinPayments = DB::table('walkin_sales')
+            ->select(
+                DB::raw('LOWER(payment_method) as payment_method'),
+                DB::raw('COUNT(*) as count'),
+                DB::raw('SUM(total_amount) as total')
+            )
             ->whereBetween(DB::raw('DATE(created_at)'), [$dateFrom, $dateTo])
             ->where('status', 'completed')
+            ->groupBy(DB::raw('LOWER(payment_method)'));
+
+        $onlinePayments = DB::table('orders')
+            ->select(
+                DB::raw('LOWER(payment_method) as payment_method'),
+                DB::raw('COUNT(*) as count'),
+                DB::raw('SUM(total) as total')
+            )
+            ->whereBetween(DB::raw('DATE(created_at)'), [$dateFrom, $dateTo])
+            ->where('status', 'completed')
+            ->groupBy(DB::raw('LOWER(payment_method)'));
+
+        $paymentBreakdown = DB::table(
+                DB::raw("({$walkinPayments->toSql()} UNION ALL {$onlinePayments->toSql()}) as combined")
+            )
+            ->mergeBindings($walkinPayments)
+            ->mergeBindings($onlinePayments)
+            ->select(
+                'payment_method',
+                DB::raw('SUM(count) as count'),
+                DB::raw('SUM(total) as total')
+            )
             ->groupBy('payment_method')
+            ->orderByDesc('total')
             ->get();
 
-        // Daily breakdown
-        $dailyBreakdown = DB::table('walkin_sales')
+        // Daily breakdown (walk-in + online combined)
+        $dailyWalkin = DB::table('walkin_sales')
             ->select(
                 DB::raw('DATE(created_at) as date'),
                 DB::raw('COUNT(*) as transactions'),
@@ -274,12 +339,30 @@ class AdminSalesReportController extends Controller
             )
             ->whereBetween(DB::raw('DATE(created_at)'), [$dateFrom, $dateTo])
             ->where('status', 'completed')
-            ->groupBy(DB::raw('DATE(created_at)'))
+            ->groupBy(DB::raw('DATE(created_at)'));
+
+        $dailyOnline = DB::table('orders')
+            ->select(
+                DB::raw('DATE(created_at) as date'),
+                DB::raw('COUNT(*) as transactions'),
+                DB::raw('SUM(total) as revenue')
+            )
+            ->whereBetween(DB::raw('DATE(created_at)'), [$dateFrom, $dateTo])
+            ->where('status', 'completed')
+            ->groupBy(DB::raw('DATE(created_at)'));
+
+        $dailyBreakdown = DB::table(
+                DB::raw("({$dailyWalkin->toSql()} UNION ALL {$dailyOnline->toSql()}) as combined")
+            )
+            ->mergeBindings($dailyWalkin)
+            ->mergeBindings($dailyOnline)
+            ->select('date', DB::raw('SUM(transactions) as transactions'), DB::raw('SUM(revenue) as revenue'))
+            ->groupBy('date')
             ->orderBy('date')
             ->get();
 
-        // Weekly breakdown (Mon–Sun grouping)
-        $weeklyBreakdown = DB::table('walkin_sales')
+        // Weekly breakdown (walk-in + online combined)
+        $weeklyWalkin = DB::table('walkin_sales')
             ->select(
                 DB::raw('YEARWEEK(created_at, 1) as week_key'),
                 DB::raw('MIN(DATE(created_at)) as week_start'),
@@ -289,12 +372,38 @@ class AdminSalesReportController extends Controller
             )
             ->whereBetween(DB::raw('DATE(created_at)'), [$dateFrom, $dateTo])
             ->where('status', 'completed')
-            ->groupBy(DB::raw('YEARWEEK(created_at, 1)'))
+            ->groupBy(DB::raw('YEARWEEK(created_at, 1)'));
+
+        $weeklyOnline = DB::table('orders')
+            ->select(
+                DB::raw('YEARWEEK(created_at, 1) as week_key'),
+                DB::raw('MIN(DATE(created_at)) as week_start'),
+                DB::raw('MAX(DATE(created_at)) as week_end'),
+                DB::raw('COUNT(*) as transactions'),
+                DB::raw('SUM(total) as revenue')
+            )
+            ->whereBetween(DB::raw('DATE(created_at)'), [$dateFrom, $dateTo])
+            ->where('status', 'completed')
+            ->groupBy(DB::raw('YEARWEEK(created_at, 1)'));
+
+        $weeklyBreakdown = DB::table(
+                DB::raw("({$weeklyWalkin->toSql()} UNION ALL {$weeklyOnline->toSql()}) as combined")
+            )
+            ->mergeBindings($weeklyWalkin)
+            ->mergeBindings($weeklyOnline)
+            ->select(
+                'week_key',
+                DB::raw('MIN(week_start) as week_start'),
+                DB::raw('MAX(week_end) as week_end'),
+                DB::raw('SUM(transactions) as transactions'),
+                DB::raw('SUM(revenue) as revenue')
+            )
+            ->groupBy('week_key')
             ->orderBy('week_key')
             ->get();
 
-        // Monthly breakdown
-        $monthlyBreakdown = DB::table('walkin_sales')
+        // Monthly breakdown (walk-in + online combined)
+        $monthlyWalkin = DB::table('walkin_sales')
             ->select(
                 DB::raw('DATE_FORMAT(created_at, "%Y-%m") as month_key'),
                 DB::raw('DATE_FORMAT(created_at, "%M %Y") as month_label'),
@@ -303,7 +412,31 @@ class AdminSalesReportController extends Controller
             )
             ->whereBetween(DB::raw('DATE(created_at)'), [$dateFrom, $dateTo])
             ->where('status', 'completed')
-            ->groupBy(DB::raw('DATE_FORMAT(created_at, "%Y-%m")'), DB::raw('DATE_FORMAT(created_at, "%M %Y")'))
+            ->groupBy(DB::raw('DATE_FORMAT(created_at, "%Y-%m")'), DB::raw('DATE_FORMAT(created_at, "%M %Y")'));
+
+        $monthlyOnline = DB::table('orders')
+            ->select(
+                DB::raw('DATE_FORMAT(created_at, "%Y-%m") as month_key'),
+                DB::raw('DATE_FORMAT(created_at, "%M %Y") as month_label'),
+                DB::raw('COUNT(*) as transactions'),
+                DB::raw('SUM(total) as revenue')
+            )
+            ->whereBetween(DB::raw('DATE(created_at)'), [$dateFrom, $dateTo])
+            ->where('status', 'completed')
+            ->groupBy(DB::raw('DATE_FORMAT(created_at, "%Y-%m")'), DB::raw('DATE_FORMAT(created_at, "%M %Y")'));
+
+        $monthlyBreakdown = DB::table(
+                DB::raw("({$monthlyWalkin->toSql()} UNION ALL {$monthlyOnline->toSql()}) as combined")
+            )
+            ->mergeBindings($monthlyWalkin)
+            ->mergeBindings($monthlyOnline)
+            ->select(
+                'month_key',
+                'month_label',
+                DB::raw('SUM(transactions) as transactions'),
+                DB::raw('SUM(revenue) as revenue')
+            )
+            ->groupBy('month_key', 'month_label')
             ->orderBy('month_key')
             ->get();
 
@@ -316,9 +449,9 @@ class AdminSalesReportController extends Controller
         } elseif ($diffDays <= 7) {
             $periodType = 'weekly';
         } elseif ($diffMonths < 3) {
-            $periodType = 'monthly';   // week-by-week breakdown
+            $periodType = 'monthly';
         } else {
-            $periodType = 'yearly';    // quarter breakdown
+            $periodType = 'yearly';
         }
 
         return view('admin_sales_report_pdf', compact(
