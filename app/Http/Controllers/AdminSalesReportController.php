@@ -114,14 +114,15 @@ class AdminSalesReportController extends Controller
             ->groupBy(DB::raw('LOWER(payment_method)'));
 
         $onlinePayments = DB::table('orders')
-            ->select(
-                DB::raw('LOWER(payment_method) as payment_method'),
-                DB::raw('COUNT(*) as count'),
-                DB::raw('SUM(total) as total')
-            )
-            ->whereBetween(DB::raw('DATE(created_at)'), [$dateFrom, $dateTo])
-            ->where('status', 'completed')
-            ->groupBy(DB::raw('LOWER(payment_method)'));
+    ->select(
+        DB::raw('LOWER(payment_method) as payment_method'),
+        DB::raw('COUNT(*) as count'),
+        DB::raw('SUM(total) as total')
+    )
+    ->whereBetween(DB::raw('DATE(created_at)'), [$dateFrom, $dateTo])
+    ->where('status', 'completed')
+    ->whereNotNull('payment_method') // ← add this
+    ->groupBy(DB::raw('LOWER(payment_method)'));
 
         $paymentBreakdown = DB::table(
                 DB::raw("({$walkinPayments->toSql()} UNION ALL {$onlinePayments->toSql()}) as combined")
@@ -307,14 +308,15 @@ class AdminSalesReportController extends Controller
             ->groupBy(DB::raw('LOWER(payment_method)'));
 
         $onlinePayments = DB::table('orders')
-            ->select(
-                DB::raw('LOWER(payment_method) as payment_method'),
-                DB::raw('COUNT(*) as count'),
-                DB::raw('SUM(total) as total')
-            )
-            ->whereBetween(DB::raw('DATE(created_at)'), [$dateFrom, $dateTo])
-            ->where('status', 'completed')
-            ->groupBy(DB::raw('LOWER(payment_method)'));
+    ->select(
+        DB::raw('LOWER(payment_method) as payment_method'),
+        DB::raw('COUNT(*) as count'),
+        DB::raw('SUM(total) as total')
+    )
+    ->whereBetween(DB::raw('DATE(created_at)'), [$dateFrom, $dateTo])
+    ->where('status', 'completed')
+    ->whereNotNull('payment_method') // ← add this
+    ->groupBy(DB::raw('LOWER(payment_method)'));
 
         $paymentBreakdown = DB::table(
                 DB::raw("({$walkinPayments->toSql()} UNION ALL {$onlinePayments->toSql()}) as combined")
