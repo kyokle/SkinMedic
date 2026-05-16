@@ -92,10 +92,10 @@
 
 @section('content')
 
-@if(session('role') === 'admin')
-    @include('partials.sidebar_admin')
-@else
+@if(session('role') === 'staff')
     @include('partials.sidebar_staff')
+@elseif(session('role') === 'admin')
+    @include('partials.sidebar_admin')
 @endif
 
 <div class="walkin-wrap">

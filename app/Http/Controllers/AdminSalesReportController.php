@@ -80,7 +80,19 @@ class AdminSalesReportController extends Controller
                 JOIN appointments a ON a.appointment_id = wss.appointment_id
                 JOIN services sv2 ON sv2.service_id = a.service_id
                 WHERE DATE(ws.created_at) BETWEEN '{$dateFrom}' AND '{$dateTo}'
-                  AND ws.status = 'completed' AND wss.is_prefilled = 1
+                  AND ws.status = 'completed'
+                  AND wss.appointment_id IS NOT NULL
+                GROUP BY sv2.name
+                UNION ALL
+                SELECT sv2.name,
+                       COUNT(wss2.id),
+                       SUM(wss2.service_price)
+                FROM walkin_sale_services wss2
+                JOIN walkin_sales ws2 ON ws2.sale_id = wss2.sale_id
+                JOIN services sv2 ON sv2.service_id = wss2.service_id
+                WHERE DATE(ws2.created_at) BETWEEN '{$dateFrom}' AND '{$dateTo}'
+                  AND ws2.status = 'completed'
+                  AND wss2.appointment_id IS NULL
                 GROUP BY sv2.name
                 UNION ALL
                 SELECT sv2.name,
@@ -88,8 +100,11 @@ class AdminSalesReportController extends Controller
                        SUM(sv2.price)
                 FROM appointments a2
                 JOIN services sv2 ON sv2.service_id = a2.service_id
-                WHERE a2.appointment_date BETWEEN '{$dateFrom}' AND '{$dateTo}'
+                WHERE DATE(a2.updated_at) BETWEEN '{$dateFrom}' AND '{$dateTo}'
                   AND a2.status = 'completed'
+                  AND a2.appointment_id NOT IN (
+                      SELECT appointment_id FROM walkin_sale_services WHERE appointment_id IS NOT NULL
+                  )
                 GROUP BY sv2.name
             ) as sales"), 'sales.service_name', '=', 'sv.name')
             ->select(
@@ -506,7 +521,10 @@ class AdminSalesReportController extends Controller
 
     private function getServiceRows(string $from, string $to)
     {
-        $walkin = DB::table('walkin_sale_services as wss')
+        // ── Walk-in services WITH a linked appointment ──────────────
+        // Removed is_prefilled restriction — count all walk-in services
+        // regardless of how they were added (prefilled or manually).
+        $walkinWithAppt = DB::table('walkin_sale_services as wss')
             ->join('walkin_sales as ws',  'ws.sale_id',       '=', 'wss.sale_id')
             ->join('appointments as a',   'a.appointment_id', '=', 'wss.appointment_id')
             ->join('services as sv',      'sv.service_id',    '=', 'a.service_id')
@@ -517,9 +535,27 @@ class AdminSalesReportController extends Controller
             )
             ->whereBetween(DB::raw('DATE(ws.created_at)'), [$from, $to])
             ->where('ws.status', 'completed')
-            ->where('wss.is_prefilled', 1)
+            ->whereNotNull('wss.appointment_id')
             ->groupBy('sv.service_id', 'sv.name');
 
+        // ── Walk-in services WITHOUT a linked appointment ────────────
+        // Walk-in services added manually (no appointment) have service_id directly on the row.
+        $walkinNoAppt = DB::table('walkin_sale_services as wss')
+            ->join('walkin_sales as ws', 'ws.sale_id',    '=', 'wss.sale_id')
+            ->join('services as sv',     'sv.service_id', '=', 'wss.service_id')
+            ->select(
+                'sv.name as service_name',
+                DB::raw('COUNT(wss.id) as total_count'),
+                DB::raw('SUM(wss.service_price) as total_revenue')
+            )
+            ->whereBetween(DB::raw('DATE(ws.created_at)'), [$from, $to])
+            ->where('ws.status', 'completed')
+            ->whereNull('wss.appointment_id')
+            ->groupBy('sv.service_id', 'sv.name');
+
+        // ── Standalone completed appointments (not tied to any walk-in sale) ──
+        // Use DATE(updated_at) so appointments marked complete today appear
+        // in today's report regardless of their future appointment_date.
         $appt = DB::table('appointments as a')
             ->join('services as sv', 'sv.service_id', '=', 'a.service_id')
             ->select(
@@ -527,16 +563,19 @@ class AdminSalesReportController extends Controller
                 DB::raw('COUNT(a.appointment_id) as total_count'),
                 DB::raw('SUM(sv.price) as total_revenue')
             )
-            ->whereBetween('a.appointment_date', [$from, $to])
+            ->whereBetween(DB::raw('DATE(a.updated_at)'), [$from, $to])
             ->where('a.status', 'completed')
             ->whereNotIn('a.appointment_id', function ($q) {
-                $q->select('appointment_id')->from('walkin_sale_services')->where('is_prefilled', 1);
+                $q->select('appointment_id')
+                  ->from('walkin_sale_services')
+                  ->whereNotNull('appointment_id');
             })
             ->groupBy('sv.service_id', 'sv.name');
 
         return collect(
-            DB::table(DB::raw("({$walkin->toSql()} UNION ALL {$appt->toSql()}) as combined"))
-                ->mergeBindings($walkin)
+            DB::table(DB::raw("({$walkinWithAppt->toSql()} UNION ALL {$walkinNoAppt->toSql()} UNION ALL {$appt->toSql()}) as combined"))
+                ->mergeBindings($walkinWithAppt)
+                ->mergeBindings($walkinNoAppt)
                 ->mergeBindings($appt)
                 ->select('service_name', DB::raw('SUM(total_count) as total_count'), DB::raw('SUM(total_revenue) as total_revenue'))
                 ->groupBy('service_name')
