@@ -475,6 +475,19 @@ class StaffBookingsController extends Controller
             );
         }
 
+        // Notify admin/staff
+        $patientName = $patient ? trim($patient->firstName . ' ' . $patient->lastName) : 'A patient';
+        $adminStaff  = DB::table('users')->whereIn('role', ['admin', 'staff'])->get();
+        foreach ($adminStaff as $u) {
+            NotificationHelper::send(
+                $u->user_id,
+                '📅 Follow-up Scheduled',
+                "{$actor} scheduled a follow-up for {$patientName} on {$request->appointment_date} at {$request->appointment_time} (Appointment #{$appointmentId}).",
+                'booking',
+                $appointmentId
+            );
+        }
+
         return redirect()->route('staff.bookings')
             ->with('success', "Follow-up appointment scheduled for {$patient?->firstName} {$patient?->lastName} on {$request->appointment_date} at {$request->appointment_time}.");
     }
