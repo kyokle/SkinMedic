@@ -327,6 +327,18 @@
                     </button>
                 @endif
 
+                {{-- ── RECEIPT BUTTON — completed orders ── --}}
+                @if($order->status === 'completed')
+                    <button class="receipt-btn"
+                            onclick="openReceipt({{ $order->id }})">
+                        <svg viewBox="0 0 20 20" fill="none" width="13" height="13">
+                            <path d="M5 2h10a1 1 0 011 1v15l-2-1.5L12 18l-2-1.5L8 18l-2-1.5L4 18V3a1 1 0 011-1z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
+                            <path d="M7 7h6M7 10h6M7 13h4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+                        </svg>
+                        Receipt
+                    </button>
+                @endif
+
                 {{-- ── CANCEL TRIGGER — only for pending / confirmed ── --}}
                 @if(in_array($order->status, ['pending', 'confirmed']))
                     <button class="cancel-trigger-btn"
@@ -480,6 +492,98 @@
 
 </div>
 
+{{-- ── RECEIPT MODAL ── --}}
+<div class="receipt-overlay" id="receiptOverlay" onclick="closeReceipt(event)">
+    <div class="receipt-box" id="receiptBox">
+        {{-- Header --}}
+        <div class="receipt-header">
+            <div class="receipt-brand">
+                <span class="receipt-brand-name">SkinMedic</span>
+                <span class="receipt-brand-tagline">Official Order Receipt</span>
+            </div>
+            <button class="receipt-close" onclick="closeReceipt()">✕</button>
+        </div>
+
+        {{-- Body --}}
+        <div class="receipt-body" id="receiptPrintArea">
+            <div class="receipt-print-brand">
+                <strong>SkinMedic</strong>
+                <span>Official Order Receipt</span>
+            </div>
+            <div class="receipt-divider-dashed"></div>
+
+            <div class="receipt-meta">
+                <div class="receipt-meta-row">
+                    <span>Order #</span><strong id="r_id"></strong>
+                </div>
+                <div class="receipt-meta-row">
+                    <span>Date</span><span id="r_date"></span>
+                </div>
+                <div class="receipt-meta-row">
+                    <span>Status</span><span id="r_status"></span>
+                </div>
+            </div>
+
+            <div class="receipt-divider-dashed"></div>
+
+            <p class="receipt-section-label">Items Ordered</p>
+            <div id="r_items" class="receipt-items"></div>
+
+            <div class="receipt-divider-dashed"></div>
+
+            <div class="receipt-totals">
+                <div class="receipt-totals-row">
+                    <span>Subtotal</span><span id="r_subtotal"></span>
+                </div>
+                <div class="receipt-totals-row receipt-total-final">
+                    <span>Total</span><strong id="r_total"></strong>
+                </div>
+            </div>
+
+            <div class="receipt-divider-dashed"></div>
+
+            <div class="receipt-payment-info">
+                <div class="receipt-meta-row">
+                    <span>Payment Method</span><span id="r_method"></span>
+                </div>
+                <div class="receipt-meta-row" id="r_ref_row" style="display:none">
+                    <span>GCash Ref #</span><span id="r_ref"></span>
+                </div>
+                <div class="receipt-meta-row">
+                    <span>Payment Status</span><span id="r_pay_status"></span>
+                </div>
+            </div>
+
+            <div class="receipt-note-row" id="r_note_row" style="display:none">
+                <span>📝 Note:</span><span id="r_note"></span>
+            </div>
+
+            <div class="receipt-divider-dashed"></div>
+            <p class="receipt-thankyou">Thank you for your purchase! 💚<br>
+                <small>SkinMedic Clinic · For concerns, please contact us directly.</small>
+            </p>
+        </div>
+
+        {{-- Footer actions --}}
+        <div class="receipt-footer">
+            <button class="receipt-print-btn" onclick="printReceipt()">
+                <svg viewBox="0 0 20 20" fill="none" width="15" height="15">
+                    <path d="M5 7V3h10v4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                    <rect x="2" y="7" width="16" height="8" rx="2" stroke="currentColor" stroke-width="1.5"/>
+                    <path d="M5 11h10M5 14h6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+                    <circle cx="15" cy="10" r="1" fill="currentColor"/>
+                </svg>
+                Print Receipt
+            </button>
+        </div>
+    </div>
+</div>
+
+{{-- Inline order data for receipt JS --}}
+<script>
+const PATIENT_ORDERS = @json($orders->keyBy('id'));
+</script>
+
 {{-- ── PROOF IMAGE LIGHTBOX ── --}}
 <div class="proof-lightbox" id="proofLightbox" onclick="closeProof(event)">
     <div class="proof-lightbox-box">
@@ -589,6 +693,110 @@ function confirmCancel(orderId) {
         return false;
     }
     return confirm('Are you sure you want to cancel this order? This cannot be undone.');
+}
+
+/* ── RECEIPT MODAL ── */
+function openReceipt(orderId) {
+    const order = PATIENT_ORDERS[orderId];
+    if (!order) return;
+
+    document.getElementById('r_id').textContent   = '#' + order.id;
+    document.getElementById('r_date').textContent = new Date(order.created_at)
+        .toLocaleString('en-PH', { dateStyle: 'long', timeStyle: 'short' });
+    document.getElementById('r_status').textContent = '✔ Completed';
+
+    // Payment
+    document.getElementById('r_method').textContent =
+        order.payment_method === 'gcash' ? 'GCash' : 'Cash on Pick-up';
+    document.getElementById('r_pay_status').textContent =
+        order.payment_status ? order.payment_status.charAt(0).toUpperCase() + order.payment_status.slice(1) : 'Paid';
+
+    const refRow = document.getElementById('r_ref_row');
+    if (order.reference) {
+        refRow.style.display = '';
+        document.getElementById('r_ref').textContent = order.reference;
+    } else {
+        refRow.style.display = 'none';
+    }
+
+    // Note
+    const noteRow = document.getElementById('r_note_row');
+    if (order.note) {
+        noteRow.style.display = '';
+        document.getElementById('r_note').textContent = order.note;
+    } else {
+        noteRow.style.display = 'none';
+    }
+
+    // Items
+    let subtotal = 0;
+    document.getElementById('r_items').innerHTML = order.items.map(item => {
+        subtotal += parseFloat(item.subtotal);
+        return `
+            <div class="receipt-item-row">
+                <div class="ri-name">${item.product_name}</div>
+                <div class="ri-qty">×${item.quantity} @ ₱${parseFloat(item.unit_price).toLocaleString('en-PH', {minimumFractionDigits:2})}</div>
+                <div class="ri-sub">₱${parseFloat(item.subtotal).toLocaleString('en-PH', {minimumFractionDigits:2})}</div>
+            </div>
+        `;
+    }).join('');
+
+    document.getElementById('r_subtotal').textContent =
+        '₱' + subtotal.toLocaleString('en-PH', { minimumFractionDigits: 2 });
+    document.getElementById('r_total').textContent =
+        '₱' + parseFloat(order.total).toLocaleString('en-PH', { minimumFractionDigits: 2 });
+
+    document.getElementById('receiptOverlay').style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+}
+
+function closeReceipt(e) {
+    if (!e || e.target === document.getElementById('receiptOverlay')) {
+        document.getElementById('receiptOverlay').style.display = 'none';
+        document.body.style.overflow = '';
+    }
+}
+
+function printReceipt() {
+    const area    = document.getElementById('receiptPrintArea');
+    const clone   = area.cloneNode(true);
+    const win     = window.open('', '_blank', 'width=420,height=680');
+    win.document.write(`
+        <!DOCTYPE html><html><head>
+        <meta charset="UTF-8">
+        <title>SkinMedic Receipt</title>
+        <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+        <style>
+            * { box-sizing: border-box; margin: 0; padding: 0; }
+            body { font-family: 'DM Sans', sans-serif; background: #fff; color: #1e2318;
+                   padding: 24px; font-size: 13px; max-width: 360px; margin: 0 auto; }
+            .receipt-print-brand { text-align: center; margin-bottom: 12px; }
+            .receipt-print-brand strong { display: block; font-size: 20px; color: #5a7a1f; letter-spacing: 1px; }
+            .receipt-print-brand span   { font-size: 12px; color: #6b7260; }
+            .receipt-divider-dashed { border: none; border-top: 1.5px dashed #ccc; margin: 10px 0; }
+            .receipt-section-label { font-size: 10px; font-weight: 700; text-transform: uppercase;
+                                     letter-spacing: .08em; color: #80a833; margin-bottom: 6px; }
+            .receipt-meta-row { display: flex; justify-content: space-between; padding: 4px 0;
+                                font-size: 12.5px; color: #444; }
+            .receipt-meta-row span:first-child { color: #888; }
+            .receipt-meta-row strong { color: #1e2318; }
+            .receipt-item-row { display: flex; align-items: flex-start; justify-content: space-between;
+                                gap: 8px; padding: 6px 0; border-bottom: 1px solid #f0f0f0; }
+            .ri-name { flex: 1; font-weight: 600; font-size: 12.5px; }
+            .ri-qty  { font-size: 11.5px; color: #6b7260; white-space: nowrap; }
+            .ri-sub  { font-weight: 700; color: #5a7a1f; white-space: nowrap; }
+            .receipt-totals-row { display: flex; justify-content: space-between; padding: 4px 0; font-size: 13px; }
+            .receipt-total-final { font-size: 14px; font-weight: 700; color: #5a7a1f; }
+            .receipt-note-row { background: #f9fbf4; border: 1px dashed #c5dba0; border-radius: 6px;
+                                padding: 8px 10px; font-size: 12px; color: #4a5c2a; margin-top: 4px;
+                                display: flex; gap: 6px; }
+            .receipt-thankyou { text-align: center; font-size: 12.5px; color: #6b7260; line-height: 1.6; padding-top: 4px; }
+            .receipt-thankyou small { font-size: 11px; }
+        </style></head><body>${clone.outerHTML}</body></html>
+    `);
+    win.document.close();
+    win.focus();
+    setTimeout(() => { win.print(); win.close(); }, 400);
 }
 </script>
 @endpush

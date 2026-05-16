@@ -572,6 +572,14 @@ function renderActions(status, paymentMethod, paymentStatus) {
                     ✔ Mark as Completed
                 </button>
             </div>`;
+    } else if (status === 'completed') {
+        html = `
+            <p class="action-hint no-action">This order has been completed.</p>
+            <div class="action-buttons">
+                <button type="button" class="btn-receipt" onclick="printStaffReceipt()">
+                    🧾 Print / Download Receipt
+                </button>
+            </div>`;
     } else {
         html = `<p class="action-hint no-action">No further actions available for this order.</p>`;
     }
@@ -613,6 +621,97 @@ function submitAction(status, payStatus) {
 
 function ucFirst(str) {
     return str ? str.charAt(0).toUpperCase() + str.slice(1) : '';
+}
+
+/* ── RECEIPT (staff) ── */
+function printStaffReceipt() {
+    const id      = document.getElementById('form_order_id').value;
+    const order   = ORDERS[id];
+    if (!order) return;
+
+    const dateStr  = new Date(order.created_at).toLocaleString('en-PH', { dateStyle: 'long', timeStyle: 'short' });
+    const method   = order.payment_method === 'gcash' ? 'GCash' : 'Cash on Pick-up';
+    const payStatus = (order.payment_status || 'paid').charAt(0).toUpperCase() + (order.payment_status || 'paid').slice(1);
+    const refLine  = order.reference
+        ? `<div class="r-row"><span>GCash Ref #</span><span>${order.reference}</span></div>` : '';
+    const noteLine = order.note
+        ? `<div class="r-note">📝 ${order.note}</div>` : '';
+
+    let subtotal = 0;
+    const itemsHtml = order.items.map(item => {
+        subtotal += parseFloat(item.subtotal);
+        return `
+            <div class="r-item">
+                <div class="ri-name">${item.product_name}</div>
+                <div class="ri-qty">×${item.quantity} @ ₱${parseFloat(item.unit_price).toLocaleString('en-PH',{minimumFractionDigits:2})}</div>
+                <div class="ri-sub">₱${parseFloat(item.subtotal).toLocaleString('en-PH',{minimumFractionDigits:2})}</div>
+            </div>`;
+    }).join('');
+
+    const total = '₱' + parseFloat(order.total).toLocaleString('en-PH', { minimumFractionDigits: 2 });
+    const subTotalFmt = '₱' + subtotal.toLocaleString('en-PH', { minimumFractionDigits: 2 });
+
+    const win = window.open('', '_blank', 'width=440,height=700');
+    win.document.write(`
+        <!DOCTYPE html><html><head>
+        <meta charset="UTF-8">
+        <title>Receipt — Order #${order.id}</title>
+        <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+        <style>
+            *  { box-sizing:border-box; margin:0; padding:0; }
+            body { font-family:'DM Sans',sans-serif; background:#fff; color:#1e2318;
+                   padding:28px 24px; max-width:360px; margin:0 auto; font-size:13px; }
+            .brand { text-align:center; margin-bottom:14px; }
+            .brand strong { display:block; font-size:22px; color:#5a7a1f; letter-spacing:1px; }
+            .brand span   { font-size:11.5px; color:#888; }
+            .dashed { border:none; border-top:1.5px dashed #ccc; margin:12px 0; }
+            .section-label { font-size:10px; font-weight:700; text-transform:uppercase;
+                             letter-spacing:.08em; color:#80a833; margin-bottom:6px; }
+            .r-row { display:flex; justify-content:space-between; padding:4px 0; font-size:12.5px; }
+            .r-row span:first-child { color:#888; }
+            .r-item { display:flex; align-items:flex-start; justify-content:space-between;
+                      gap:8px; padding:7px 0; border-bottom:1px solid #f0f0f0; }
+            .ri-name { flex:1; font-weight:600; font-size:12.5px; }
+            .ri-qty  { font-size:11.5px; color:#888; white-space:nowrap; }
+            .ri-sub  { font-weight:700; color:#5a7a1f; white-space:nowrap; }
+            .r-total-row { display:flex; justify-content:space-between; padding:4px 0; font-size:13px; }
+            .r-grand { font-size:15px; font-weight:700; color:#5a7a1f; padding-top:4px; }
+            .r-note { background:#f2f8e6; border:1px dashed #c5dba0; border-radius:6px;
+                      padding:8px 10px; font-size:12px; color:#4a5c2a; margin-top:4px; }
+            .r-patient { font-weight:600; color:#1e2318; }
+            .thankyou { text-align:center; font-size:12.5px; color:#888; line-height:1.7; padding-top:4px; }
+            .thankyou small { font-size:11px; }
+            @media print { body { padding:0 16px; } }
+        </style></head><body>
+        <div class="brand">
+            <strong>SkinMedic</strong>
+            <span>Official Order Receipt</span>
+        </div>
+        <div class="dashed"></div>
+        <div class="r-row"><span>Order #</span><strong>#${order.id}</strong></div>
+        <div class="r-row"><span>Patient</span><span class="r-patient">${order.patient_name}</span></div>
+        <div class="r-row"><span>Date</span><span>${dateStr}</span></div>
+        <div class="r-row"><span>Status</span><span>✔ Completed</span></div>
+        <div class="dashed"></div>
+        <p class="section-label">Items Ordered</p>
+        ${itemsHtml}
+        <div class="dashed"></div>
+        <div class="r-total-row"><span>Subtotal</span><span>${subTotalFmt}</span></div>
+        <div class="r-total-row r-grand"><span>Total</span><strong>${total}</strong></div>
+        <div class="dashed"></div>
+        <p class="section-label">Payment</p>
+        <div class="r-row"><span>Method</span><span>${method}</span></div>
+        ${refLine}
+        <div class="r-row"><span>Payment Status</span><span>${payStatus}</span></div>
+        ${noteLine}
+        <div class="dashed"></div>
+        <p class="thankyou">Thank you for your purchase! 💚<br>
+            <small>SkinMedic Clinic · For concerns, please contact us directly.</small>
+        </p>
+        <script>window.onload=()=>{window.print();}<\/script>
+        </body></html>
+    `);
+    win.document.close();
 }
 
 window.onclick = e => {
