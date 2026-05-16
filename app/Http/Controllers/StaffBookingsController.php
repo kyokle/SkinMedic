@@ -446,7 +446,6 @@ class StaffBookingsController extends Controller
             'appointment_time' => $request->appointment_time,
             'status'           => 'approved',   // follow-ups are pre-approved
             'notes'            => $request->input('notes', ''),
-            'is_followup'      => 1,
             'created_at'       => now(),
             'updated_at'       => now(),
         ]);
