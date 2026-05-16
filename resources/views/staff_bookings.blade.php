@@ -466,10 +466,10 @@ function closeFollowUpModal() {
     document.getElementById('followUpModal').style.display = 'none';
 }
 
-function prefillFromLastAppt() {
-    // Get the underlying select element value (Tom Select stores value there)
-    const sel       = document.getElementById('fu_patient');
-    const opt       = sel.options[sel.selectedIndex];
+function prefillFromLastAppt(selectedValue) {
+    const sel = document.getElementById('fu_patient');
+    // Find the option by value — Tom Select may not have updated selectedIndex yet
+    const opt = [...sel.options].find(o => String(o.value) === String(selectedValue));
     if (!opt || !opt.value) return;
 
     const lastDate    = opt.dataset.lastDate;
@@ -603,8 +603,8 @@ window.addEventListener('DOMContentLoaded', function () {
         placeholder: '— Search patient —',
         allowEmptyOption: true,
         maxOptions: 300,
-        onItemAdd() {
-            prefillFromLastAppt();
+        onItemAdd(value) {
+            prefillFromLastAppt(value);
         },
     });
 
