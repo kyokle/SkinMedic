@@ -7,6 +7,51 @@
     <title>All Appointments — SkinMedic</title>
     <link rel="stylesheet" href="{{ asset('asset/css/staff_bookings.css') }}">
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Fraunces:wght@700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.min.css" rel="stylesheet">
+    <style>
+        /* ── Tom Select — match app style ── */
+        .ts-wrapper { padding: 0 !important; border: none !important; box-shadow: none !important; }
+        .ts-control {
+            border: 1.5px solid #e0e0e0 !important;
+            border-radius: 7px !important;
+            font-family: 'DM Sans', sans-serif !important;
+            font-size: 0.85rem !important;
+            background: #fafaf8 !important;
+            padding: 7px 11px !important;
+            box-shadow: none !important;
+            min-height: unset !important;
+            cursor: pointer;
+        }
+        .ts-wrapper.focus .ts-control { border-color: #80a833 !important; background: #fff !important; box-shadow: 0 0 0 2px rgba(128,168,51,0.15) !important; }
+        .ts-dropdown { font-family: 'DM Sans', sans-serif; font-size: 0.85rem; border: 1.5px solid #e0e0e0; border-radius: 8px; box-shadow: 0 4px 16px rgba(0,0,0,0.10); margin-top: 2px; }
+        .ts-dropdown .option { padding: 8px 12px; color: #333; }
+        .ts-dropdown .option:hover, .ts-dropdown .option.active { background: #f0f7e6 !important; color: #3a5c00; }
+        .ts-dropdown .option.selected { background: #80a833 !important; color: #fff; }
+        .ts-dropdown .ts-dropdown-content { max-height: 200px; }
+        /* Fu-select Tom Select sizing */
+        .fu-field .ts-wrapper { width: 100% !important; }
+        .fu-field .ts-control { padding: 8px 11px !important; }
+        /* Slot styles */
+        .fu-slot-grid { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 4px; }
+        .fu-slot-btn {
+            padding: 6px 12px;
+            border: 1.5px solid #ddd;
+            border-radius: 7px;
+            background: #fafaf8;
+            color: #555;
+            font-size: 0.8rem;
+            font-family: 'DM Sans', sans-serif;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        .fu-slot-btn:hover { border-color: #80a833; color: #80a833; background: #f0f7e6; }
+        .fu-slot-btn.selected { background: #80a833; color: #fff; border-color: #80a833; font-weight: 600; }
+        .fu-slots-hint { font-size: 0.8rem; color: #aaa; margin: 4px 0; }
+        .fu-slots-loading { color: #80a833; }
+        .fu-slots-none { color: #e05; }
+        .fu-slots-warn { color: #b45309; background: #fffbe6; border-radius: 5px; padding: 4px 8px; }
+    </style>
 </head>
 <body>
 
@@ -125,7 +170,6 @@
             <div class="modal-row"><span>Time</span><span id="m_time"></span></div>
             <div class="modal-row" style="border-bottom:none;"><span>Status</span><span id="m_status"></span></div>
 
-            {{-- Hidden form — submitted by JS --}}
             <form method="POST" action="{{ route('staff.bookings.update-status') }}" id="statusForm">
                 @csrf
                 <input type="hidden" name="appointment_id" id="appointment_id">
@@ -133,13 +177,11 @@
                 <input type="hidden" name="cancel_reason"  id="cancel_reason_value">
             </form>
 
-            {{-- Pending actions --}}
             <div id="actionButtons" style="display:none; margin-top:18px; gap:8px; justify-content:center;">
                 <button type="button" class="approve-btn"   onclick="submitStatus('approved')">✅ Approve</button>
                 <button type="button" class="cancelled-btn" onclick="openCancelReason()">✕ Cancel</button>
             </div>
 
-            {{-- Approved actions --}}
             <div id="actionButtonsApproved" style="display:none; margin-top:18px; gap:8px; justify-content:center;">
                 <button type="button" class="complete-btn"  onclick="submitStatus('completed')">✔ Completed</button>
                 <button type="button" class="cancelled-btn" onclick="openCancelReason()">✕ Cancel</button>
@@ -160,7 +202,6 @@
         <div class="modal-body">
             <p class="reason-intro">Please provide a reason for cancelling this appointment. The patient will be notified.</p>
 
-            {{-- Quick reason chips --}}
             <div class="reason-chips">
                 <button type="button" class="reason-chip" onclick="selectChip(this, 'Patient did not show up')">No-show</button>
                 <button type="button" class="reason-chip" onclick="selectChip(this, 'Doctor unavailable')">Doctor unavailable</button>
@@ -205,8 +246,8 @@
             {{-- Patient --}}
             <div class="fu-field">
                 <label class="fu-label">Patient</label>
-                <select name="user_id" id="fu_patient" class="fu-select" required onchange="prefillFromLastAppt()">
-                    <option value="">— Select patient —</option>
+                <select name="user_id" id="fu_patient" class="fu-select" required>
+                    <option value="">— Search patient —</option>
                     @foreach($patients as $pt)
                         <option value="{{ $pt->user_id }}"
                                 data-last-date="{{ $pt->last_appt_date ?? '' }}"
@@ -219,7 +260,7 @@
                 </select>
             </div>
 
-            {{-- Last session info (read-only hint) --}}
+            {{-- Last session info --}}
             <div id="fu_last_info" class="fu-last-info" style="display:none;">
                 <span class="fu-last-label">Last session:</span>
                 <span id="fu_last_text" class="fu-last-text"></span>
@@ -229,7 +270,7 @@
             <div class="fu-field">
                 <label class="fu-label">Service</label>
                 <select name="service_id" id="fu_service" class="fu-select" required>
-                    <option value="">— Select service —</option>
+                    <option value="">— Search service —</option>
                     @foreach($services as $svc)
                         <option value="{{ $svc->service_id }}">{{ $svc->name }}</option>
                     @endforeach
@@ -239,9 +280,8 @@
             {{-- Doctor --}}
             <div class="fu-field">
                 <label class="fu-label">Doctor</label>
-                <select name="doctor_id" id="fu_doctor" class="fu-select" required
-                        onchange="fetchFollowUpSlots()">
-                    <option value="">— Select doctor —</option>
+                <select name="doctor_id" id="fu_doctor" class="fu-select" required>
+                    <option value="">— Search doctor —</option>
                     @foreach($doctors as $doc)
                         <option value="{{ $doc->doctor_id ?? $doc->user_id }}">
                             Dr. {{ $doc->firstName }} {{ $doc->lastName }}
@@ -250,19 +290,17 @@
                 </select>
             </div>
 
-            {{-- Date (default: 1 week from last appt, or today+7) --}}
+            {{-- Date & Time --}}
             <div class="fu-row">
                 <div class="fu-field">
                     <label class="fu-label">Date</label>
-                    <input type="date" name="appointment_date" id="fu_date" class="fu-input" required
-                           onchange="fetchFollowUpSlots()">
+                    <input type="date" name="appointment_date" id="fu_date" class="fu-input" required>
                 </div>
                 <div class="fu-field">
                     <label class="fu-label">Time Slot</label>
                     <div id="fu_slots_wrap">
                         <p class="fu-slots-hint">Select a doctor and date first.</p>
                     </div>
-                    {{-- Hidden input carries the chosen time to the form --}}
                     <input type="hidden" name="appointment_time" id="fu_time" required>
                 </div>
             </div>
@@ -281,7 +319,9 @@
     </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
 <script>
+const TODAY = '{{ now()->toDateString() }}';
 let activeTab = '{{ $activeFilter }}';
 
 /* ── TAB FILTER ── */
@@ -294,12 +334,12 @@ function setTab(tab, btn) {
 
 /* ── SEARCH + FILTER ── */
 function applyFilters() {
-    const q      = document.getElementById('q').value.toLowerCase().trim();
-    const doc    = document.getElementById('doctorFilter').value;
-    const from   = document.getElementById('dateFrom').value;
-    const to     = document.getElementById('dateTo').value;
-    let visible  = 0;
-    const rows   = document.querySelectorAll('#bookingsTable tbody tr[data-status]');
+    const q     = document.getElementById('q').value.toLowerCase().trim();
+    const doc   = document.getElementById('doctorFilter').value;
+    const from  = document.getElementById('dateFrom').value;
+    const to    = document.getElementById('dateTo').value;
+    let visible = 0;
+    const rows  = document.querySelectorAll('#bookingsTable tbody tr[data-status]');
 
     rows.forEach(tr => {
         const matchTab  = activeTab === 'all' || tr.dataset.status === activeTab;
@@ -356,7 +396,6 @@ function closeModal() {
     document.getElementById('bookingModal').style.display = 'none';
 }
 
-/* ── SUBMIT (non-cancel) ── */
 function submitStatus(s) {
     document.getElementById('status_value').value        = s;
     document.getElementById('cancel_reason_value').value = '';
@@ -365,8 +404,8 @@ function submitStatus(s) {
 
 /* ── CANCEL REASON MODAL ── */
 function openCancelReason() {
-    document.getElementById('cancelReasonText').value = '';
-    document.getElementById('charCount').textContent  = '0';
+    document.getElementById('cancelReasonText').value    = '';
+    document.getElementById('charCount').textContent     = '0';
     document.getElementById('reasonError').style.display = 'none';
     document.querySelectorAll('.reason-chip').forEach(c => c.classList.remove('selected'));
     document.getElementById('cancelReasonModal').style.display = 'flex';
@@ -379,16 +418,14 @@ function closeCancelReason() {
 function selectChip(btn, text) {
     document.querySelectorAll('.reason-chip').forEach(c => c.classList.remove('selected'));
     btn.classList.add('selected');
-    document.getElementById('cancelReasonText').value = text;
-    document.getElementById('charCount').textContent  = text.length;
+    document.getElementById('cancelReasonText').value    = text;
+    document.getElementById('charCount').textContent     = text.length;
     document.getElementById('reasonError').style.display = 'none';
 }
 
 function updateCharCount(el) {
     document.getElementById('charCount').textContent = el.value.length;
-    if (el.value.trim()) {
-        document.getElementById('reasonError').style.display = 'none';
-    }
+    if (el.value.trim()) document.getElementById('reasonError').style.display = 'none';
 }
 
 function confirmCancel() {
@@ -403,14 +440,25 @@ function confirmCancel() {
 }
 
 /* ── FOLLOW-UP MODAL ── */
+let tsPatient = null, tsService = null, tsDoctor = null;
+
 function openFollowUpModal() {
     // Default date: today + 7 days
     const d = new Date();
     d.setDate(d.getDate() + 7);
-    document.getElementById('fu_date').value  = d.toISOString().split('T')[0];
-    document.getElementById('fu_time').value  = '';
+    const defaultDate = d.toISOString().split('T')[0];
+
+    document.getElementById('fu_date').value            = defaultDate;
+    document.getElementById('fu_date').min              = TODAY; // ← block past dates
+    document.getElementById('fu_time').value            = '';
     document.getElementById('fu_last_info').style.display = 'none';
-    document.getElementById('fu_slots_wrap').innerHTML = '<p class="fu-slots-hint">Select a doctor and date first.</p>';
+    document.getElementById('fu_slots_wrap').innerHTML  = '<p class="fu-slots-hint">Select a doctor and date first.</p>';
+
+    // Reset Tom Select values
+    if (tsPatient) tsPatient.clear();
+    if (tsService) tsService.clear();
+    if (tsDoctor)  tsDoctor.clear();
+
     document.getElementById('followUpModal').style.display = 'flex';
 }
 
@@ -419,43 +467,42 @@ function closeFollowUpModal() {
 }
 
 function prefillFromLastAppt() {
+    // Get the underlying select element value (Tom Select stores value there)
     const sel       = document.getElementById('fu_patient');
     const opt       = sel.options[sel.selectedIndex];
-    const lastDate  = opt.dataset.lastDate;
-    const lastTime  = opt.dataset.lastTime;
+    if (!opt || !opt.value) return;
+
+    const lastDate    = opt.dataset.lastDate;
+    const lastTime    = opt.dataset.lastTime;
     const lastService = opt.dataset.lastService;
     const lastDoctor  = opt.dataset.lastDoctor;
-    const infoBox   = document.getElementById('fu_last_info');
+    const infoBox     = document.getElementById('fu_last_info');
 
     if (lastDate) {
-        // Suggest 1 week after last session
         const d = new Date(lastDate + 'T00:00:00');
         d.setDate(d.getDate() + 7);
-        document.getElementById('fu_date').value = d.toISOString().split('T')[0];
+        const suggested = d.toISOString().split('T')[0];
 
-        // Pre-select same service
-        if (lastService) document.getElementById('fu_service').value = lastService;
+        // Only set if suggested date is in the future
+        const finalDate = suggested >= TODAY ? suggested : TODAY;
+        document.getElementById('fu_date').value = finalDate;
 
-        // Pre-select same doctor, then fetch slots (which will try to pre-select lastTime)
-        if (lastDoctor) {
-            document.getElementById('fu_doctor').value = lastDoctor;
-        }
+        if (lastService && tsService) tsService.setValue(String(lastService));
+        if (lastDoctor  && tsDoctor)  tsDoctor.setValue(String(lastDoctor));
 
-        // Show hint
         const label     = new Date(lastDate + 'T00:00:00').toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' });
         const timeLabel = lastTime ? ' at ' + new Date('1970-01-01T' + lastTime).toLocaleTimeString('en-PH', { hour: 'numeric', minute: '2-digit' }) : '';
         document.getElementById('fu_last_text').textContent = label + timeLabel;
         infoBox.style.display = 'flex';
 
-        // Fetch slots and try to pre-highlight the same time
         fetchFollowUpSlots(lastTime ? lastTime.substring(0, 5) : null);
     } else {
         infoBox.style.display = 'none';
         const d = new Date();
         d.setDate(d.getDate() + 7);
-        document.getElementById('fu_date').value = d.toISOString().split('T')[0];
+        document.getElementById('fu_date').value           = d.toISOString().split('T')[0];
         document.getElementById('fu_slots_wrap').innerHTML = '<p class="fu-slots-hint">Select a doctor and date first.</p>';
-        document.getElementById('fu_time').value = '';
+        document.getElementById('fu_time').value           = '';
     }
 }
 
@@ -471,16 +518,24 @@ function fetchFollowUpSlots(preferTime = null) {
         return;
     }
 
+    // ── Block past dates ──
+    if (date < TODAY) {
+        wrap.innerHTML = '<p class="fu-slots-hint fu-slots-none">⚠ Please select today or a future date.</p>';
+        document.getElementById('fu_time').value = '';
+        return;
+    }
+
     wrap.innerHTML = '<p class="fu-slots-hint fu-slots-loading">⏳ Loading slots…</p>';
     document.getElementById('fu_time').value = '';
 
+    // Uses /get-available-times which already filters by doctor's availability_schedule
     const url = `/get-available-times?doctor_id=${doctor}&date=${date}` + (service ? `&service_id=${service}` : '');
 
     fetch(url)
         .then(r => r.json())
         .then(slots => {
             if (!slots.length) {
-                wrap.innerHTML = '<p class="fu-slots-hint fu-slots-none">No available slots for this doctor on this date.</p>';
+                wrap.innerHTML = '<p class="fu-slots-hint fu-slots-none">No slots within this doctor\'s schedule on this date.</p>';
                 return;
             }
 
@@ -494,12 +549,11 @@ function fetchFollowUpSlots(preferTime = null) {
             const grid = document.getElementById('fu_slot_grid');
 
             available.forEach(slot => {
-                const btn  = document.createElement('button');
-                btn.type   = 'button';
+                const btn     = document.createElement('button');
+                btn.type      = 'button';
                 btn.className = 'fu-slot-btn';
                 btn.dataset.time = slot.time;
 
-                // Format display: "09:00" → "9:00 AM"
                 const [h, m] = slot.time.split(':').map(Number);
                 const ampm   = h >= 12 ? 'PM' : 'AM';
                 const hour   = h % 12 || 12;
@@ -507,18 +561,17 @@ function fetchFollowUpSlots(preferTime = null) {
 
                 btn.onclick = () => selectFollowUpSlot(slot.time, btn);
 
-                // Auto-select if it matches the preferred time
                 if (preferTime && slot.time === preferTime) {
-                    selectFollowUpSlot(slot.time, btn);
+                    // defer so grid is in DOM first
+                    setTimeout(() => selectFollowUpSlot(slot.time, btn), 0);
                 }
 
                 grid.appendChild(btn);
             });
 
-            // If preferred time wasn't in available slots, clear the hint
             if (preferTime && !available.find(s => s.time === preferTime)) {
-                const note = document.createElement('p');
-                note.className = 'fu-slots-hint fu-slots-warn';
+                const note       = document.createElement('p');
+                note.className   = 'fu-slots-hint fu-slots-warn';
                 note.textContent = `⚠ Previous slot (${preferTime}) is unavailable — please choose another.`;
                 wrap.insertBefore(note, grid);
             }
@@ -534,16 +587,48 @@ function selectFollowUpSlot(time, btn) {
     document.getElementById('fu_time').value = time;
 }
 
-/* ── CLOSE ON BACKDROP CLICK ── */
+/* ── CLOSE ON BACKDROP ── */
 window.onclick = e => {
     if (e.target === document.getElementById('bookingModal'))      closeModal();
     if (e.target === document.getElementById('cancelReasonModal')) closeCancelReason();
     if (e.target === document.getElementById('followUpModal'))     closeFollowUpModal();
 };
 
+/* ── INIT ── */
 window.addEventListener('DOMContentLoaded', function () {
     applyFilters();
 
+    // ── Tom Select — Patient ──
+    tsPatient = new TomSelect('#fu_patient', {
+        placeholder: '— Search patient —',
+        allowEmptyOption: true,
+        maxOptions: 300,
+        onItemAdd() {
+            prefillFromLastAppt();
+        },
+    });
+
+    // ── Tom Select — Service ──
+    tsService = new TomSelect('#fu_service', {
+        placeholder: '— Search service —',
+        allowEmptyOption: true,
+        maxOptions: 100,
+        onItemAdd() { fetchFollowUpSlots(); },
+    });
+
+    // ── Tom Select — Doctor ──
+    tsDoctor = new TomSelect('#fu_doctor', {
+        placeholder: '— Search doctor —',
+        allowEmptyOption: true,
+        maxOptions: 100,
+        onItemAdd() { fetchFollowUpSlots(); },
+    });
+
+    // ── Set today as min date on fu_date ──
+    document.getElementById('fu_date').min = TODAY;
+    document.getElementById('fu_date').addEventListener('change', () => fetchFollowUpSlots());
+
+    // ── Auto-open modal if ?open= param is set ──
     const params = new URLSearchParams(window.location.search);
     const openId = params.get('open');
     if (openId) {

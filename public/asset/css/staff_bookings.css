@@ -475,3 +475,30 @@ tr[data-status]:hover td { background: #fafff2; cursor: pointer; }
   transition: background 0.15s;
 }
 .fu-confirm-btn:hover { background: #6d9229; }
+/* ══════════════════════════════════════════
+   FOLLOW-UP SLOT GRID
+══════════════════════════════════════════ */
+.fu-slot-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+    margin-top: 4px;
+}
+.fu-slot-btn {
+    padding: 6px 12px;
+    border: 1.5px solid #ddd;
+    border-radius: 7px;
+    background: #fafaf8;
+    color: #555;
+    font-size: 0.8rem;
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+.fu-slot-btn:hover    { border-color: #80a833; color: #80a833; background: #f0f7e6; }
+.fu-slot-btn.selected { background: #80a833; color: #fff; border-color: #80a833; font-weight: 600; }
+.fu-slots-hint    { font-size: 0.8rem; color: #aaa; margin: 4px 0; }
+.fu-slots-loading { color: #80a833; }
+.fu-slots-none    { color: #e05; }
+.fu-slots-warn    { color: #b45309; background: #fffbe6; border-radius: 5px; padding: 4px 8px; }
