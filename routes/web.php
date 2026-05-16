@@ -183,6 +183,7 @@ Route::post('/staff/bookings/update-status', [StaffBookingsController::class, 'u
 Route::get('/staff/bookings', [StaffBookingsController::class, 'index'])
     ->name('staff.bookings')
     ->middleware('check.staff.role');
+Route::post('/staff/bookings/followup', [StaffBookingsController::class, 'storeFollowUp'])->name('staff.bookings.followup');
 
 // ── Staff Services ───────────────────────────────────────
 Route::get('/staff/services',  [StaffServicesController::class,  'index'])->name('staff.services');

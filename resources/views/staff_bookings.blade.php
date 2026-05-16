@@ -20,6 +20,9 @@
     <div class="topbar">
         <h2>All Appointments</h2>
         <div style="display:flex;align-items:center;gap:14px;">
+            <button class="followup-trigger-btn" onclick="openFollowUpModal()" type="button">
+                📅 Schedule Follow-up
+            </button>
             <div class="date-box">
                 <p>Today's Date</p>
                 <strong>{{ now()->toDateString() }}</strong>
@@ -183,6 +186,101 @@
     </div>
 </div>
 
+{{-- ══════════════════════════════════════════
+     FOLLOW-UP APPOINTMENT MODAL
+═══════════════════════════════════════════ --}}
+<div id="followUpModal" class="modal">
+    <div class="modal-content followup-modal-content">
+        <div class="modal-header">
+            <h2>📅 Schedule Follow-up</h2>
+            <span class="close-btn" onclick="closeFollowUpModal()">&times;</span>
+        </div>
+        <p class="followup-intro">
+            Book a follow-up appointment for a patient — defaulting to <strong>1 week</strong> after their last session.
+        </p>
+
+        <form method="POST" action="{{ route('staff.bookings.followup') }}" id="followUpForm">
+            @csrf
+
+            {{-- Patient --}}
+            <div class="fu-field">
+                <label class="fu-label">Patient</label>
+                <select name="user_id" id="fu_patient" class="fu-select" required onchange="prefillFromLastAppt()">
+                    <option value="">— Select patient —</option>
+                    @foreach($patients as $pt)
+                        <option value="{{ $pt->user_id }}"
+                                data-last-date="{{ $pt->last_appt_date ?? '' }}"
+                                data-last-time="{{ $pt->last_appt_time ?? '' }}"
+                                data-last-service="{{ $pt->last_service_id ?? '' }}"
+                                data-last-doctor="{{ $pt->last_doctor_id ?? '' }}">
+                            {{ $pt->firstName }} {{ $pt->lastName }}
+                        </option>
+                    @endforeach
+                </select>
+            </div>
+
+            {{-- Last session info (read-only hint) --}}
+            <div id="fu_last_info" class="fu-last-info" style="display:none;">
+                <span class="fu-last-label">Last session:</span>
+                <span id="fu_last_text" class="fu-last-text"></span>
+            </div>
+
+            {{-- Service --}}
+            <div class="fu-field">
+                <label class="fu-label">Service</label>
+                <select name="service_id" id="fu_service" class="fu-select" required>
+                    <option value="">— Select service —</option>
+                    @foreach($services as $svc)
+                        <option value="{{ $svc->service_id }}">{{ $svc->name }}</option>
+                    @endforeach
+                </select>
+            </div>
+
+            {{-- Doctor --}}
+            <div class="fu-field">
+                <label class="fu-label">Doctor</label>
+                <select name="doctor_id" id="fu_doctor" class="fu-select" required
+                        onchange="fetchFollowUpSlots()">
+                    <option value="">— Select doctor —</option>
+                    @foreach($doctors as $doc)
+                        <option value="{{ $doc->doctor_id ?? $doc->user_id }}">
+                            Dr. {{ $doc->firstName }} {{ $doc->lastName }}
+                        </option>
+                    @endforeach
+                </select>
+            </div>
+
+            {{-- Date (default: 1 week from last appt, or today+7) --}}
+            <div class="fu-row">
+                <div class="fu-field">
+                    <label class="fu-label">Date</label>
+                    <input type="date" name="appointment_date" id="fu_date" class="fu-input" required
+                           onchange="fetchFollowUpSlots()">
+                </div>
+                <div class="fu-field">
+                    <label class="fu-label">Time Slot</label>
+                    <div id="fu_slots_wrap">
+                        <p class="fu-slots-hint">Select a doctor and date first.</p>
+                    </div>
+                    {{-- Hidden input carries the chosen time to the form --}}
+                    <input type="hidden" name="appointment_time" id="fu_time" required>
+                </div>
+            </div>
+
+            {{-- Notes --}}
+            <div class="fu-field">
+                <label class="fu-label">Notes <span class="fu-optional">optional</span></label>
+                <textarea name="notes" class="fu-textarea" placeholder="e.g. Patient to continue treatment, same slot preferred…" rows="2"></textarea>
+            </div>
+
+            <div class="fu-actions">
+                <button type="button" class="fu-cancel-btn" onclick="closeFollowUpModal()">Cancel</button>
+                <button type="submit" class="fu-confirm-btn">✓ Book Follow-up</button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <script>
 let activeTab = '{{ $activeFilter }}';
 
@@ -267,12 +365,10 @@ function submitStatus(s) {
 
 /* ── CANCEL REASON MODAL ── */
 function openCancelReason() {
-    // Reset state
     document.getElementById('cancelReasonText').value = '';
     document.getElementById('charCount').textContent  = '0';
     document.getElementById('reasonError').style.display = 'none';
     document.querySelectorAll('.reason-chip').forEach(c => c.classList.remove('selected'));
-    // Show cancel modal, keep booking modal open in background
     document.getElementById('cancelReasonModal').style.display = 'flex';
 }
 
@@ -281,7 +377,6 @@ function closeCancelReason() {
 }
 
 function selectChip(btn, text) {
-    // Toggle selection
     document.querySelectorAll('.reason-chip').forEach(c => c.classList.remove('selected'));
     btn.classList.add('selected');
     document.getElementById('cancelReasonText').value = text;
@@ -307,16 +402,148 @@ function confirmCancel() {
     document.getElementById('statusForm').submit();
 }
 
+/* ── FOLLOW-UP MODAL ── */
+function openFollowUpModal() {
+    // Default date: today + 7 days
+    const d = new Date();
+    d.setDate(d.getDate() + 7);
+    document.getElementById('fu_date').value  = d.toISOString().split('T')[0];
+    document.getElementById('fu_time').value  = '';
+    document.getElementById('fu_last_info').style.display = 'none';
+    document.getElementById('fu_slots_wrap').innerHTML = '<p class="fu-slots-hint">Select a doctor and date first.</p>';
+    document.getElementById('followUpModal').style.display = 'flex';
+}
+
+function closeFollowUpModal() {
+    document.getElementById('followUpModal').style.display = 'none';
+}
+
+function prefillFromLastAppt() {
+    const sel       = document.getElementById('fu_patient');
+    const opt       = sel.options[sel.selectedIndex];
+    const lastDate  = opt.dataset.lastDate;
+    const lastTime  = opt.dataset.lastTime;
+    const lastService = opt.dataset.lastService;
+    const lastDoctor  = opt.dataset.lastDoctor;
+    const infoBox   = document.getElementById('fu_last_info');
+
+    if (lastDate) {
+        // Suggest 1 week after last session
+        const d = new Date(lastDate + 'T00:00:00');
+        d.setDate(d.getDate() + 7);
+        document.getElementById('fu_date').value = d.toISOString().split('T')[0];
+
+        // Pre-select same service
+        if (lastService) document.getElementById('fu_service').value = lastService;
+
+        // Pre-select same doctor, then fetch slots (which will try to pre-select lastTime)
+        if (lastDoctor) {
+            document.getElementById('fu_doctor').value = lastDoctor;
+        }
+
+        // Show hint
+        const label     = new Date(lastDate + 'T00:00:00').toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' });
+        const timeLabel = lastTime ? ' at ' + new Date('1970-01-01T' + lastTime).toLocaleTimeString('en-PH', { hour: 'numeric', minute: '2-digit' }) : '';
+        document.getElementById('fu_last_text').textContent = label + timeLabel;
+        infoBox.style.display = 'flex';
+
+        // Fetch slots and try to pre-highlight the same time
+        fetchFollowUpSlots(lastTime ? lastTime.substring(0, 5) : null);
+    } else {
+        infoBox.style.display = 'none';
+        const d = new Date();
+        d.setDate(d.getDate() + 7);
+        document.getElementById('fu_date').value = d.toISOString().split('T')[0];
+        document.getElementById('fu_slots_wrap').innerHTML = '<p class="fu-slots-hint">Select a doctor and date first.</p>';
+        document.getElementById('fu_time').value = '';
+    }
+}
+
+function fetchFollowUpSlots(preferTime = null) {
+    const doctor  = document.getElementById('fu_doctor').value;
+    const date    = document.getElementById('fu_date').value;
+    const service = document.getElementById('fu_service').value;
+    const wrap    = document.getElementById('fu_slots_wrap');
+
+    if (!doctor || !date) {
+        wrap.innerHTML = '<p class="fu-slots-hint">Select a doctor and date first.</p>';
+        document.getElementById('fu_time').value = '';
+        return;
+    }
+
+    wrap.innerHTML = '<p class="fu-slots-hint fu-slots-loading">⏳ Loading slots…</p>';
+    document.getElementById('fu_time').value = '';
+
+    const url = `/get-available-times?doctor_id=${doctor}&date=${date}` + (service ? `&service_id=${service}` : '');
+
+    fetch(url)
+        .then(r => r.json())
+        .then(slots => {
+            if (!slots.length) {
+                wrap.innerHTML = '<p class="fu-slots-hint fu-slots-none">No available slots for this doctor on this date.</p>';
+                return;
+            }
+
+            const available = slots.filter(s => !s.taken);
+            if (!available.length) {
+                wrap.innerHTML = '<p class="fu-slots-hint fu-slots-none">All slots are fully booked for this date.</p>';
+                return;
+            }
+
+            wrap.innerHTML = '<div class="fu-slot-grid" id="fu_slot_grid"></div>';
+            const grid = document.getElementById('fu_slot_grid');
+
+            available.forEach(slot => {
+                const btn  = document.createElement('button');
+                btn.type   = 'button';
+                btn.className = 'fu-slot-btn';
+                btn.dataset.time = slot.time;
+
+                // Format display: "09:00" → "9:00 AM"
+                const [h, m] = slot.time.split(':').map(Number);
+                const ampm   = h >= 12 ? 'PM' : 'AM';
+                const hour   = h % 12 || 12;
+                btn.textContent = `${hour}:${String(m).padStart(2,'0')} ${ampm}`;
+
+                btn.onclick = () => selectFollowUpSlot(slot.time, btn);
+
+                // Auto-select if it matches the preferred time
+                if (preferTime && slot.time === preferTime) {
+                    selectFollowUpSlot(slot.time, btn);
+                }
+
+                grid.appendChild(btn);
+            });
+
+            // If preferred time wasn't in available slots, clear the hint
+            if (preferTime && !available.find(s => s.time === preferTime)) {
+                const note = document.createElement('p');
+                note.className = 'fu-slots-hint fu-slots-warn';
+                note.textContent = `⚠ Previous slot (${preferTime}) is unavailable — please choose another.`;
+                wrap.insertBefore(note, grid);
+            }
+        })
+        .catch(() => {
+            wrap.innerHTML = '<p class="fu-slots-hint fu-slots-none">Could not load slots. Check connection.</p>';
+        });
+}
+
+function selectFollowUpSlot(time, btn) {
+    document.querySelectorAll('.fu-slot-btn').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+    document.getElementById('fu_time').value = time;
+}
+
 /* ── CLOSE ON BACKDROP CLICK ── */
 window.onclick = e => {
     if (e.target === document.getElementById('bookingModal'))      closeModal();
     if (e.target === document.getElementById('cancelReasonModal')) closeCancelReason();
+    if (e.target === document.getElementById('followUpModal'))     closeFollowUpModal();
 };
 
 window.addEventListener('DOMContentLoaded', function () {
     applyFilters();
 
-    // Auto-open modal from notification click
     const params = new URLSearchParams(window.location.search);
     const openId = params.get('open');
     if (openId) {

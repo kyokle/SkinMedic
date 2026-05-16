@@ -205,9 +205,40 @@ class StaffBookingsController extends Controller
             ->orderBy('firstName')
             ->get();
 
+        // ── Patients with their last completed appointment info ──
+        $patients = DB::table('users as u')
+            ->leftJoin(DB::raw("(
+                SELECT a.user_id,
+                       a.appointment_date  AS last_appt_date,
+                       a.appointment_time  AS last_appt_time,
+                       a.service_id        AS last_service_id,
+                       a.doctor_id         AS last_doctor_id
+                FROM appointments a
+                INNER JOIN (
+                    SELECT user_id, MAX(appointment_date) AS max_date
+                    FROM appointments
+                    WHERE status = 'completed'
+                    GROUP BY user_id
+                ) latest ON latest.user_id = a.user_id AND a.appointment_date = latest.max_date
+                WHERE a.status = 'completed'
+            ) AS last_appt"), 'last_appt.user_id', '=', 'u.user_id')
+            ->where('u.role', 'patient')
+            ->select(
+                'u.user_id', 'u.firstName', 'u.lastName',
+                'last_appt.last_appt_date',
+                'last_appt.last_appt_time',
+                'last_appt.last_service_id',
+                'last_appt.last_doctor_id'
+            )
+            ->orderBy('u.firstName')
+            ->get();
+
+        // ── Services list for follow-up modal ──
+        $services = DB::table('services')->orderBy('name')->get();
+
         return view('staff_bookings', array_merge(
             $this->sidebarData(),
-            compact('bookings', 'activeFilter', 'doctors')
+            compact('bookings', 'activeFilter', 'doctors', 'patients', 'services')
         ));
     }
 
@@ -381,5 +412,69 @@ class StaffBookingsController extends Controller
         }
 
         return redirect()->route('staff.bookings');
+    }
+
+    // ── POST /staff/bookings/followup ─────────────────────────
+    public function storeFollowUp(Request $request)
+    {
+        if (!in_array(Session::get('role'), ['staff', 'admin'])) {
+            return redirect()->route('index');
+        }
+
+        $request->validate([
+            'user_id'          => 'required|integer',
+            'service_id'       => 'required|integer',
+            'doctor_id'        => 'required|integer',
+            'appointment_date' => 'required|date',
+            'appointment_time' => 'required',
+        ]);
+
+        // Resolve doctor_id from doctor table (may be passed as user_id of doctor)
+        $doctor = DB::table('doctor')->where('doctor_id', $request->doctor_id)->first();
+        if (!$doctor) {
+            // Try looking up by user_id as fallback
+            $doctor = DB::table('doctor')->where('user_id', $request->doctor_id)->first();
+        }
+
+        $appointmentId = DB::table('appointments')->insertGetId([
+            'user_id'          => $request->user_id,
+            'service_id'       => $request->service_id,
+            'doctor_id'        => $doctor ? $doctor->doctor_id : $request->doctor_id,
+            'appointment_date' => $request->appointment_date,
+            'appointment_time' => $request->appointment_time,
+            'status'           => 'approved',   // follow-ups are pre-approved
+            'notes'            => $request->input('notes', ''),
+            'is_followup'      => 1,
+            'created_at'       => now(),
+            'updated_at'       => now(),
+        ]);
+
+        $actor   = $this->actorName();
+        $patient = DB::table('users')->where('user_id', $request->user_id)->first();
+
+        // Notify patient
+        if ($patient) {
+            NotificationHelper::send(
+                $patient->user_id,
+                'Follow-up Appointment Scheduled',
+                "A follow-up appointment has been scheduled for you on {$request->appointment_date} at {$request->appointment_time} by {$actor}.",
+                'upcoming',
+                $appointmentId
+            );
+        }
+
+        // Notify doctor
+        if ($doctor && $doctor->user_id) {
+            NotificationHelper::send(
+                $doctor->user_id,
+                'Follow-up Appointment Scheduled',
+                "{$actor} scheduled a follow-up appointment #{$appointmentId} on {$request->appointment_date} at {$request->appointment_time}.",
+                'booking',
+                $appointmentId
+            );
+        }
+
+        return redirect()->route('staff.bookings')
+            ->with('success', "Follow-up appointment scheduled for {$patient?->firstName} {$patient?->lastName} on {$request->appointment_date} at {$request->appointment_time}.");
     }
 }
