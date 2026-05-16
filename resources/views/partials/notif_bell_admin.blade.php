@@ -10,15 +10,17 @@
     </button>
 
     <div id="notifDropdown"
-         style="display:none;position:absolute;top:44px;right:0;width:320px;
-                background:white;border-radius:10px;box-shadow:0 4px 16px rgba(0,0,0,0.15);
+         style="display:none;position:fixed;top:64px;right:10px;
+                width:calc(100vw - 20px);max-width:400px;
+                background:white;border-radius:12px;
+                box-shadow:0 4px 24px rgba(0,0,0,0.18);
                 z-index:9999;">
 
-        <div style="padding:10px 14px;font-weight:600;border-bottom:1px solid #eee;
+        <div style="padding:12px 16px;font-weight:600;font-size:14px;border-bottom:1px solid #eee;
                     display:flex;justify-content:space-between;align-items:center;">
             <span>🏥 Clinic Notifications</span>
             <button onclick="markAllAdminRead()"
-                    style="font-size:11px;color:#80a833;background:none;border:none;cursor:pointer;">
+                    style="font-size:12px;color:#80a833;background:none;border:none;cursor:pointer;">
                 Mark all read
             </button>
         </div>
@@ -27,7 +29,7 @@
             @foreach(['all' => 'All', 'booking' => 'Bookings', 'inventory' => 'Inventory'] as $key => $label)
             <button onclick="switchAdminTab('{{ $key }}', this)"
                     data-tab="{{ $key }}"
-                    style="flex:1;padding:8px 4px;font-size:11px;border:none;background:none;
+                    style="flex:1;padding:10px 4px;font-size:12px;border:none;background:none;
                            cursor:pointer;font-family:inherit;border-bottom:2px solid transparent;
                            {{ $key === 'all' ? 'border-bottom-color:#80a833;font-weight:600;color:#80a833;' : 'color:#888;' }}">
                 {{ $label }}
@@ -35,7 +37,7 @@
             @endforeach
         </div>
 
-        <div id="notifList" style="max-height:300px;overflow-y:auto;"></div>
+        <div id="notifList" style="max-height:60vh;overflow-y:auto;"></div>
     </div>
 </div>
 
@@ -87,14 +89,18 @@ function loadAdminNotifications(type) {
             const icons = { booking: '📅', inventory: '📦', rescheduled: '🔄', general: '🔔' };
             list.innerHTML = items.map(n => `
                 <div onclick="handleAdminNotifClick(${n.id}, '${n.type}', ${n.reference_id || 0})"
-                     style="padding:12px 14px;border-bottom:1px solid #f0f0f0;cursor:pointer;
+                     style="padding:14px 16px;border-bottom:1px solid #f0f0f0;cursor:pointer;
                             background:${n.is_read ? '#fff' : '#f9fff2'}">
-                    <div style="display:flex;align-items:center;gap:6px;">
-                        <span>${icons[n.type] || '🔔'}</span>
-                        <span style="font-weight:${n.is_read ? '400' : '600'};font-size:13px;">${n.title}</span>
+                    <div style="display:flex;align-items:flex-start;gap:8px;">
+                        <span style="font-size:16px;flex-shrink:0;">${icons[n.type] || '🔔'}</span>
+                        <div style="min-width:0;flex:1;">
+                            <div style="font-weight:${n.is_read ? '500' : '700'};font-size:13px;
+                                        color:#1a1f16;line-height:1.3;">${n.title}</div>
+                            <div style="font-size:12px;color:#555;margin-top:4px;line-height:1.5;
+                                        word-break:break-word;white-space:normal;">${n.message}</div>
+                            <div style="font-size:11px;color:#aaa;margin-top:4px;">${n.created_at}</div>
+                        </div>
                     </div>
-                    <div style="font-size:12px;color:#666;margin-top:3px;padding-left:20px;">${n.message}</div>
-                    <div style="font-size:11px;color:#aaa;margin-top:3px;padding-left:20px;">${n.created_at}</div>
                 </div>`).join('');
         });
 }

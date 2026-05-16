@@ -312,7 +312,7 @@ class StaffInventoryController extends Controller
         $adminStaff = DB::table('users')->whereIn('role', ['admin', 'staff'])->get();
 
         foreach ($nearExpiry as $item) {
-            $daysLeft = now()->diffInDays($item->expiry_date);
+            $daysLeft = (int) now()->diffInDays($item->expiry_date);
             $title    = '⏰ Expiry Warning';
             $msg      = $item->product_name . ' is expiring in ' . $daysLeft . ' day(s) on ' . $item->expiry_date . ' (' . $item->qty . ' units remaining).';
 
