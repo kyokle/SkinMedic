@@ -201,8 +201,10 @@ class StaffBookingsController extends Controller
         $activeFilter = $request->query('filter', 'all');
 
         $doctors = DB::table('users')
-            ->where('role', 'doctor')
-            ->orderBy('firstName')
+            ->join('doctor', 'doctor.user_id', '=', 'users.user_id')
+            ->where('users.role', 'doctor')
+            ->select('users.user_id', 'users.firstName', 'users.lastName', 'doctor.doctor_id', 'doctor.availability_schedule')
+            ->orderBy('users.firstName')
             ->get();
 
         // ── Patients with their last completed appointment info ──

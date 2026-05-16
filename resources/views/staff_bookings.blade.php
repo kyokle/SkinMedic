@@ -283,7 +283,7 @@
                 <select name="doctor_id" id="fu_doctor" class="fu-select" required>
                     <option value="">— Search doctor —</option>
                     @foreach($doctors as $doc)
-                        <option value="{{ $doc->doctor_id ?? $doc->user_id }}">
+                        <option value="{{ $doc->doctor_id }}">
                             Dr. {{ $doc->firstName }} {{ $doc->lastName }}
                         </option>
                     @endforeach
