@@ -495,7 +495,8 @@ function prefillFromLastAppt(selectedValue) {
         document.getElementById('fu_last_text').textContent = label + timeLabel;
         infoBox.style.display = 'flex';
 
-        fetchFollowUpSlots(lastTime ? lastTime.substring(0, 5) : null);
+        // Defer so Tom Select setValue has time to update the underlying select
+        setTimeout(() => fetchFollowUpSlots(lastTime ? lastTime.substring(0, 5) : null), 50);
     } else {
         infoBox.style.display = 'none';
         const d = new Date();
@@ -507,6 +508,7 @@ function prefillFromLastAppt(selectedValue) {
 }
 
 function fetchFollowUpSlots(preferTime = null) {
+    // Use .value directly on the underlying select — Tom Select keeps it in sync
     const doctor  = document.getElementById('fu_doctor').value;
     const date    = document.getElementById('fu_date').value;
     const service = document.getElementById('fu_service').value;
@@ -613,7 +615,7 @@ window.addEventListener('DOMContentLoaded', function () {
         placeholder: '— Search service —',
         allowEmptyOption: true,
         maxOptions: 100,
-        onItemAdd() { fetchFollowUpSlots(); },
+        onItemAdd() { setTimeout(() => fetchFollowUpSlots(), 0); },
     });
 
     // ── Tom Select — Doctor ──
@@ -621,12 +623,17 @@ window.addEventListener('DOMContentLoaded', function () {
         placeholder: '— Search doctor —',
         allowEmptyOption: true,
         maxOptions: 100,
-        onItemAdd() { fetchFollowUpSlots(); },
+        onItemAdd() { setTimeout(() => fetchFollowUpSlots(), 0); },
     });
 
     // ── Set today as min date on fu_date ──
     document.getElementById('fu_date').min = TODAY;
-    document.getElementById('fu_date').addEventListener('change', () => fetchFollowUpSlots());
+    document.getElementById('fu_date').addEventListener('change', function() {
+        if (this.value < TODAY) {
+            this.value = TODAY;
+        }
+        fetchFollowUpSlots();
+    });
 
     // ── Auto-open modal if ?open= param is set ──
     const params = new URLSearchParams(window.location.search);
