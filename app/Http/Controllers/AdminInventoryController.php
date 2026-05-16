@@ -4,12 +4,22 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Session;
 use App\Http\Controllers\SidebarDataController;
 use App\Helpers\NotificationHelper;
 
 class AdminInventoryController extends Controller
 {
     use SidebarDataController;
+
+    // ── Get the name of the currently logged-in admin/staff ──
+    private function actorName(): string
+    {
+        $userId = Session::get('user_id');
+        if (!$userId) return 'Admin';
+        $user = DB::table('users')->where('user_id', $userId)->first();
+        return $user ? trim($user->firstName . ' ' . $user->lastName) : 'Admin';
+    }
 
     public function index()
     {
@@ -65,18 +75,17 @@ class AdminInventoryController extends Controller
 
     public function addStock(Request $request)
     {
-        // ── Validation ────────────────────────────────────────
         $request->validate([
             'product_id'  => 'required|integer|exists:products,product_id',
             'quantity'    => 'required|integer|min:1|max:99999',
             'expiry_date' => 'required|date|after_or_equal:today',
         ], [
-            'quantity.min'             => 'Quantity must be at least 1.',
-            'quantity.max'             => 'Quantity cannot exceed 99,999 per batch.',
+            'quantity.min'               => 'Quantity must be at least 1.',
+            'quantity.max'               => 'Quantity cannot exceed 99,999 per batch.',
             'expiry_date.after_or_equal' => 'Expiry date must be today or a future date.',
         ]);
-        // ─────────────────────────────────────────────────────
 
+        $actor      = $this->actorName();
         $productId  = (int) $request->input('product_id');
         $qty        = (int) $request->input('quantity');
         $expiryDate = $request->input('expiry_date');
@@ -93,7 +102,6 @@ class AdminInventoryController extends Controller
             ) WHERE product_id = ?
         ", [$productId, $productId]);
 
-        // ── Notifications ─────────────────────────────────────
         $product    = DB::table('products')->where('product_id', $productId)->first();
         $newQty     = DB::table('inventory_logs')
                         ->where('product_id', $productId)
@@ -101,13 +109,15 @@ class AdminInventoryController extends Controller
                         ->where('quantity', '>', 0)
                         ->sum('quantity');
 
-        $adminStaff = DB::table('users')->whereIn('role', ['admin', 'staff'])->get();
+        $productName = $product->product_name ?? 'A product';
+        $adminStaff  = DB::table('users')->whereIn('role', ['admin', 'staff'])->get();
 
         foreach ($adminStaff as $u) {
             NotificationHelper::send(
                 $u->user_id,
                 'Stock Added',
-                ($product->product_name ?? 'A product') . ' had ' . $qty . ' units added. Total stock: ' . $newQty . '.'
+                "{$actor} added {$qty} units of {$productName}. Total stock: {$newQty}.",
+                'inventory'
             );
         }
 
@@ -116,7 +126,8 @@ class AdminInventoryController extends Controller
                 NotificationHelper::send(
                     $u->user_id,
                     '⚠ Low Stock Warning',
-                    ($product->product_name ?? 'A product') . ' is low on stock (' . $newQty . ' units remaining).'
+                    "{$productName} is still low on stock after restock by {$actor} ({$newQty} units remaining).",
+                    'inventory'
                 );
             }
         }
@@ -126,18 +137,17 @@ class AdminInventoryController extends Controller
                 NotificationHelper::send(
                     $u->user_id,
                     '❌ Out of Stock',
-                    ($product->product_name ?? 'A product') . ' is now out of stock.'
+                    "{$productName} is now out of stock. Last action by {$actor}.",
+                    'inventory'
                 );
             }
         }
-        // ─────────────────────────────────────────────────────
 
         return redirect()->route('admin.inventory')->with('success', $qty . ' units added successfully.');
     }
 
     public function deductStock(Request $request)
     {
-        // ── Validation ────────────────────────────────────────
         $request->validate([
             'product_id' => 'required|integer|exists:products,product_id',
             'quantity'   => 'required|integer|min:1',
@@ -145,14 +155,12 @@ class AdminInventoryController extends Controller
         ], [
             'quantity.min' => 'Quantity must be at least 1.',
         ]);
-        // ─────────────────────────────────────────────────────
 
+        $actor   = $this->actorName();
         $product = DB::table('products')->where('product_id', $request->product_id)->first();
         if (!$product) return back()->with('error', 'Product not found.');
 
         if ($request->action === 'set') {
-            // "Set exact qty" — the user types the new desired total.
-            // We deduct the difference between current and target.
             $targetQty = (int) $request->quantity;
 
             if ($targetQty < 0) {
@@ -165,7 +173,6 @@ class AdminInventoryController extends Controller
 
             $deductQty = $product->quantity - $targetQty;
         } else {
-            // "Deduct" mode — straightforward subtraction
             if ($request->quantity > $product->quantity) {
                 return back()->with('error', 'Cannot deduct ' . $request->quantity . ' units; only ' . $product->quantity . ' in stock.');
             }
@@ -198,7 +205,6 @@ class AdminInventoryController extends Controller
                 $remaining -= $batch->quantity;
             }
         }
-        // ─────────────────────────────────────────────────────
 
         $newQty = DB::table('inventory_logs')
             ->where('product_id', $request->product_id)
@@ -210,18 +216,18 @@ class AdminInventoryController extends Controller
             ->where('product_id', $request->product_id)
             ->update(['quantity' => $newQty]);
 
-        // ── Notifications ─────────────────────────────────────
-        $adminStaff = DB::table('users')->whereIn('role', ['admin', 'staff'])->get();
+        $productName = $product->product_name ?? 'A product';
+        $adminStaff  = DB::table('users')->whereIn('role', ['admin', 'staff'])->get();
 
         $actionLabel = $request->action === 'set'
-            ? 'adjusted to ' . $newQty . ' units (deducted ' . $deductQty . ')'
-            : $deductQty . ' units deducted. Remaining: ' . $newQty;
+            ? "{$actor} adjusted {$productName} to {$newQty} units (deducted {$deductQty})."
+            : "{$actor} deducted {$deductQty} units from {$productName}. Remaining: {$newQty}.";
 
         foreach ($adminStaff as $u) {
             NotificationHelper::send(
                 $u->user_id,
                 'Stock Updated',
-                ($product->product_name ?? 'A product') . ' — ' . $actionLabel . '.',
+                $actionLabel,
                 'inventory'
             );
         }
@@ -231,7 +237,7 @@ class AdminInventoryController extends Controller
                 NotificationHelper::send(
                     $u->user_id,
                     '⚠ Low Stock Warning',
-                    ($product->product_name ?? 'A product') . ' is low on stock (' . $newQty . ' units remaining).',
+                    "{$productName} is low on stock ({$newQty} units remaining) after adjustment by {$actor}.",
                     'inventory'
                 );
             }
@@ -242,51 +248,52 @@ class AdminInventoryController extends Controller
                 NotificationHelper::send(
                     $u->user_id,
                     '❌ Out of Stock',
-                    ($product->product_name ?? 'A product') . ' is now out of stock.',
+                    "{$productName} is now out of stock after adjustment by {$actor}.",
                     'inventory'
                 );
             }
         }
-        // ─────────────────────────────────────────────────────
 
         return back()->with('success', 'Stock updated successfully.');
     }
 
     public function updateReorder(Request $request)
-{
-    $request->validate([
-        'product_id'    => 'required|integer|exists:products,product_id',
-        'reorder_level' => 'required|integer|min:0|max:99999',
-    ], [
-        'reorder_level.min' => 'Reorder level cannot be negative.',
-        'reorder_level.max' => 'Reorder level cannot exceed 99,999.',
-    ]);
+    {
+        $request->validate([
+            'product_id'    => 'required|integer|exists:products,product_id',
+            'reorder_level' => 'required|integer|min:0|max:99999',
+        ], [
+            'reorder_level.min' => 'Reorder level cannot be negative.',
+            'reorder_level.max' => 'Reorder level cannot exceed 99,999.',
+        ]);
 
-    $productId    = (int) $request->input('product_id');
-    $reorderLevel = (int) $request->input('reorder_level');
+        $actor        = $this->actorName();
+        $productId    = (int) $request->input('product_id');
+        $reorderLevel = (int) $request->input('reorder_level');
 
-    $product = DB::table('products')->where('product_id', $productId)->first();
-    if (!$product) return back()->with('error', 'Product not found.');
+        $product = DB::table('products')->where('product_id', $productId)->first();
+        if (!$product) return back()->with('error', 'Product not found.');
 
-    DB::table('products')
-        ->where('product_id', $productId)
-        ->update(['reorder_level' => $reorderLevel]);
+        $oldLevel = $product->reorder_level;
 
-    // ── Notifications ─────────────────────────────────────
-    $adminStaff = DB::table('users')->whereIn('role', ['admin', 'staff'])->get();
+        DB::table('products')
+            ->where('product_id', $productId)
+            ->update(['reorder_level' => $reorderLevel]);
 
-    foreach ($adminStaff as $u) {
-        NotificationHelper::send(
-            $u->user_id,
-            'Reorder Level Updated',
-            ($product->product_name ?? 'A product') . ' reorder level changed to ' . $reorderLevel . ' units.',
-            'inventory'
-        );
+        $productName = $product->product_name ?? 'A product';
+        $adminStaff  = DB::table('users')->whereIn('role', ['admin', 'staff'])->get();
+
+        foreach ($adminStaff as $u) {
+            NotificationHelper::send(
+                $u->user_id,
+                'Reorder Level Updated',
+                "{$actor} changed the reorder level of {$productName} from {$oldLevel} to {$reorderLevel} units.",
+                'inventory'
+            );
+        }
+
+        return back()->with('success', 'Reorder level updated successfully.');
     }
-    // ─────────────────────────────────────────────────────
-
-    return back()->with('success', 'Reorder level updated successfully.');
-}
 
     private function checkNearExpiry(): void
     {
@@ -318,7 +325,7 @@ class AdminInventoryController extends Controller
                     ->exists();
 
                 if (!$alreadyNotified) {
-                    NotificationHelper::send($u->user_id, $title, $msg);
+                    NotificationHelper::send($u->user_id, $title, $msg, 'inventory');
                 }
             }
         }

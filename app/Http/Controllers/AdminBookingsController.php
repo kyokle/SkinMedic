@@ -13,6 +13,15 @@ class AdminBookingsController extends Controller
 {
     use SidebarDataController;
 
+    // ── Get the name of the currently logged-in admin/staff ──
+    private function actorName(): string
+    {
+        $userId = Session::get('user_id');
+        if (!$userId) return 'Admin';
+        $user = DB::table('users')->where('user_id', $userId)->first();
+        return $user ? trim($user->firstName . ' ' . $user->lastName) : 'Admin';
+    }
+
     // ── Auto-complete helper ──────────────────────────────────
     private function autoComplete(): void
     {
@@ -83,7 +92,7 @@ class AdminBookingsController extends Controller
                 );
             }
 
-            // Notify admin/admin
+            // Notify admin/staff
             $adminStaff = DB::table('users')->whereIn('role', ['admin', 'staff'])->get();
             foreach ($adminStaff as $u) {
                 NotificationHelper::send(
@@ -174,8 +183,8 @@ class AdminBookingsController extends Controller
         $bookings = DB::table('appointments as a')
             ->leftJoin('services as s', 'a.service_id', '=', 's.service_id')
             ->leftJoin('users as p',    'a.user_id',    '=', 'p.user_id')
-            ->leftJoin('doctor as doc',  'a.doctor_id',     '=', 'doc.doctor_id')
-            ->leftJoin('users as d',     'doc.user_id',     '=', 'd.user_id')
+            ->leftJoin('doctor as doc',  'a.doctor_id',  '=', 'doc.doctor_id')
+            ->leftJoin('users as d',     'doc.user_id',  '=', 'd.user_id')
             ->selectRaw("
                 a.appointment_id,
                 s.name AS service_name,
@@ -197,9 +206,9 @@ class AdminBookingsController extends Controller
             ->get();
 
         return view('admin_bookings', array_merge(
-    $this->sidebarData(),
-    compact('bookings', 'activeFilter', 'doctors')
-    ));
+            $this->sidebarData(),
+            compact('bookings', 'activeFilter', 'doctors')
+        ));
     }
 
     // ── POST /admin/bookings/update-status ────────────────────
@@ -209,8 +218,10 @@ class AdminBookingsController extends Controller
             return redirect()->route('index');
         }
 
-        $id     = (int) $request->input('appointment_id');
-        $status = $request->input('status');
+        $actor        = $this->actorName();
+        $id           = (int) $request->input('appointment_id');
+        $status       = $request->input('status');
+        $cancelReason = trim($request->input('cancel_reason', ''));
 
         $appt = DB::table('appointments')->where('appointment_id', $id)->first();
 
@@ -234,7 +245,6 @@ class AdminBookingsController extends Controller
                         'updated_at'    => now(),
                     ]);
 
-                // Notify patient
                 $patient = DB::table('users')->where('user_id', $appt->user_id)->first();
                 if ($patient) {
                     NotificationHelper::send(
@@ -246,7 +256,6 @@ class AdminBookingsController extends Controller
                     );
                 }
 
-                // Notify doctor
                 $doctor = DB::table('doctor')->where('doctor_id', $appt->doctor_id)->first();
                 if ($doctor && $doctor->user_id) {
                     NotificationHelper::send(
@@ -258,7 +267,6 @@ class AdminBookingsController extends Controller
                     );
                 }
 
-                // Notify admin/staff
                 $adminStaff = DB::table('users')->whereIn('role', ['admin', 'staff'])->get();
                 foreach ($adminStaff as $u) {
                     NotificationHelper::send(
@@ -270,7 +278,6 @@ class AdminBookingsController extends Controller
                     );
                 }
 
-                // Free up the slot for waitlisted patients
                 WaitlistController::notifyNext(
                     $appt->appointment_date,
                     $appt->appointment_time
@@ -280,9 +287,14 @@ class AdminBookingsController extends Controller
             }
         }
 
+        $updatePayload = ['status' => $status, 'updated_at' => now()];
+        if ($status === 'cancelled' && $cancelReason !== '') {
+            $updatePayload['cancel_reason'] = $cancelReason;
+        }
+
         DB::table('appointments')
             ->where('appointment_id', $id)
-            ->update(['status' => $status]);
+            ->update($updatePayload);
 
         if ($status === 'completed') {
             $alreadyDeducted = DB::table('inventory_logs')
@@ -303,10 +315,17 @@ class AdminBookingsController extends Controller
                 ->update(['is_rescheduled' => false]);
         }
 
+        $reasonSuffix = ($status === 'cancelled' && $cancelReason !== '')
+            ? " Reason: {$cancelReason}"
+            : '';
+
+        // ── Patient-facing messages ──
         $patientMessages = [
-            'approved'  => $isRescheduled ? 'Your rescheduled appointment has been approved.' : 'Your appointment has been approved.',
-            'completed' => 'Your appointment has been marked as completed.',
-            'cancelled' => 'Your appointment has been cancelled.',
+            'approved'  => $isRescheduled
+                ? "Your rescheduled appointment has been approved by {$actor}."
+                : "Your appointment has been approved by {$actor}.",
+            'completed' => "Your appointment has been marked as completed by {$actor}.",
+            'cancelled' => "Your appointment has been cancelled by {$actor}." . $reasonSuffix,
         ];
         $patientTypes = [
             'approved'  => 'upcoming',
@@ -314,10 +333,11 @@ class AdminBookingsController extends Controller
             'cancelled' => 'cancelled',
         ];
 
+        // ── Staff/admin/doctor messages (with actor for accountability) ──
         $staffMessages = [
-            'approved'  => 'An appointment has been approved.',
-            'completed' => 'An appointment has been marked as completed.',
-            'cancelled' => 'An appointment has been cancelled.',
+            'approved'  => "{$actor} approved appointment #{$id} on {$appt->appointment_date} at {$appt->appointment_time}.",
+            'completed' => "{$actor} marked appointment #{$id} on {$appt->appointment_date} at {$appt->appointment_time} as completed.",
+            'cancelled' => "{$actor} cancelled appointment #{$id} on {$appt->appointment_date} at {$appt->appointment_time}." . $reasonSuffix,
         ];
         $staffTypes = [
             'approved'  => 'booking',
@@ -326,9 +346,9 @@ class AdminBookingsController extends Controller
         ];
 
         $title       = 'Appointment ' . ucfirst($status);
-        $patientMsg  = $patientMessages[$status] ?? 'Your appointment status has been updated.';
+        $patientMsg  = $patientMessages[$status] ?? "Your appointment status was updated by {$actor}.";
         $patientType = $patientTypes[$status]    ?? 'upcoming';
-        $staffMsg    = $staffMessages[$status]   ?? 'An appointment status has been updated.';
+        $staffMsg    = $staffMessages[$status]   ?? "{$actor} updated appointment #{$id} status to {$status}.";
         $staffType   = $staffTypes[$status]      ?? 'booking';
 
         $patient = DB::table('users')->where('user_id', $appt->user_id)->first();
@@ -346,7 +366,6 @@ class AdminBookingsController extends Controller
             NotificationHelper::send($u->user_id, $title, $staffMsg, $staffType, $id);
         }
 
-        // Notify next waitlisted patient when slot is freed
         if ($status === 'cancelled') {
             WaitlistController::notifyNext(
                 $appt->appointment_date,
@@ -354,8 +373,6 @@ class AdminBookingsController extends Controller
             );
         }
 
-        // After completing an appointment, redirect to walk-in sale
-        // with patient and appointment pre-filled for billing
         if ($status === 'completed') {
             return redirect()->route('admin.walkin', [
                 'from_appointment' => $id,

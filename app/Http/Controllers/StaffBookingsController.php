@@ -13,6 +13,15 @@ class StaffBookingsController extends Controller
 {
     use SidebarDataController;
 
+    // ── Get the name of the currently logged-in staff/admin ──
+    private function actorName(): string
+    {
+        $userId = Session::get('user_id');
+        if (!$userId) return 'Staff';
+        $user = DB::table('users')->where('user_id', $userId)->first();
+        return $user ? trim($user->firstName . ' ' . $user->lastName) : 'Staff';
+    }
+
     // ── Auto-complete helper ──────────────────────────────────
     private function autoComplete(): void
     {
@@ -197,9 +206,9 @@ class StaffBookingsController extends Controller
             ->get();
 
         return view('staff_bookings', array_merge(
-    $this->sidebarData(),
-    compact('bookings', 'activeFilter', 'doctors')
-    ));
+            $this->sidebarData(),
+            compact('bookings', 'activeFilter', 'doctors')
+        ));
     }
 
     // ── POST /staff/bookings/update-status ────────────────────
@@ -209,6 +218,7 @@ class StaffBookingsController extends Controller
             return redirect()->route('index');
         }
 
+        $actor        = $this->actorName();
         $id           = (int) $request->input('appointment_id');
         $status       = $request->input('status');
         $cancelReason = trim($request->input('cancel_reason', ''));
@@ -235,7 +245,6 @@ class StaffBookingsController extends Controller
                         'updated_at'    => now(),
                     ]);
 
-                // Notify patient
                 $patient = DB::table('users')->where('user_id', $appt->user_id)->first();
                 if ($patient) {
                     NotificationHelper::send(
@@ -247,7 +256,6 @@ class StaffBookingsController extends Controller
                     );
                 }
 
-                // Notify doctor
                 $doctor = DB::table('doctor')->where('doctor_id', $appt->doctor_id)->first();
                 if ($doctor && $doctor->user_id) {
                     NotificationHelper::send(
@@ -259,7 +267,6 @@ class StaffBookingsController extends Controller
                     );
                 }
 
-                // Notify admin/staff
                 $adminStaff = DB::table('users')->whereIn('role', ['admin', 'staff'])->get();
                 foreach ($adminStaff as $u) {
                     NotificationHelper::send(
@@ -271,7 +278,6 @@ class StaffBookingsController extends Controller
                     );
                 }
 
-                // Free up the slot for waitlisted patients
                 WaitlistController::notifyNext(
                     $appt->appointment_date,
                     $appt->appointment_time
@@ -313,10 +319,13 @@ class StaffBookingsController extends Controller
             ? " Reason: {$cancelReason}"
             : '';
 
+        // ── Patient-facing messages (no actor name, keeps it clean) ──
         $patientMessages = [
-            'approved'  => $isRescheduled ? 'Your rescheduled appointment has been approved.' : 'Your appointment has been approved.',
-            'completed' => 'Your appointment has been marked as completed.',
-            'cancelled' => 'Your appointment has been cancelled.' . $reasonSuffix,
+            'approved'  => $isRescheduled
+                ? "Your rescheduled appointment has been approved by {$actor}."
+                : "Your appointment has been approved by {$actor}.",
+            'completed' => "Your appointment has been marked as completed by {$actor}.",
+            'cancelled' => "Your appointment has been cancelled by {$actor}." . $reasonSuffix,
         ];
         $patientTypes = [
             'approved'  => 'upcoming',
@@ -324,10 +333,11 @@ class StaffBookingsController extends Controller
             'cancelled' => 'cancelled',
         ];
 
+        // ── Staff/admin/doctor messages (include actor for accountability) ──
         $staffMessages = [
-            'approved'  => 'An appointment has been approved.',
-            'completed' => 'An appointment has been marked as completed.',
-            'cancelled' => 'An appointment has been cancelled.' . $reasonSuffix,
+            'approved'  => "{$actor} approved appointment #{$id} on {$appt->appointment_date} at {$appt->appointment_time}.",
+            'completed' => "{$actor} marked appointment #{$id} on {$appt->appointment_date} at {$appt->appointment_time} as completed.",
+            'cancelled' => "{$actor} cancelled appointment #{$id} on {$appt->appointment_date} at {$appt->appointment_time}." . $reasonSuffix,
         ];
         $staffTypes = [
             'approved'  => 'booking',
@@ -336,9 +346,9 @@ class StaffBookingsController extends Controller
         ];
 
         $title       = 'Appointment ' . ucfirst($status);
-        $patientMsg  = $patientMessages[$status] ?? 'Your appointment status has been updated.';
+        $patientMsg  = $patientMessages[$status] ?? "Your appointment status was updated by {$actor}.";
         $patientType = $patientTypes[$status]    ?? 'upcoming';
-        $staffMsg    = $staffMessages[$status]   ?? 'An appointment status has been updated.';
+        $staffMsg    = $staffMessages[$status]   ?? "{$actor} updated appointment #{$id} status to {$status}.";
         $staffType   = $staffTypes[$status]      ?? 'booking';
 
         $patient = DB::table('users')->where('user_id', $appt->user_id)->first();
@@ -356,7 +366,6 @@ class StaffBookingsController extends Controller
             NotificationHelper::send($u->user_id, $title, $staffMsg, $staffType, $id);
         }
 
-        // Notify next waitlisted patient when slot is freed
         if ($status === 'cancelled') {
             WaitlistController::notifyNext(
                 $appt->appointment_date,
@@ -364,8 +373,6 @@ class StaffBookingsController extends Controller
             );
         }
 
-        // After completing an appointment, redirect to walk-in sale
-        // with patient and appointment pre-filled for billing
         if ($status === 'completed') {
             return redirect()->route('staff.walkin', [
                 'from_appointment' => $id,
