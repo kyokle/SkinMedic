@@ -76,24 +76,12 @@ class AdminSalesReportController extends Controller
                        COUNT(wss.id) as total_count,
                        SUM(wss.service_price) as total_revenue
                 FROM walkin_sale_services wss
-                JOIN walkin_sales ws ON ws.sale_id = wss.sale_id
-                JOIN appointments a ON a.appointment_id = wss.appointment_id
-                JOIN services sv2 ON sv2.service_id = a.service_id
+                JOIN walkin_sales ws ON ws.sale_id       = wss.sale_id
+                JOIN appointments a  ON a.appointment_id = wss.appointment_id
+                JOIN services sv2    ON sv2.service_id   = a.service_id
                 WHERE DATE(ws.created_at) BETWEEN '{$dateFrom}' AND '{$dateTo}'
                   AND ws.status = 'completed'
                   AND wss.appointment_id IS NOT NULL
-                GROUP BY sv2.name
-                UNION ALL
-                SELECT sv2.name,
-                       COUNT(a2.appointment_id),
-                       SUM(sv2.price)
-                FROM appointments a2
-                JOIN services sv2 ON sv2.service_id = a2.service_id
-                WHERE DATE(a2.updated_at) BETWEEN '{$dateFrom}' AND '{$dateTo}'
-                  AND a2.status = 'completed'
-                  AND a2.appointment_id NOT IN (
-                      SELECT appointment_id FROM walkin_sale_services WHERE appointment_id IS NOT NULL
-                  )
                 GROUP BY sv2.name
             ) as sales"), 'sales.service_name', '=', 'sv.name')
             ->select(
@@ -512,43 +500,19 @@ class AdminSalesReportController extends Controller
     private function getServiceRows(string $from, string $to)
     {
         $rows = DB::select("
-            SELECT service_name,
-                   SUM(total_count)   AS total_count,
-                   SUM(total_revenue) AS total_revenue
-            FROM (
-                -- Walk-in services linked to an appointment
-                SELECT sv.name          AS service_name,
-                       COUNT(wss.id)    AS total_count,
-                       SUM(wss.service_price) AS total_revenue
-                FROM walkin_sale_services wss
-                JOIN walkin_sales ws ON ws.sale_id        = wss.sale_id
-                JOIN appointments a  ON a.appointment_id  = wss.appointment_id
-                JOIN services sv     ON sv.service_id     = a.service_id
-                WHERE DATE(ws.created_at) BETWEEN ? AND ?
-                  AND ws.status = 'completed'
-                  AND wss.appointment_id IS NOT NULL
-                GROUP BY sv.service_id, sv.name
-
-                UNION ALL
-
-                -- Standalone completed appointments not tied to any walk-in sale
-                SELECT sv.name                AS service_name,
-                       COUNT(a.appointment_id) AS total_count,
-                       SUM(sv.price)           AS total_revenue
-                FROM appointments a
-                JOIN services sv ON sv.service_id = a.service_id
-                WHERE DATE(a.updated_at) BETWEEN ? AND ?
-                  AND a.status = 'completed'
-                  AND a.appointment_id NOT IN (
-                      SELECT appointment_id
-                      FROM walkin_sale_services
-                      WHERE appointment_id IS NOT NULL
-                  )
-                GROUP BY sv.service_id, sv.name
-            ) AS combined
-            GROUP BY service_name
+            SELECT sv.name          AS service_name,
+                   COUNT(wss.id)    AS total_count,
+                   SUM(wss.service_price) AS total_revenue
+            FROM walkin_sale_services wss
+            JOIN walkin_sales ws ON ws.sale_id       = wss.sale_id
+            JOIN appointments a  ON a.appointment_id = wss.appointment_id
+            JOIN services sv     ON sv.service_id    = a.service_id
+            WHERE DATE(ws.created_at) BETWEEN ? AND ?
+              AND ws.status = 'completed'
+              AND wss.appointment_id IS NOT NULL
+            GROUP BY sv.service_id, sv.name
             ORDER BY total_revenue DESC
-        ", [$from, $to, $from, $to]);
+        ", [$from, $to]);
 
         return collect($rows);
     }
