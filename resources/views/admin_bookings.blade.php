@@ -29,11 +29,11 @@
     </div>
 
     <div class="filter-tabs">
-        <button class="{{ $activeFilter === 'all'       ? 'active' : '' }}" onclick="filterTable('all', this)">All</button>
-        <button class="{{ $activeFilter === 'pending'   ? 'active' : '' }}" onclick="filterTable('pending', this)">Pending</button>
-        <button class="{{ $activeFilter === 'approved'  ? 'active' : '' }}" onclick="filterTable('approved', this)">Approved</button>
-        <button class="{{ $activeFilter === 'completed' ? 'active' : '' }}" onclick="filterTable('completed', this)">Completed</button>
-        <button class="{{ $activeFilter === 'cancelled' ? 'active' : '' }}" onclick="filterTable('cancelled', this)">Cancelled</button>
+        <button class="{{ $activeFilter === 'all'       ? 'active' : '' }}" onclick="setTab('all', this)">All</button>
+        <button class="{{ $activeFilter === 'pending'   ? 'active' : '' }}" onclick="setTab('pending', this)">Pending</button>
+        <button class="{{ $activeFilter === 'approved'  ? 'active' : '' }}" onclick="setTab('approved', this)">Approved</button>
+        <button class="{{ $activeFilter === 'completed' ? 'active' : '' }}" onclick="setTab('completed', this)">Completed</button>
+        <button class="{{ $activeFilter === 'cancelled' ? 'active' : '' }}" onclick="setTab('cancelled', this)">Cancelled</button>
     </div>
 
 {{-- ── Search / filter bar ── --}}
@@ -74,6 +74,7 @@
                 @php $cls = strtolower($row->status); @endphp
                 <tr data-status="{{ $row->status }}"
                     data-id="{{ $row->appointment_id }}"
+                    data-date="{{ $row->appointment_date }}"
                     onclick="openModal(
                         '{{ $row->appointment_id }}',
                         '{{ addslashes($row->patient_name) }}',
