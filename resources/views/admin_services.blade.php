@@ -97,7 +97,7 @@
             <span class="close-btn" onclick="closeModal()">&times;</span>
         </div>
         <div class="modal-body">
-            <form method="POST" action="{{ route('admin.services.store') }}" enctype="multipart/form-data">
+            <form method="POST" action="{{ route('admin.services.add') }}" enctype="multipart/form-data">
                 @csrf
                 <label>Service Name</label>
                 <input type="text" name="name" required>
