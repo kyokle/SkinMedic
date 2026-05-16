@@ -13,7 +13,7 @@ class AdminProductsController extends Controller
     use SidebarDataController;
 
     // ─────────────────────────────────────────
-    // GET  /staff/products
+    // GET /admin/products
     // ─────────────────────────────────────────
     public function index()
     {
@@ -25,7 +25,7 @@ class AdminProductsController extends Controller
     }
 
     // ─────────────────────────────────────────
-    // POST /staff/products/store  (route: staff.products.store)
+    // POST /admin/products/store  (route: admin.products.store)
     // BUG 6 FIX: route uses 'store' so we add store() that calls add()
     // ─────────────────────────────────────────
     public function store(Request $request)
@@ -35,6 +35,20 @@ class AdminProductsController extends Controller
 
     public function add(Request $request)
     {
+        $request->validate([
+            'product_name'  => 'required|string|max:255',
+            'cost_price'    => 'required|numeric|min:0.01',
+            'selling_price' => 'required|numeric|min:0.01',
+            'expiry_date'   => 'required|date|after_or_equal:today',
+        ], [
+            'cost_price.min'             => 'Cost price must be greater than zero.',
+            'cost_price.required'        => 'Cost price is required.',
+            'selling_price.min'          => 'Selling price must be greater than zero.',
+            'selling_price.required'     => 'Selling price is required.',
+            'expiry_date.required'       => 'Expiry date is required.',
+            'expiry_date.after_or_equal' => 'Expiry date must be today or a future date.',
+        ]);
+
         // BUG 3 FIX: use Cloudinary instead of local move()
         $imgName = 'default.png';
         if ($request->hasFile('image')) {
@@ -67,14 +81,25 @@ class AdminProductsController extends Controller
             'created_at'  => now(),
         ]);
 
-        return redirect()->route('admin.products');      // BUG 1 FIX: was 'admin.products'
+        return redirect()->route('admin.products');  
     }
 
     // ─────────────────────────────────────────
-    // POST /staff/products/update
+    // POST /admin/products/update
     // ─────────────────────────────────────────
     public function update(Request $request)
     {
+        $request->validate([
+            'product_name'  => 'required|string|max:255',
+            'cost_price'    => 'required|numeric|min:0.01',
+            'selling_price' => 'required|numeric|min:0.01',
+        ], [
+            'cost_price.min'         => 'Cost price must be greater than zero.',
+            'cost_price.required'    => 'Cost price is required.',
+            'selling_price.min'      => 'Selling price must be greater than zero.',
+            'selling_price.required' => 'Selling price is required.',
+        ]);
+
         $productId = (int) $request->input('product_id');
         $data = [
             'product_name'     => $request->input('product_name'),
@@ -89,7 +114,6 @@ class AdminProductsController extends Controller
             'status'           => $request->input('status'),
         ];
 
-        // BUG 3 FIX: use Cloudinary instead of local move()
         if ($request->hasFile('image')) {
             $uploaded      = cloudinary()->uploadApi()->upload($request->file('image')->getRealPath());
             $data['image'] = $uploaded['secure_url'];
@@ -97,11 +121,11 @@ class AdminProductsController extends Controller
 
         DB::table('products')->where('product_id', $productId)->update($data);
 
-        return redirect()->route('admin.products');      // BUG 1 FIX: was 'admin.products'
+        return redirect()->route('admin.products');      
     }
 
     // ─────────────────────────────────────────
-    // POST /staff/products/delete
+    // POST /admin/products/delete
     // ─────────────────────────────────────────
     public function delete(Request $request)
     {
