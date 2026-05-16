@@ -9,6 +9,85 @@
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=Fraunces:wght@700&display=swap" rel="stylesheet">
 {{-- Tom Select --}}
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.css">
+<style>
+    /* ── Tom Select overrides to match existing design ── */
+    .ts-wrapper.full-select,
+    .ts-wrapper.prod-select,
+    .ts-wrapper.svc-select,
+    .ts-wrapper.svc-doctor {
+        padding: 0;
+        border: none;
+        background: transparent;
+    }
+
+    .ts-wrapper .ts-control {
+        width: 100%;
+        padding: 9px 12px;
+        border: 1.5px solid #e0e0e0;
+        border-radius: 8px;
+        font-size: 0.88rem;
+        font-family: 'DM Sans', sans-serif;
+        color: #333;
+        background: #fafafa;
+        transition: border-color 0.2s;
+        box-sizing: border-box;
+        box-shadow: none;
+        cursor: pointer;
+        min-height: unset;
+    }
+
+    .ts-wrapper.focus .ts-control,
+    .ts-wrapper .ts-control:focus-within {
+        border-color: #80a833 !important;
+        outline: none;
+        background: #fff;
+        box-shadow: none;
+    }
+
+    /* Dropdown */
+    .ts-dropdown {
+        font-family: 'DM Sans', sans-serif;
+        font-size: 0.88rem;
+        border: 1.5px solid #d8e8c0;
+        border-radius: 8px;
+        box-shadow: 0 6px 20px rgba(0,0,0,0.10);
+        margin-top: 3px;
+        z-index: 9999;
+    }
+
+    .ts-dropdown .option {
+        padding: 9px 12px;
+        color: #333;
+        border-radius: 0;
+        transition: background 0.1s;
+    }
+    .ts-dropdown .option:hover,
+    .ts-dropdown .option.active {
+        background: #f0f7e6;
+        color: #3a6400;
+    }
+
+    /* Search input inside dropdown */
+    .ts-dropdown .ts-dropdown-content { max-height: 220px; }
+    .ts-wrapper .ts-control input {
+        font-family: 'DM Sans', sans-serif;
+        font-size: 0.88rem;
+        color: #333;
+    }
+
+    /* Remove default arrow and use a clean one */
+    .ts-wrapper:not(.multi) .ts-control .value { color: #333; }
+    .ts-wrapper .ts-control::after { border-color: #888 transparent transparent transparent; }
+
+    /* Prefilled Tom Select fields */
+    .ts-wrapper.prefilled-ts .ts-control {
+        border-color: #80a833 !important;
+        background: #f9fff2 !important;
+    }
+
+    /* Patient select — slightly taller placeholder area */
+    #patientSelect-ts-wrapper .ts-control { min-height: 40px; }
+</style>
 @endpush
 
 @section('content')
