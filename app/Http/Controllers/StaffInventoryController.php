@@ -153,13 +153,14 @@ class StaffInventoryController extends Controller
         if ($request->action === 'set') {
             // "Set exact qty" — the user types the new desired total.
             // We deduct the difference between current and target.
-            $targetQty = $request->quantity;
+            $targetQty = (int) $request->quantity;
+
+            if ($targetQty < 0) {
+                return back()->with('error', 'Target quantity cannot be negative.');
+            }
 
             if ($targetQty >= $product->quantity) {
                 return back()->with('error', 'Target quantity must be less than the current stock (' . $product->quantity . '). Use Add Stock to increase.');
-            }
-            if ($targetQty < 0) {
-                return back()->with('error', 'Target quantity cannot be negative.');
             }
 
             $deductQty = $product->quantity - $targetQty;

@@ -36,6 +36,20 @@ class StaffProductsController extends Controller
 
     public function add(Request $request)
     {
+        $request->validate([
+            'product_name'  => 'required|string|max:255',
+            'cost_price'    => 'required|numeric|min:0.01',
+            'selling_price' => 'required|numeric|min:0.01',
+            'expiry_date'   => 'required|date|after_or_equal:today',
+        ], [
+            'cost_price.min'              => 'Cost price must be greater than zero.',
+            'cost_price.required'         => 'Cost price is required.',
+            'selling_price.min'           => 'Selling price must be greater than zero.',
+            'selling_price.required'      => 'Selling price is required.',
+            'expiry_date.required'        => 'Expiry date is required.',
+            'expiry_date.after_or_equal'  => 'Expiry date must be today or a future date.',
+        ]);
+
         // BUG 3 FIX: use Cloudinary instead of local move()
         $imgName = 'default.png';
         if ($request->hasFile('image')) {
@@ -76,6 +90,17 @@ class StaffProductsController extends Controller
     // ─────────────────────────────────────────
     public function update(Request $request)
     {
+        $request->validate([
+            'product_name'  => 'required|string|max:255',
+            'cost_price'    => 'required|numeric|min:0.01',
+            'selling_price' => 'required|numeric|min:0.01',
+        ], [
+            'cost_price.min'         => 'Cost price must be greater than zero.',
+            'cost_price.required'    => 'Cost price is required.',
+            'selling_price.min'      => 'Selling price must be greater than zero.',
+            'selling_price.required' => 'Selling price is required.',
+        ]);
+
         $productId = (int) $request->input('product_id');
         $data = [
             'product_name'     => $request->input('product_name'),

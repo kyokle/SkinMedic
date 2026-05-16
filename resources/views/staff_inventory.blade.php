@@ -422,13 +422,39 @@ function validateModalAdd() {
     const qty    = document.getElementById('addQtyModal');
     const expiry = document.getElementById('addExpiryModal');
     const today  = new Date().toISOString().split('T')[0];
+
+    // Clear previous inline errors
+    ['addQtyError', 'addExpiryError'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.remove();
+    });
+
+    let valid = true;
+
     if (!qty.value || parseInt(qty.value) < 1) {
-        qty.focus(); return false;
+        showInlineError(qty, 'addQtyError', 'Quantity must be at least 1.');
+        valid = false;
     }
     if (!expiry.value || expiry.value < today) {
-        expiry.focus(); return false;
+        showInlineError(expiry, 'addExpiryError', 'Expiry date must be today or a future date. Expired stock cannot be added.');
+        valid = false;
     }
-    return true;
+    return valid;
+}
+
+function showInlineError(inputEl, errorId, message) {
+    inputEl.style.borderColor = '#dc2626';
+    const err = document.createElement('span');
+    err.id        = errorId;
+    err.className = 'inline-error-msg';
+    err.textContent = '⚠ ' + message;
+    inputEl.parentNode.insertBefore(err, inputEl.nextSibling);
+    inputEl.addEventListener('input', function cleanup() {
+        const existing = document.getElementById(errorId);
+        if (existing) existing.remove();
+        inputEl.style.borderColor = '';
+        inputEl.removeEventListener('input', cleanup);
+    }, { once: true });
 }
 
 function toggleRemoveBtn() {

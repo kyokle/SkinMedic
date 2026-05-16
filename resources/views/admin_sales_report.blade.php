@@ -23,7 +23,7 @@
                 <p>Today's Date</p>
                 <strong>{{ now()->toDateString() }}</strong>
             </div>
-            @include('partials.notif_bell_staff')
+            @include('partials.notif_bell_admin')
         </div>
     </div>
 

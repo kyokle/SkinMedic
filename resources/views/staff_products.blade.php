@@ -32,6 +32,18 @@
       </div>
     </header>
 
+    {{-- ── Validation errors ── --}}
+    @if($errors->any())
+    <div class="validation-error-box" id="validationErrors">
+        <strong>⚠ Please fix the following before saving:</strong>
+        <ul>
+            @foreach($errors->all() as $error)
+                <li>{{ $error }}</li>
+            @endforeach
+        </ul>
+    </div>
+    @endif
+
     {{-- ── Filter bar ── --}}
     <div class="filter-bar">
       <div class="product-search-wrap">
@@ -125,6 +137,7 @@
       <div class="modal-body">
         <form method="POST" action="{{ route('staff.products.store') }}" enctype="multipart/form-data">
           @csrf
+          <input type="hidden" name="_form" value="add">
           <label>Product Name</label>
           <input type="text" name="product_name" required>
           <label>Description</label>
@@ -141,12 +154,32 @@
           <input type="number" name="quantity" min="0">
           <label>Reorder Level</label>
           <input type="number" name="reorder_level" min="0">
-          <label>Cost Price</label>
-          <input type="number" step="0.01" name="cost_price">
-          <label>Selling Price</label>
-          <input type="number" step="0.01" name="selling_price">
-          <label>Expiry Date</label>
-          <input type="date" name="expiry_date">
+          <label>Cost Price <span class="req">*</span></label>
+          <input type="number" step="0.01" name="cost_price" min="0.01" required
+                 placeholder="e.g. 150.00"
+                 class="{{ $errors->has('cost_price') ? 'input-error' : '' }}"
+                 value="{{ old('cost_price') }}">
+          @error('cost_price')
+              <span class="field-error">{{ $message }}</span>
+          @enderror
+
+          <label>Selling Price <span class="req">*</span></label>
+          <input type="number" step="0.01" name="selling_price" min="0.01" required
+                 placeholder="e.g. 250.00"
+                 class="{{ $errors->has('selling_price') ? 'input-error' : '' }}"
+                 value="{{ old('selling_price') }}">
+          @error('selling_price')
+              <span class="field-error">{{ $message }}</span>
+          @enderror
+
+          <label>Expiry Date <span class="req">*</span></label>
+          <input type="date" name="expiry_date" required
+                 min="{{ now()->toDateString() }}"
+                 class="{{ $errors->has('expiry_date') ? 'input-error' : '' }}"
+                 value="{{ old('expiry_date') }}">
+          @error('expiry_date')
+              <span class="field-error">{{ $message }}</span>
+          @enderror
           <label>Storage Location</label>
           <input type="text" name="storage_location">
           <label>Status</label>
@@ -172,6 +205,7 @@
       <div class="modal-body">
         <form method="POST" action="{{ route('staff.products.update') }}" enctype="multipart/form-data">
           @csrf
+          <input type="hidden" name="_form" value="edit">
           <input type="hidden" name="product_id" id="edit_id">
           <label>Product Name</label>
           <input type="text" name="product_name" id="edit_name" required>
@@ -185,10 +219,19 @@
           <input type="text" name="supplier" id="edit_supplier">
           <label>Batch Number</label>
           <input type="text" name="batch_number" id="edit_batch">
-          <label>Cost Price</label>
-          <input type="number" step="0.01" name="cost_price" id="edit_cost">
-          <label>Selling Price</label>
-          <input type="number" step="0.01" name="selling_price" id="edit_selling">
+          <label>Cost Price <span class="req">*</span></label>
+          <input type="number" step="0.01" name="cost_price" id="edit_cost" min="0.01" required
+                 placeholder="e.g. 150.00">
+          @error('cost_price')
+              <span class="field-error">{{ $message }}</span>
+          @enderror
+
+          <label>Selling Price <span class="req">*</span></label>
+          <input type="number" step="0.01" name="selling_price" id="edit_selling" min="0.01" required
+                 placeholder="e.g. 250.00">
+          @error('selling_price')
+              <span class="field-error">{{ $message }}</span>
+          @enderror
           <label>Storage Location</label>
           <input type="text" name="storage_location" id="edit_location">
           <label>Status</label>
@@ -229,6 +272,48 @@
     if (e.target === addModal)  closeModal();
     if (e.target === editModal) closeEditModal();
   };
+
+  /* ── Re-open modal if server returned validation errors ── */
+  @if($errors->has('cost_price') || $errors->has('selling_price') || $errors->has('expiry_date') || $errors->has('product_name'))
+    @if(old('_form') === 'edit')
+      document.addEventListener('DOMContentLoaded', () => editModal.style.display = 'flex');
+    @else
+      document.addEventListener('DOMContentLoaded', () => addModal.style.display  = 'flex');
+    @endif
+  @endif
+
+  /* ── Client-side price + expiry guard ── */
+  function validatePrices(formEl) {
+      const cost    = parseFloat(formEl.querySelector('[name="cost_price"]')?.value);
+      const selling = parseFloat(formEl.querySelector('[name="selling_price"]')?.value);
+      const expiry  = formEl.querySelector('[name="expiry_date"]');
+      const today   = new Date().toISOString().split('T')[0];
+      const msgs    = [];
+
+      if (isNaN(cost)    || cost    <= 0) msgs.push('Cost price must be greater than zero.');
+      if (isNaN(selling) || selling <= 0) msgs.push('Selling price must be greater than zero.');
+      if (expiry && (!expiry.value || expiry.value < today)) {
+          msgs.push('Expiry date must be today or a future date.');
+      }
+
+      if (msgs.length) {
+          alert('⚠ Cannot save:\n\n• ' + msgs.join('\n• '));
+          return false;
+      }
+      return true;
+  }
+
+  /* ── Attach to both forms ── */
+  document.addEventListener('DOMContentLoaded', () => {
+      document.querySelector('#addProductModal form')
+          ?.addEventListener('submit', function(e) {
+              if (!validatePrices(this)) e.preventDefault();
+          });
+      document.querySelector('#editProductModal form')
+          ?.addEventListener('submit', function(e) {
+              if (!validatePrices(this)) e.preventDefault();
+          });
+  });
 
   /* ── Filter logic ── */
   let activeCat = 'all';
