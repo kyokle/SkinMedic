@@ -186,7 +186,7 @@
                                 @endforeach
                             </select>
                             <input type="number" name="items[0][quantity]" class="qty-input"
-                                   min="1" value="1" placeholder="Qty" oninput="recalcTotal()">
+                                   min="1" value="1" placeholder="Qty" oninput="enforceMinQty(this); recalcTotal()">
                             <span class="line-price">₱0.00</span>
                             <button type="button" class="remove-line" onclick="removeLine(this)" title="Remove">✕</button>
                         </div>
@@ -482,7 +482,7 @@ function addProductLine() {
             ${productOptionsHTML()}
         </select>
         <input type="number" name="items[${productIndex}][quantity]" class="qty-input"
-               min="1" value="1" placeholder="Qty" oninput="recalcTotal()">
+               min="1" value="1" placeholder="Qty" oninput="enforceMinQty(this); recalcTotal()">
         <span class="line-price">₱0.00</span>
         <button type="button" class="remove-line" onclick="removeLine(this)" title="Remove">✕</button>
     `;
@@ -678,6 +678,12 @@ function checkSlotFromLine(line) {
 
 // Backwards compat for inline onchange on date/time inputs
 function checkSlot(el) { checkSlotFromLine(el.closest('.service-line')); }
+
+// ── Quantity guard — prevents negatives and zero ──────────
+function enforceMinQty(input) {
+    const val = parseInt(input.value);
+    if (isNaN(val) || val < 1) input.value = 1;
+}
 
 // ── Totals ────────────────────────────────────────────────
 function recalcTotal() {

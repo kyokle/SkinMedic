@@ -29,6 +29,14 @@ class AdminServicesController extends Controller
 
     public function store(Request $request)
     {
+        $request->validate([
+            'name'   => 'required|string|max:255',
+            'price'  => 'required|numeric|min:0',
+            'status' => 'required|string',
+        ], [
+            'price.min' => 'Price cannot be negative.',
+        ]);
+
         $name   = $request->input('name');
         $desc   = $request->input('description');
         $price  = (float) $request->input('price');
@@ -63,6 +71,14 @@ if ($request->hasFile('image') && $request->file('image')->isValid()) {
 
     public function update(Request $request)
 {
+    $request->validate([
+        'name'   => 'required|string|max:255',
+        'price'  => 'required|numeric|min:0',
+        'status' => 'required|string',
+    ], [
+        'price.min' => 'Price cannot be negative.',
+    ]);
+
     $serviceId = (int) $request->input('service_id');
     $name      = $request->input('name');
     $desc      = $request->input('description');
