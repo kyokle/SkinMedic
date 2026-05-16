@@ -85,17 +85,6 @@ class AdminSalesReportController extends Controller
                 GROUP BY sv2.name
                 UNION ALL
                 SELECT sv2.name,
-                       COUNT(wss2.id),
-                       SUM(wss2.service_price)
-                FROM walkin_sale_services wss2
-                JOIN walkin_sales ws2 ON ws2.sale_id = wss2.sale_id
-                JOIN services sv2 ON sv2.service_id = wss2.service_id
-                WHERE DATE(ws2.created_at) BETWEEN '{$dateFrom}' AND '{$dateTo}'
-                  AND ws2.status = 'completed'
-                  AND wss2.appointment_id IS NULL
-                GROUP BY sv2.name
-                UNION ALL
-                SELECT sv2.name,
                        COUNT(a2.appointment_id),
                        SUM(sv2.price)
                 FROM appointments a2
@@ -484,103 +473,83 @@ class AdminSalesReportController extends Controller
 
     private function getProductRows(string $from, string $to)
     {
-        $walkin = DB::table('walkin_sale_items as wi')
-            ->join('walkin_sales as ws', 'ws.sale_id',   '=', 'wi.sale_id')
-            ->join('products as p',      'p.product_id', '=', 'wi.product_id')
-            ->select(
-                'p.product_name as name',
-                DB::raw('SUM(wi.quantity) as total_qty'),
-                DB::raw('SUM(wi.subtotal) as total_revenue')
-            )
-            ->whereBetween(DB::raw('DATE(ws.created_at)'), [$from, $to])
-            ->where('ws.status', 'completed')
-            ->groupBy('p.product_id', 'p.product_name');
+        $rows = DB::select("
+            SELECT name,
+                   SUM(total_qty)     AS total_qty,
+                   SUM(total_revenue) AS total_revenue
+            FROM (
+                -- Walk-in product sales
+                SELECT p.product_name AS name,
+                       SUM(wi.quantity) AS total_qty,
+                       SUM(wi.subtotal) AS total_revenue
+                FROM walkin_sale_items wi
+                JOIN walkin_sales ws ON ws.sale_id    = wi.sale_id
+                JOIN products p      ON p.product_id  = wi.product_id
+                WHERE DATE(ws.created_at) BETWEEN ? AND ?
+                  AND ws.status = 'completed'
+                GROUP BY p.product_id, p.product_name
 
-        $online = DB::table('order_items as oi')
-            ->join('orders as o',   'o.id',         '=', 'oi.order_id')
-            ->join('products as p', 'p.product_id', '=', 'oi.product_id')
-            ->select(
-                'p.product_name as name',
-                DB::raw('SUM(oi.quantity) as total_qty'),
-                DB::raw('SUM(oi.subtotal) as total_revenue')
-            )
-            ->whereBetween(DB::raw('DATE(o.created_at)'), [$from, $to])
-            ->where('o.status', 'completed')
-            ->groupBy('p.product_id', 'p.product_name');
+                UNION ALL
 
-        return collect(
-            DB::table(DB::raw("({$walkin->toSql()} UNION ALL {$online->toSql()}) as combined"))
-                ->mergeBindings($walkin)
-                ->mergeBindings($online)
-                ->select('name', DB::raw('SUM(total_qty) as total_qty'), DB::raw('SUM(total_revenue) as total_revenue'))
-                ->groupBy('name')
-                ->orderByDesc('total_revenue')
-                ->get()
-        );
+                -- Online order product sales
+                SELECT p.product_name AS name,
+                       SUM(oi.quantity) AS total_qty,
+                       SUM(oi.subtotal) AS total_revenue
+                FROM order_items oi
+                JOIN orders o   ON o.id          = oi.order_id
+                JOIN products p ON p.product_id  = oi.product_id
+                WHERE DATE(o.created_at) BETWEEN ? AND ?
+                  AND o.status = 'completed'
+                GROUP BY p.product_id, p.product_name
+            ) AS combined
+            GROUP BY name
+            ORDER BY total_revenue DESC
+        ", [$from, $to, $from, $to]);
+
+        return collect($rows);
     }
 
     private function getServiceRows(string $from, string $to)
     {
-        // ── Walk-in services WITH a linked appointment ──────────────
-        // Removed is_prefilled restriction — count all walk-in services
-        // regardless of how they were added (prefilled or manually).
-        $walkinWithAppt = DB::table('walkin_sale_services as wss')
-            ->join('walkin_sales as ws',  'ws.sale_id',       '=', 'wss.sale_id')
-            ->join('appointments as a',   'a.appointment_id', '=', 'wss.appointment_id')
-            ->join('services as sv',      'sv.service_id',    '=', 'a.service_id')
-            ->select(
-                'sv.name as service_name',
-                DB::raw('COUNT(wss.id) as total_count'),
-                DB::raw('SUM(wss.service_price) as total_revenue')
-            )
-            ->whereBetween(DB::raw('DATE(ws.created_at)'), [$from, $to])
-            ->where('ws.status', 'completed')
-            ->whereNotNull('wss.appointment_id')
-            ->groupBy('sv.service_id', 'sv.name');
+        $rows = DB::select("
+            SELECT service_name,
+                   SUM(total_count)   AS total_count,
+                   SUM(total_revenue) AS total_revenue
+            FROM (
+                -- Walk-in services linked to an appointment
+                SELECT sv.name          AS service_name,
+                       COUNT(wss.id)    AS total_count,
+                       SUM(wss.service_price) AS total_revenue
+                FROM walkin_sale_services wss
+                JOIN walkin_sales ws ON ws.sale_id        = wss.sale_id
+                JOIN appointments a  ON a.appointment_id  = wss.appointment_id
+                JOIN services sv     ON sv.service_id     = a.service_id
+                WHERE DATE(ws.created_at) BETWEEN ? AND ?
+                  AND ws.status = 'completed'
+                  AND wss.appointment_id IS NOT NULL
+                GROUP BY sv.service_id, sv.name
 
-        // ── Walk-in services WITHOUT a linked appointment ────────────
-        // Walk-in services added manually (no appointment) have service_id directly on the row.
-        $walkinNoAppt = DB::table('walkin_sale_services as wss')
-            ->join('walkin_sales as ws', 'ws.sale_id',    '=', 'wss.sale_id')
-            ->join('services as sv',     'sv.service_id', '=', 'wss.service_id')
-            ->select(
-                'sv.name as service_name',
-                DB::raw('COUNT(wss.id) as total_count'),
-                DB::raw('SUM(wss.service_price) as total_revenue')
-            )
-            ->whereBetween(DB::raw('DATE(ws.created_at)'), [$from, $to])
-            ->where('ws.status', 'completed')
-            ->whereNull('wss.appointment_id')
-            ->groupBy('sv.service_id', 'sv.name');
+                UNION ALL
 
-        // ── Standalone completed appointments (not tied to any walk-in sale) ──
-        // Use DATE(updated_at) so appointments marked complete today appear
-        // in today's report regardless of their future appointment_date.
-        $appt = DB::table('appointments as a')
-            ->join('services as sv', 'sv.service_id', '=', 'a.service_id')
-            ->select(
-                'sv.name as service_name',
-                DB::raw('COUNT(a.appointment_id) as total_count'),
-                DB::raw('SUM(sv.price) as total_revenue')
-            )
-            ->whereBetween(DB::raw('DATE(a.updated_at)'), [$from, $to])
-            ->where('a.status', 'completed')
-            ->whereNotIn('a.appointment_id', function ($q) {
-                $q->select('appointment_id')
-                  ->from('walkin_sale_services')
-                  ->whereNotNull('appointment_id');
-            })
-            ->groupBy('sv.service_id', 'sv.name');
+                -- Standalone completed appointments not tied to any walk-in sale
+                SELECT sv.name                AS service_name,
+                       COUNT(a.appointment_id) AS total_count,
+                       SUM(sv.price)           AS total_revenue
+                FROM appointments a
+                JOIN services sv ON sv.service_id = a.service_id
+                WHERE DATE(a.updated_at) BETWEEN ? AND ?
+                  AND a.status = 'completed'
+                  AND a.appointment_id NOT IN (
+                      SELECT appointment_id
+                      FROM walkin_sale_services
+                      WHERE appointment_id IS NOT NULL
+                  )
+                GROUP BY sv.service_id, sv.name
+            ) AS combined
+            GROUP BY service_name
+            ORDER BY total_revenue DESC
+        ", [$from, $to, $from, $to]);
 
-        return collect(
-            DB::table(DB::raw("({$walkinWithAppt->toSql()} UNION ALL {$walkinNoAppt->toSql()} UNION ALL {$appt->toSql()}) as combined"))
-                ->mergeBindings($walkinWithAppt)
-                ->mergeBindings($walkinNoAppt)
-                ->mergeBindings($appt)
-                ->select('service_name', DB::raw('SUM(total_count) as total_count'), DB::raw('SUM(total_revenue) as total_revenue'))
-                ->groupBy('service_name')
-                ->orderByDesc('total_revenue')
-                ->get()
-        );
+        return collect($rows);
     }
 }
