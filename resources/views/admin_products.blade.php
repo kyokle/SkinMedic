@@ -135,7 +135,7 @@
         <span class="close-btn" onclick="closeModal()">&times;</span>
       </div>
       <div class="modal-body">
-        <form method="POST" action="{{ route('admin.products.store') }}" enctype="multipart/form-data">
+        <form method="POST" action="{{ route('admin.products.add') }}" enctype="multipart/form-data">
           @csrf
           <input type="hidden" name="_form" value="add">
           <label>Product Name</label>
