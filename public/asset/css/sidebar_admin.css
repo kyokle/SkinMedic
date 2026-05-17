@@ -27,6 +27,7 @@ body {
 /* ── Sidebar ── */
 .sidebar {
     height: 100vh;
+    height: 100dvh;
     overflow: hidden;
     width: var(--sb-w);
     background: var(--sb-bg);
@@ -98,6 +99,7 @@ body {
     flex: 1;
     padding: 16px 12px;
     overflow-y: auto;
+    overscroll-behavior: contain;
 }
 
 .sb-label {
@@ -213,8 +215,6 @@ body {
 
     /* Sidebar slides off-screen by default */
     .sidebar {
-    height: 100vh;
-    overflow: hidden;
         transform: translateX(-100%);
     }
 

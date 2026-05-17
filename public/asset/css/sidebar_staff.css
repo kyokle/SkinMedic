@@ -26,6 +26,7 @@ body {
 
 .sidebar {
     height: 100vh;
+    height: 100dvh;
     overflow: hidden;
     width: var(--sb-w);
     background: var(--sb-bg);
@@ -97,6 +98,7 @@ body {
     flex: 1;
     padding: 16px 12px;
     overflow-y: auto;
+    overscroll-behavior: contain;
 }
 
 .sb-label {
@@ -206,9 +208,7 @@ body {
 /* ── Responsive ── */
 @media (max-width: 768px) {
     .sb-hamburger { display: flex; }
-    .sidebar {
-    height: 100vh;
-    overflow: hidden; transform: translateX(-100%); }
+    .sidebar { transform: translateX(-100%); }
     .sidebar.open { transform: translateX(0); }
     .main, main.content { margin-left: 0; width: 100%; }
 }
