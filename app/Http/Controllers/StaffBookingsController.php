@@ -367,12 +367,6 @@ class StaffBookingsController extends Controller
             'cancelled' => 'cancelled',
         ];
 
-        // ── Staff/admin/doctor messages (include actor for accountability) ──
-        $staffMessages = [
-            'approved'  => "{$actor} approved appointment #{$id} on {$appt->appointment_date} at {$appt->appointment_time}.",
-            'completed' => "{$actor} marked appointment #{$id} on {$appt->appointment_date} at {$appt->appointment_time} as completed.",
-            'cancelled' => "{$actor} cancelled appointment #{$id} on {$appt->appointment_date} at {$appt->appointment_time}." . $reasonSuffix,
-        ];
         $staffTypes = [
             'approved'  => 'booking',
             'completed' => 'booking',
@@ -382,10 +376,19 @@ class StaffBookingsController extends Controller
         $title       = 'Appointment ' . ucfirst($status);
         $patientMsg  = $patientMessages[$status] ?? "Your appointment status was updated by {$actor}.";
         $patientType = $patientTypes[$status]    ?? 'upcoming';
-        $staffMsg    = $staffMessages[$status]   ?? "{$actor} updated appointment #{$id} status to {$status}.";
         $staffType   = $staffTypes[$status]      ?? 'booking';
 
-        $patient = DB::table('users')->where('user_id', $appt->user_id)->first();
+        $patient     = DB::table('users')->where('user_id', $appt->user_id)->first();
+        $patientName = $patient ? trim($patient->firstName . ' ' . $patient->lastName) : 'A patient';
+
+        // ── Staff/admin/doctor messages (include actor + patient name) ──
+        $staffMessages = [
+            'approved'  => "{$actor} approved {$patientName}'s appointment on {$appt->appointment_date} at {$appt->appointment_time}.",
+            'completed' => "{$actor} marked {$patientName}'s appointment on {$appt->appointment_date} at {$appt->appointment_time} as completed.",
+            'cancelled' => "{$actor} cancelled {$patientName}'s appointment on {$appt->appointment_date} at {$appt->appointment_time}." . $reasonSuffix,
+        ];
+        $staffMsg = $staffMessages[$status] ?? "{$actor} updated {$patientName}'s appointment #{$id} status to {$status}.";
+
         if ($patient) {
             NotificationHelper::send($patient->user_id, $title, $patientMsg, $patientType, $id);
         }

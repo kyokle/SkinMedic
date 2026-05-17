@@ -70,9 +70,12 @@ class DoctorBookingsController extends Controller
                 'is_rescheduled'   => true,
             ]);
 
+        $patientUser = DB::table('users')->where('user_id', $appt->user_id)->first();
+        $patientName = $patientUser ? trim($patientUser->firstName . ' ' . $patientUser->lastName) : 'A patient';
+
         $title      = 'Appointment Rescheduled';
         $patientMsg = "{$actor} rescheduled your appointment to {$request->new_date} at {$request->new_time}.";
-        $staffMsg   = "{$actor} rescheduled appointment #{$apptId} to {$request->new_date} at {$request->new_time}.";
+        $staffMsg   = "{$actor} rescheduled {$patientName}'s appointment to {$request->new_date} at {$request->new_time}.";
 
         $patient = DB::table('users')->where('user_id', $appt->user_id)->first();
         if ($patient) {
@@ -125,9 +128,12 @@ class DoctorBookingsController extends Controller
             default              => 'an unspecified reason',
         };
 
+        $patientUser = DB::table('users')->where('user_id', $appt->user_id)->first();
+        $patientName = $patientUser ? trim($patientUser->firstName . ' ' . $patientUser->lastName) : 'A patient';
+
         $title      = 'Appointment Cancelled';
         $patientMsg = "{$actor} cancelled your appointment on {$appt->appointment_date} at {$appt->appointment_time} due to {$reasonLabel}.";
-        $staffMsg   = "{$actor} cancelled appointment #{$apptId} on {$appt->appointment_date} at {$appt->appointment_time}. Reason: {$reasonLabel}.";
+        $staffMsg   = "{$actor} cancelled {$patientName}'s appointment on {$appt->appointment_date} at {$appt->appointment_time}. Reason: {$reasonLabel}.";
 
         $patient = DB::table('users')->where('user_id', $appt->user_id)->first();
         if ($patient) {
