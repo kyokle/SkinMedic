@@ -93,7 +93,7 @@ class PatientProfileController extends Controller
             'medical_history'         => 'nullable|string',
             'allergies'               => 'nullable|string',
             'emergency_contact_name'  => 'nullable|string|max:100',
-            'emergency_contact_phone' => 'nullable|string|max:20',
+            'emergency_contact_phone' => 'nullable|digits:11',
         ]);
 
         DB::table('patient')

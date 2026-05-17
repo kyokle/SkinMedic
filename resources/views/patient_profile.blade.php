@@ -155,7 +155,10 @@
                         <label>Emergency Phone</label>
                         <input type="tel" name="emergency_contact_phone"
                                value="{{ old('emergency_contact_phone', $data->emergency_contact_phone) }}"
-                               placeholder="Contact phone">
+                               placeholder="Contact phone"
+                               pattern="[0-9]{11}" maxlength="11" minlength="11"
+                               title="Phone number must be exactly 11 digits"
+                               oninput="this.value=this.value.replace(/[^0-9]/g,'').slice(0,11)">
                     </div>
 
                     <button type="submit" class="save-btn">Save Changes</button>
