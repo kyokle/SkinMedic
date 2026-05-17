@@ -417,11 +417,6 @@ class AdminBookingsController extends Controller
                 ->update(['quantity' => $total]);
         }
 
-        // Remove related notifications
-        DB::table('notifications')
-            ->where('appointment_id', $id)
-            ->delete();
-
         // Delete the appointment
         DB::table('appointments')->where('appointment_id', $id)->delete();
 
