@@ -382,4 +382,49 @@ class AdminBookingsController extends Controller
 
         return redirect()->route('admin.bookings');
     }
+
+    // ── DELETE /admin/bookings/{id} ───────────────────────────
+    public function destroy(int $id)
+    {
+        if (Session::get('role') !== 'admin') {
+            return redirect()->route('index');
+        }
+
+        $appt = DB::table('appointments')->where('appointment_id', $id)->first();
+
+        if (!$appt) {
+            return redirect()->route('admin.bookings')->with('error', 'Appointment not found.');
+        }
+
+        // Remove related inventory OUT logs (re-credit stock if needed)
+        $outLogs = DB::table('inventory_logs')
+            ->where('appointment_id', $id)
+            ->where('type', 'OUT')
+            ->get();
+
+        foreach ($outLogs as $log) {
+            DB::table('inventory_logs')->where('id', $log->id)->delete();
+
+            // Recalculate product quantity from remaining IN logs
+            $total = DB::table('inventory_logs')
+                ->where('product_id', $log->product_id)
+                ->where('type', 'IN')
+                ->where('quantity', '>', 0)
+                ->sum('quantity');
+
+            DB::table('products')
+                ->where('product_id', $log->product_id)
+                ->update(['quantity' => $total]);
+        }
+
+        // Remove related notifications
+        DB::table('notifications')
+            ->where('appointment_id', $id)
+            ->delete();
+
+        // Delete the appointment
+        DB::table('appointments')->where('appointment_id', $id)->delete();
+
+        return redirect()->route('admin.bookings')->with('success', "Appointment #{$id} has been permanently deleted.");
+    }
 }

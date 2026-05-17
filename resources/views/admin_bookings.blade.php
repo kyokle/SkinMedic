@@ -17,6 +17,13 @@
 @endif
 
 <div class="main">
+    @if(session('success'))
+        <div class="flash-success">{{ session('success') }}</div>
+    @endif
+    @if(session('error'))
+        <div class="flash-error">{{ session('error') }}</div>
+    @endif
+
     <div class="topbar">
         <h2 style="font-size:1.4rem;font-weight:700;">All Appointments</h2>
         <div style="display:flex;align-items:center;gap:14px;">
@@ -147,6 +154,37 @@
         <button type="button" class="cancelled-btn" onclick="submitStatus('cancelled')">Cancel</button>
     </div>
 </form>
+
+@if(session('role') === 'admin')
+<form method="POST" id="deleteForm" style="margin-top:10px;">
+    @csrf
+    @method('DELETE')
+    <input type="hidden" name="appointment_id" id="delete_appointment_id">
+    <div id="deleteButtonArea" style="display:none; justify-content:center;">
+        <button type="button" class="delete-btn" onclick="confirmDelete()">🗑 Delete Record</button>
+    </div>
+</form>
+@endif
+        </div>
+    </div>
+</div>
+
+{{-- ── Delete confirm modal ── --}}
+<div id="deleteConfirmModal" class="modal">
+    <div class="modal-content" style="max-width:380px;text-align:center;">
+        <div class="modal-header" style="justify-content:center;border-bottom:1px solid #f3f3f3;padding-bottom:12px;">
+            <h2 style="color:#ef4444;">Delete Appointment</h2>
+        </div>
+        <div class="modal-body" style="padding:20px 0 8px;">
+            <p style="font-size:0.9rem;color:#555;margin-bottom:6px;">
+                You are about to <strong>permanently delete</strong> appointment
+                <strong id="confirm_delete_id"></strong>.
+            </p>
+            <p style="font-size:0.82rem;color:#ef4444;">This cannot be undone.</p>
+        </div>
+        <div style="display:flex;gap:10px;justify-content:center;margin-top:16px;">
+            <button class="delete-btn" onclick="executeDelete()">Yes, Delete</button>
+            <button class="reset-btn" style="height:36px;padding:0 18px;" onclick="closeDeleteConfirm()">Cancel</button>
         </div>
     </div>
 </div>
@@ -200,6 +238,10 @@ function resetFilters() {
 function openModal(id, patient, service, doctor, date, time, status) {
     document.getElementById('actionButtons').setAttribute('style', 'display:none; margin-top:18px; gap:8px; justify-content:center;');
     document.getElementById('actionButtonsApproved').setAttribute('style', 'display:none; margin-top:18px; gap:8px; justify-content:center;');
+
+    const deleteArea = document.getElementById('deleteButtonArea');
+    if (deleteArea) deleteArea.setAttribute('style', 'display:none; justify-content:center;');
+
     document.getElementById('bookingModal').style.display = 'flex';
     document.getElementById('m_id').innerText       = id;
     document.getElementById('m_patient').innerText  = patient;
@@ -210,12 +252,38 @@ function openModal(id, patient, service, doctor, date, time, status) {
     document.getElementById('m_status').innerText   = status;
     document.getElementById('appointment_id').value = id;
 
+    const deleteIdField = document.getElementById('delete_appointment_id');
+    if (deleteIdField) deleteIdField.value = id;
+
     const s = status.trim().toLowerCase();
     if (s === 'pending') {
         document.getElementById('actionButtons').setAttribute('style', 'display:flex; margin-top:18px; gap:8px; justify-content:center;');
     } else if (s === 'approved') {
         document.getElementById('actionButtonsApproved').setAttribute('style', 'display:flex; margin-top:18px; gap:8px; justify-content:center;');
     }
+
+    // Show delete button for admin on cancelled/completed records
+    if (deleteArea && (s === 'cancelled' || s === 'completed')) {
+        deleteArea.setAttribute('style', 'display:flex; justify-content:center; margin-top:12px;');
+    }
+}
+
+function confirmDelete() {
+    const id = document.getElementById('delete_appointment_id').value;
+    document.getElementById('confirm_delete_id').innerText = '#' + id;
+    document.getElementById('bookingModal').style.display = 'none';
+    document.getElementById('deleteConfirmModal').style.display = 'flex';
+}
+
+function closeDeleteConfirm() {
+    document.getElementById('deleteConfirmModal').style.display = 'none';
+}
+
+function executeDelete() {
+    const id = document.getElementById('delete_appointment_id').value;
+    const form = document.getElementById('deleteForm');
+    form.action = `/admin/bookings/${id}`;
+    form.submit();
 }
 
 function closeModal() { document.getElementById('bookingModal').style.display = 'none'; }
@@ -226,6 +294,7 @@ function submitStatus(s) {
 
 window.onclick = e => {
     if (e.target === document.getElementById('bookingModal')) closeModal();
+    if (e.target === document.getElementById('deleteConfirmModal')) closeDeleteConfirm();
 };
 
 window.addEventListener('DOMContentLoaded', function () {

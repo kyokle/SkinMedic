@@ -209,3 +209,21 @@ tr[data-status]:hover td { background: #fafff2; cursor: pointer; }
   font-size: 0.88rem; font-weight: 500;
 }
 .complete-btn:hover { background: #2563eb; }
+
+.delete-btn {
+  background: #ef4444; color: white; border: none;
+  border-radius: 6px; padding: 9px 18px; cursor: pointer;
+  font-size: 0.88rem; font-weight: 500;
+}
+.delete-btn:hover { background: #dc2626; }
+
+/* ── Flash messages ── */
+.flash-success, .flash-error {
+  padding: 10px 16px;
+  border-radius: 8px;
+  margin-bottom: 16px;
+  font-size: 0.87rem;
+  font-weight: 500;
+}
+.flash-success { background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; }
+.flash-error   { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }

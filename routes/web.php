@@ -248,6 +248,8 @@ Route::get('/admin',                             [AdminPageController::class,   
 // ── Admin Bookings ──────────────────────────────────
 Route::get('/admin/bookings',                    [AdminBookingsController::class,     'index'])->name('admin.bookings');
 Route::post('/admin/bookings/update-status',     [AdminBookingsController::class,     'updateStatus'])->name('admin.bookings.update-status');
+Route::delete('/admin/bookings/{id}', [AdminBookingsController::class, 'destroy'])
+    ->name('admin.bookings.destroy');
 
 // ── Admin Reviews ──────────────────────────────────
 Route::get('/admin/reviews',          [AdminReviewsController::class, 'index'])->name('admin.reviews');
