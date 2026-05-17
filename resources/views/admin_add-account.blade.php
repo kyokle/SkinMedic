@@ -77,8 +77,15 @@
                         </div>
                         <div class="form-group">
                             <label>Phone Number</label>
-                            <input type="text" name="phone_no" placeholder="09XX XXX XXXX"
+                            <input type="text" name="phone_no" id="phone_no"
+                                   placeholder="09XXXXXXXXX"
+                                   maxlength="11"
+                                   pattern="\d{11}"
+                                   inputmode="numeric"
+                                   oninput="this.value=this.value.replace(/\D/g,'')"
+                                   title="Phone number must be exactly 11 digits"
                                    value="{{ old('phone_no') }}">
+                            <div id="phone_error" style="color:#ef4444;font-size:12px;margin-top:4px;display:none;">Phone number must be exactly 11 digits.</div>
                         </div>
                     </div>
                     <div class="form-group">
@@ -221,15 +228,31 @@ function checkMatch() {
     else            { ml.textContent = '✗ No match'; ml.style.color = '#ef4444'; }
 }
 document.getElementById('createForm').addEventListener('submit', function (e) {
-    const pw   = document.getElementById('pw').value;
-    const cpw  = document.getElementById('cpw').value;
-    const role = document.querySelector('input[name="role"]:checked');
-    const err  = document.getElementById('fErr');
+    const pw    = document.getElementById('pw').value;
+    const cpw   = document.getElementById('cpw').value;
+    const role  = document.querySelector('input[name="role"]:checked');
+    const err   = document.getElementById('fErr');
+    const phone = document.getElementById('phone_no');
+    const phoneErr = document.getElementById('phone_error');
     err.textContent = '';
+    phoneErr.style.display = 'none';
+
     if (!role) { e.preventDefault(); err.textContent = 'Please select a role.'; return; }
     if (pw !== cpw) { e.preventDefault(); err.textContent = 'Passwords do not match.'; return; }
     if (pw.length < 8 || !/[A-Z]/.test(pw) || !/[a-z]/.test(pw) || !/[0-9]/.test(pw) || !/[\W_]/.test(pw)) {
-        e.preventDefault(); err.textContent = 'Password does not meet all requirements.';
+        e.preventDefault(); err.textContent = 'Password does not meet all requirements.'; return;
+    }
+    if (phone.value.trim() !== '' && phone.value.trim().length !== 11) {
+        e.preventDefault();
+        phoneErr.style.display = 'block';
+        phone.focus();
+    }
+});
+
+document.getElementById('phone_no').addEventListener('input', function () {
+    const phoneErr = document.getElementById('phone_error');
+    if (this.value.length === 0 || this.value.length === 11) {
+        phoneErr.style.display = 'none';
     }
 });
 </script>

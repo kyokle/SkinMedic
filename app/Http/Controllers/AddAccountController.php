@@ -23,6 +23,7 @@ class AddAccountController extends Controller
             'confirm_password' => 'required',
             'firstname'        => 'required|string',
             'lastname'         => 'required|string',
+            'phone_no'         => 'nullable|digits:11',
         ]);
 
         $otp = rand(100000, 999999);

@@ -111,6 +111,10 @@ class AdminAddAccountController extends Controller
             }
         }
 
+        if ($data['phone_no'] !== '' && !preg_match('/^\d{11}$/', $data['phone_no'])) {
+            $errors[] = 'Phone number must be exactly 11 digits.';
+        }
+
         return $errors;
     }
 

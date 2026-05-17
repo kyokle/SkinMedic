@@ -101,10 +101,12 @@ public function cancel(Request $request)
 {
     $request->validate([
         'appointment_id' => 'required|integer',
+        'cancel_reason'  => 'required|string|max:300',
     ]);
 
-    $apptId = (int) $request->appointment_id;
-    $userId = (int) Session::get('user_id');
+    $apptId      = (int) $request->appointment_id;
+    $userId      = (int) Session::get('user_id');
+    $cancelReason = trim($request->cancel_reason);
 
     $appt = DB::table('appointments')
         ->where('appointment_id', $apptId)
@@ -119,13 +121,13 @@ public function cancel(Request $request)
         ->where('appointment_id', $apptId)
         ->update([
             'status'        => 'cancelled',
-            'cancel_reason' => 'patient_request',
-            'updated_at'    => now(), 
+            'cancel_reason' => $cancelReason,
+            'updated_at'    => now(),
         ]);
 
     $title    = 'Appointment Cancelled by Patient';
-    $msg      = 'Your appointment on ' . $appt->appointment_date . ' at ' . $appt->appointment_time . ' has been cancelled.';
-    $staffMsg = 'A patient has cancelled their appointment on ' . $appt->appointment_date . ' at ' . $appt->appointment_time . '.';
+    $msg      = 'Your appointment on ' . $appt->appointment_date . ' at ' . $appt->appointment_time . ' has been cancelled. Reason: ' . $cancelReason;
+    $staffMsg = 'A patient has cancelled their appointment on ' . $appt->appointment_date . ' at ' . $appt->appointment_time . '. Reason: ' . $cancelReason;
 
     NotificationHelper::send($userId, $title, $msg, 'cancelled', $apptId);
 
@@ -139,12 +141,10 @@ public function cancel(Request $request)
         NotificationHelper::send($u->user_id, $title, $staffMsg, 'booking', $apptId);
     }
 
-    // ── Always trigger waitlist — patient cancels always free the slot ──
-
     WaitlistController::notifyNext(
-    $appt->appointment_date,
-    $appt->appointment_time
-);
+        $appt->appointment_date,
+        $appt->appointment_time
+    );
 
     return back()->with('success', 'Appointment cancelled successfully.');
 }

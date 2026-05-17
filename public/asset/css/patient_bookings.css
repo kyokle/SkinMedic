@@ -180,3 +180,60 @@ tr:last-child td { border-bottom: none; }
 .approved  { background: #80a833; }
 .completed { background: #3b82f6; }
 .cancelled { background: #ef4444; }
+
+/* ══════════════════════════════════════════
+   PATIENT CANCEL REASON
+══════════════════════════════════════════ */
+.patient-reason-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 12px;
+}
+
+.patient-reason-chip {
+    padding: 5px 12px;
+    border: 1.5px solid #ddd;
+    border-radius: 20px;
+    background: #fafaf8;
+    color: #555;
+    font-size: 0.76rem;
+    font-family: inherit;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.patient-reason-chip:hover {
+    border-color: #ef4444;
+    color: #ef4444;
+    background: #fff1f2;
+}
+
+.patient-reason-chip.selected {
+    border-color: #ef4444;
+    background: #ffeaea;
+    color: #c0392b;
+    font-weight: 600;
+}
+
+.patient-reason-textarea {
+    width: 100%;
+    height: 80px;
+    border: 1.5px solid #ddd;
+    border-radius: 8px;
+    padding: 9px 11px;
+    font-size: 0.84rem;
+    font-family: inherit;
+    color: #333;
+    resize: vertical;
+    outline: none;
+    background: #fafaf8;
+    box-sizing: border-box;
+    transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.patient-reason-textarea:focus {
+    border-color: #ef4444;
+    box-shadow: 0 0 0 2px rgba(239,68,68,0.12);
+}

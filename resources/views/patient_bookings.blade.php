@@ -216,34 +216,68 @@
         <p id="pm_noActionMsg"
            style="font-size:0.8rem;color:#aaa;text-align:center;margin-top:16px;"></p>
 
-        {{-- Cancel Confirmation Overlay --}}
+        {{-- Cancel Reason Overlay --}}
         <div id="pm_cancelConfirm"
              style="display:none;position:absolute;inset:0;background:rgba(0,0,0,0.45);
-                    border-radius:14px;z-index:10;align-items:center;justify-content:center;">
-            <div style="background:#fff;border-radius:12px;padding:28px 24px;
-                        max-width:280px;text-align:center;box-shadow:0 8px 32px rgba(0,0,0,0.18);">
-                <div style="font-size:2rem;margin-bottom:10px;">⚠️</div>
-                <p style="font-weight:700;font-size:15px;margin-bottom:6px;">Cancel Appointment?</p>
-                <p style="font-size:13px;color:#666;margin-bottom:20px;">
-                    This action cannot be undone. The doctor and clinic will be notified.
+                    border-radius:14px;z-index:10;align-items:center;justify-content:center;
+                    padding:20px;">
+            <div style="background:#fff;border-radius:12px;padding:24px;
+                        width:100%;max-width:360px;box-shadow:0 8px 32px rgba(0,0,0,0.18);">
+
+                <p style="font-weight:700;font-size:15px;margin:0 0 4px;">Cancel Appointment</p>
+                <p style="font-size:12.5px;color:#666;margin:0 0 14px;line-height:1.5;">
+                    Please let us know why you're cancelling. The clinic will be notified.
                 </p>
-                <div style="display:flex;gap:10px;justify-content:center;">
-                    <button onclick="closePatientCancelConfirm()"
-                            style="padding:8px 20px;border-radius:8px;border:1px solid #ddd;
-                                   background:#f5f5f5;cursor:pointer;font-family:inherit;font-size:13px;">
-                        Go Back
-                    </button>
-                    <form method="POST" action="{{ route('patient.bookings.cancel') }}" style="margin:0;">
-                        @csrf
-                        <input type="hidden" name="appointment_id" id="pm_cancel_appt_id">
-                        <button type="submit"
-                                style="padding:8px 20px;border-radius:8px;border:none;
+
+                {{-- Quick-select chips --}}
+                <div class="patient-reason-chips">
+                    <button type="button" class="patient-reason-chip"
+                            onclick="selectPatientChip(this, 'Schedule conflict')">Schedule conflict</button>
+                    <button type="button" class="patient-reason-chip"
+                            onclick="selectPatientChip(this, 'Feeling better, no longer needed')">No longer needed</button>
+                    <button type="button" class="patient-reason-chip"
+                            onclick="selectPatientChip(this, 'Financial reasons')">Financial reasons</button>
+                    <button type="button" class="patient-reason-chip"
+                            onclick="selectPatientChip(this, 'Found another clinic')">Found another clinic</button>
+                    <button type="button" class="patient-reason-chip"
+                            onclick="selectPatientChip(this, 'Personal emergency')">Personal emergency</button>
+                </div>
+
+                <textarea id="pm_cancel_reason_text"
+                          class="patient-reason-textarea"
+                          placeholder="Type or select a reason above…"
+                          maxlength="300"
+                          oninput="updatePatientCharCount(this)"></textarea>
+                <div style="text-align:right;font-size:11px;color:#aaa;margin-top:3px;margin-bottom:8px;">
+                    <span id="pm_charCount">0</span> / 300
+                </div>
+
+                <p id="pm_reasonError"
+                   style="display:none;font-size:12px;color:#ef4444;font-weight:500;margin-bottom:8px;">
+                    ⚠ Please provide a reason before cancelling.
+                </p>
+
+                <form method="POST" action="{{ route('patient.bookings.cancel') }}" id="pm_cancelForm" style="margin:0;">
+                    @csrf
+                    <input type="hidden" name="appointment_id" id="pm_cancel_appt_id">
+                    <input type="hidden" name="cancel_reason"  id="pm_cancel_reason_value">
+                    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:4px;">
+                        <button type="button"
+                                onclick="closePatientCancelConfirm()"
+                                style="padding:8px 18px;border-radius:8px;border:1.5px solid #ddd;
+                                       background:none;cursor:pointer;font-family:inherit;font-size:13px;color:#666;">
+                            Go Back
+                        </button>
+                        <button type="button"
+                                onclick="submitPatientCancel()"
+                                style="padding:8px 18px;border-radius:8px;border:none;
                                        background:#dc2626;color:#fff;cursor:pointer;
                                        font-family:inherit;font-size:13px;font-weight:600;">
-                            Yes, Cancel
+                            Confirm Cancel
                         </button>
-                    </form>
-                </div>
+                    </div>
+                </form>
+
             </div>
         </div>
 
@@ -316,12 +350,7 @@ function openPatientModal(id, service, doctor, date, time, status, cancelReason)
     const reasonRow = document.getElementById('pm_cancelReasonRow');
     const reasonEl  = document.getElementById('pm_cancelReason');
     if (status === 'cancelled' && cancelReason) {
-        const labels = {
-            patient_request: 'Cancelled by you',
-            doctor_request:  'Cancelled by doctor',
-            no_show:         'No-show',
-        };
-        reasonEl.textContent    = labels[cancelReason] || cancelReason;
+        reasonEl.textContent    = cancelReason;
         reasonRow.style.display = 'block';
     } else {
         reasonRow.style.display = 'none';
@@ -338,14 +367,44 @@ function openPatientModal(id, service, doctor, date, time, status, cancelReason)
 function closePatientModal() {
     document.getElementById('pm_cancelConfirm').style.display = 'none';
     document.getElementById('patientModal').style.display     = 'none';
+    document.querySelectorAll('.patient-reason-chip').forEach(c => c.classList.remove('selected'));
 }
 
 function openPatientCancelConfirm() {
+    // Reset state
+    document.getElementById('pm_cancel_reason_text').value   = '';
+    document.getElementById('pm_cancel_reason_value').value  = '';
+    document.getElementById('pm_charCount').textContent      = '0';
+    document.getElementById('pm_reasonError').style.display  = 'none';
+    document.querySelectorAll('.patient-reason-chip').forEach(c => c.classList.remove('selected'));
     document.getElementById('pm_cancelConfirm').style.display = 'flex';
 }
 
 function closePatientCancelConfirm() {
     document.getElementById('pm_cancelConfirm').style.display = 'none';
+}
+
+function selectPatientChip(btn, text) {
+    document.querySelectorAll('.patient-reason-chip').forEach(c => c.classList.remove('selected'));
+    btn.classList.add('selected');
+    document.getElementById('pm_cancel_reason_text').value  = text;
+    document.getElementById('pm_charCount').textContent     = text.length;
+    document.getElementById('pm_reasonError').style.display = 'none';
+}
+
+function updatePatientCharCount(el) {
+    document.getElementById('pm_charCount').textContent = el.value.length;
+    if (el.value.trim()) document.getElementById('pm_reasonError').style.display = 'none';
+}
+
+function submitPatientCancel() {
+    const reason = document.getElementById('pm_cancel_reason_text').value.trim();
+    if (!reason) {
+        document.getElementById('pm_reasonError').style.display = 'block';
+        return;
+    }
+    document.getElementById('pm_cancel_reason_value').value = reason;
+    document.getElementById('pm_cancelForm').submit();
 }
 
 function formatTime(t) {
