@@ -277,7 +277,10 @@
               </div>
               <div class="sg-group">
                 <label>Phone Number</label>
-                <input type="text" name="phone_no" placeholder="09XXXXXXXXX">
+                <input type="text" name="phone_no" placeholder="09XXXXXXXXX"
+                       pattern="[0-9]{11}" maxlength="11" minlength="11"
+                       title="Phone number must be exactly 11 digits"
+                       oninput="this.value=this.value.replace(/[^0-9]/g,'').slice(0,11)">
               </div>
               <div class="sg-group">
                 <label>Address</label>

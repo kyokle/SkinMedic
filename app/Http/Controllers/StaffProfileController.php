@@ -48,6 +48,14 @@ class StaffProfileController extends Controller
 
     public function updatePersonal(Request $request)
     {
+        $request->validate([
+            'firstName' => 'required|string|max:100',
+            'lastName'  => 'required|string|max:100',
+            'gender'    => 'nullable|in:male,female,others',
+            'address'   => 'nullable|string|max:255',
+            'phone_no'  => 'nullable|digits:11',
+        ]);
+
         DB::update("
             UPDATE users SET firstName=?, lastName=?, gender=?, address=?, phone_no=?
             WHERE user_id=?
@@ -56,7 +64,7 @@ class StaffProfileController extends Controller
             $request->input('lastName'),
             $request->input('gender'),
             $request->input('address'),
-            $request->input('phone_no'),
+            $request->input('phone_no') ? preg_replace('/[^0-9]/', '', $request->input('phone_no')) : null,
             session('user_id'),
         ]);
 

@@ -76,7 +76,10 @@
                 </div>
                 <div class="form-row">
                     <label>Phone</label>
-                    <input type="text" name="phone_no" value="{{ $doctor['phone_no'] }}">
+                    <input type="text" name="phone_no" value="{{ $doctor['phone_no'] }}"
+                           pattern="[0-9]{11}" maxlength="11" minlength="11"
+                           title="Phone number must be exactly 11 digits"
+                           oninput="this.value=this.value.replace(/[^0-9]/g,'').slice(0,11)">
                 </div>
                 <div class="form-row">
                     <label>Address</label>

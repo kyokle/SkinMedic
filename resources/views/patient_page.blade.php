@@ -127,8 +127,7 @@
                 '{{ addslashes($row->doctor_name) }}',
                 '{{ $row->appointment_date }}',
                 '{{ $row->appointment_time }}',
-                '{{ $row->status }}',
-                '{{ $row->appointment_id }}'
+                '{{ $row->status }}'
             )">
                 <td>{{ $row->service_name }}</td>
                 <td>{{ $doc }}</td>
@@ -159,14 +158,6 @@
         <div class="modal-row"><span>Date</span><span id="modalDate"></span></div>
         <div class="modal-row"><span>Time</span><span id="modalTime"></span></div>
         <div class="modal-row"><span>Status</span><span id="modalStatus"></span></div>
-        <form method="POST" action="{{ route('patient.cancel') }}" id="cancelForm">
-            @csrf
-            <input type="hidden" name="cancel_id" id="modalCancelId">
-            <button type="submit" class="cancel-btn"
-                onclick="return confirm('Are you sure you want to cancel this appointment?');">
-                Cancel Appointment
-            </button>
-        </form>
     </div>
 </div>
 
@@ -180,11 +171,6 @@ function openModal(service, doctor, date, time, status, id) {
     document.getElementById('modalDate').innerText    = date;
     document.getElementById('modalTime').innerText    = time;
     document.getElementById('modalStatus').innerText  = status;
-    document.getElementById('modalCancelId').value    = id;
-    document.getElementById('cancelForm').style.display = 'block';
-    if (status === 'completed' || status === 'cancelled') {
-        document.getElementById('cancelForm').style.display = 'none';
-    }
     document.getElementById('bookingModal').classList.add('open');
 }
 function closeModal() {

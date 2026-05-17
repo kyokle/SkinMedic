@@ -110,7 +110,10 @@
                     <div class="field-row">
                         <label>Phone No.</label>
                         <input type="tel" name="phone_no"
-                               value="{{ old('phone_no', $data->phone_no) }}">
+                               value="{{ old('phone_no', $data->phone_no) }}"
+                               pattern="[0-9]{11}" maxlength="11" minlength="11"
+                               title="Phone number must be exactly 11 digits"
+                               oninput="this.value=this.value.replace(/[^0-9]/g,'').slice(0,11)">
                     </div>
                     <div class="field-row">
                         <label>Address</label>

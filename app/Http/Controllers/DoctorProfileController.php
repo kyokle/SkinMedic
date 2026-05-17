@@ -75,7 +75,7 @@ class DoctorProfileController extends Controller
             'firstName' => 'required|string|max:100',
             'lastName'  => 'required|string|max:100',
             'gender'    => 'required|in:male,female,others',
-            'phone_no'  => 'nullable|string|max:20',
+            'phone_no'  => 'nullable|digits:11',
             'address'   => 'nullable|string|max:255',
         ]);
 

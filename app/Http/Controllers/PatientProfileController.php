@@ -69,7 +69,7 @@ class PatientProfileController extends Controller
             'lastName'  => 'required|string|max:100',
             'gender'    => 'required|in:male,female,others',
             'address'   => 'nullable|string|max:255',
-            'phone_no'  => 'nullable|string|max:20',
+            'phone_no'  => 'nullable|digits:11',
         ]);
 
         DB::table('users')

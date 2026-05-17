@@ -186,6 +186,7 @@ class IndexController extends Controller
         'email'     => 'required|email|unique:users,email',
         'gender'    => 'required|in:male,female,others',
         'password'  => 'required|min:8',
+        'phone_no'  => 'nullable|digits:11',
     ]);
 
     $otp = rand(100000, 999999);
