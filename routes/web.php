@@ -184,7 +184,7 @@ Route::get('/staff/bookings', [StaffBookingsController::class, 'index'])
     ->name('staff.bookings')
     ->middleware('check.staff.role');
 Route::post('/staff/bookings/followup', [StaffBookingsController::class, 'storeFollowUp'])->name('staff.bookings.followup');
-Route::get('/staff/patient-info/{userId}', [StaffBookingController::class, 'patientInfo'])
+Route::get('/staff/patient-info/{userId}', [StaffBookingsController::class, 'patientInfo'])
     ->name('staff.patient.info');
 
 // ── Staff Services ───────────────────────────────────────
