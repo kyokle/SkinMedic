@@ -26,8 +26,9 @@ body {
 
 /* ── Sidebar ── */
 .sidebar {
+    height: 100vh;
+    overflow: hidden;
     width: var(--sb-w);
-    min-height: 100vh;
     background: var(--sb-bg);
     position: fixed;
     top: 0; left: 0;
@@ -212,6 +213,8 @@ body {
 
     /* Sidebar slides off-screen by default */
     .sidebar {
+    height: 100vh;
+    overflow: hidden;
         transform: translateX(-100%);
     }
 

@@ -25,8 +25,9 @@ body {
 }
 
 .sidebar {
+    height: 100vh;
+    overflow: hidden;
     width: var(--sb-w);
-    min-height: 100vh;
     background: var(--sb-bg);
     position: fixed;
     top: 0; left: 0;
@@ -201,7 +202,9 @@ body {
 /* ── Responsive ── */
 @media (max-width: 768px) {
     .sb-hamburger { display: flex; }
-    .sidebar { transform: translateX(-100%); }
+    .sidebar {
+    height: 100vh;
+    overflow: hidden; transform: translateX(-100%); }
     .sidebar.open { transform: translateX(0); }
     .main, main.content { margin-left: 0; width: 100%; }
 }
