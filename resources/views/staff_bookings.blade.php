@@ -129,6 +129,7 @@
             <tr data-status="{{ $row->status }}"
                 data-id="{{ $row->appointment_id }}"
                 data-date="{{ $row->appointment_date }}"
+                data-patient-id="{{ $row->user_id }}"
                 onclick="openModal(
                     {{ $row->appointment_id }},
                     '{{ addslashes($row->patient_name) }}',
@@ -136,7 +137,8 @@
                     '{{ addslashes($row->doctor_name) }}',
                     '{{ $row->appointment_date }}',
                     '{{ $row->appointment_time }}',
-                    '{{ $row->status }}'
+                    '{{ $row->status }}',
+                    {{ $row->user_id }}
                 )"
                 style="cursor:pointer;">
                 <td>{{ $row->appointment_id }}</td>
@@ -170,6 +172,13 @@
             <div class="modal-row"><span>Time</span><span id="m_time"></span></div>
             <div class="modal-row" style="border-bottom:none;"><span>Status</span><span id="m_status"></span></div>
 
+            {{-- View Patient Info button --}}
+            <div style="margin-top:14px; padding-top:14px; border-top:1px solid #f3f3f3;">
+                <button type="button" class="view-patient-btn" onclick="openPatientPanel()">
+                    👤 View Patient Info
+                </button>
+            </div>
+
             <form method="POST" action="{{ route('staff.bookings.update-status') }}" id="statusForm">
                 @csrf
                 <input type="hidden" name="appointment_id" id="appointment_id">
@@ -186,6 +195,24 @@
                 <button type="button" class="complete-btn"  onclick="submitStatus('completed')">✔ Completed</button>
                 <button type="button" class="cancelled-btn" onclick="openCancelReason()">✕ Cancel</button>
             </div>
+        </div>
+    </div>
+</div>
+
+{{-- ══════════════════════════════════════════
+     PATIENT INFO PANEL
+═══════════════════════════════════════════ --}}
+<div id="patientPanel" class="modal">
+    <div class="modal-content patient-panel-content">
+        <div class="modal-header">
+            <div style="display:flex;align-items:center;gap:8px;">
+                <button type="button" class="patient-panel-back-btn" onclick="closePatientPanel()">← Back</button>
+                <h2>Patient Information</h2>
+            </div>
+            <span class="close-btn" onclick="closePatientPanelFull()">&times;</span>
+        </div>
+        <div class="modal-body" id="patientPanelBody" style="gap:0; max-height:70vh; overflow-y:auto; padding-right:4px;">
+            <div class="patient-panel-loading">⏳ Loading patient info…</div>
         </div>
     </div>
 </div>
@@ -370,7 +397,9 @@ function resetFilters() {
 }
 
 /* ── BOOKING MODAL ── */
-function openModal(id, patient, service, doctor, date, time, status) {
+let currentPatientId = null;
+
+function openModal(id, patient, service, doctor, date, time, status, patientId) {
     document.getElementById('actionButtons').style.display         = 'none';
     document.getElementById('actionButtonsApproved').style.display = 'none';
     document.getElementById('m_id').innerText       = id;
@@ -381,6 +410,7 @@ function openModal(id, patient, service, doctor, date, time, status) {
     document.getElementById('m_time').innerText     = time;
     document.getElementById('m_status').innerText   = status;
     document.getElementById('appointment_id').value = id;
+    currentPatientId = patientId || null;
 
     const s = status.trim().toLowerCase();
     if (s === 'pending') {
@@ -400,6 +430,114 @@ function submitStatus(s) {
     document.getElementById('status_value').value        = s;
     document.getElementById('cancel_reason_value').value = '';
     document.getElementById('statusForm').submit();
+}
+
+/* ── PATIENT INFO PANEL ── */
+function openPatientPanel() {
+    if (!currentPatientId) return;
+
+    // Reset body to loading state
+    const body = document.getElementById('patientPanelBody');
+    body.innerHTML = '<div class="patient-panel-loading">⏳ Loading patient info…</div>';
+
+    // Swap modals
+    document.getElementById('bookingModal').style.display = 'none';
+    document.getElementById('patientPanel').style.display = 'flex';
+
+    fetch(`/staff/patient-info/${currentPatientId}`, {
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'Accept': 'application/json',
+        }
+    })
+    .then(r => {
+        if (!r.ok) throw new Error('Not found');
+        return r.json();
+    })
+    .then(p => renderPatientPanel(p))
+    .catch(() => {
+        body.innerHTML = '<div style="color:#ef4444;padding:16px;font-size:0.85rem;text-align:center;">⚠ Could not load patient info. Please try again.</div>';
+    });
+}
+
+function closePatientPanel() {
+    // Back → re-open booking modal
+    document.getElementById('patientPanel').style.display  = 'none';
+    document.getElementById('bookingModal').style.display  = 'flex';
+}
+
+function closePatientPanelFull() {
+    // × → close everything
+    document.getElementById('patientPanel').style.display = 'none';
+}
+
+function renderPatientPanel(p) {
+    const na = `<span class="pir-value pir-empty">Not on file</span>`;
+    const val = v => v && String(v).trim()
+        ? `<span class="pir-value">${v}</span>`
+        : na;
+
+    // Allergies: split by comma for badge display
+    let allergyHtml = na;
+    if (p.allergies && p.allergies.trim()) {
+        const items = p.allergies.split(',').map(a => a.trim()).filter(Boolean);
+        allergyHtml = `<span class="pir-value" style="text-align:right;">
+            ${items.map(a => `<span class="patient-allergy-badge">⚠ ${a}</span>`).join('')}
+        </span>`;
+    }
+
+    const fullName = [p.firstName, p.lastName].filter(Boolean).join(' ') || null;
+    const gender   = p.gender ? p.gender.charAt(0).toUpperCase() + p.gender.slice(1) : null;
+
+    document.getElementById('patientPanelBody').innerHTML = `
+
+        <p class="patient-section-title">Personal</p>
+
+        <div class="patient-info-row">
+            <span class="pir-label">Full Name</span>
+            ${val(fullName)}
+        </div>
+        <div class="patient-info-row">
+            <span class="pir-label">Gender</span>
+            ${val(gender)}
+        </div>
+        <div class="patient-info-row">
+            <span class="pir-label">Email</span>
+            ${val(p.email)}
+        </div>
+        <div class="patient-info-row">
+            <span class="pir-label">Phone</span>
+            ${val(p.phone_no)}
+        </div>
+        <div class="patient-info-row">
+            <span class="pir-label">Address</span>
+            ${val(p.address)}
+        </div>
+
+        <p class="patient-section-title">Medical</p>
+
+        <div class="patient-info-row" style="align-items:flex-start;">
+            <span class="pir-label">Allergies</span>
+            ${allergyHtml}
+        </div>
+        <div class="patient-info-row" style="align-items:flex-start;">
+            <span class="pir-label">Medical History</span>
+            ${p.medical_history && p.medical_history.trim()
+                ? `<span class="pir-value" style="text-align:right;white-space:pre-line;">${p.medical_history}</span>`
+                : na}
+        </div>
+
+        <p class="patient-section-title">Emergency Contact</p>
+
+        <div class="patient-info-row">
+            <span class="pir-label">Name</span>
+            ${val(p.emergency_contact_name)}
+        </div>
+        <div class="patient-info-row">
+            <span class="pir-label">Phone</span>
+            ${val(p.emergency_contact_phone)}
+        </div>
+    `;
 }
 
 /* ── CANCEL REASON MODAL ── */
@@ -449,7 +587,7 @@ function openFollowUpModal() {
     const defaultDate = d.toISOString().split('T')[0];
 
     document.getElementById('fu_date').value            = defaultDate;
-    document.getElementById('fu_date').min              = TODAY; // ← block past dates
+    document.getElementById('fu_date').min              = TODAY;
     document.getElementById('fu_time').value            = '';
     document.getElementById('fu_last_info').style.display = 'none';
     document.getElementById('fu_slots_wrap').innerHTML  = '<p class="fu-slots-hint">Select a doctor and date first.</p>';
@@ -468,7 +606,6 @@ function closeFollowUpModal() {
 
 function prefillFromLastAppt(selectedValue) {
     const sel = document.getElementById('fu_patient');
-    // Find the option by value — Tom Select may not have updated selectedIndex yet
     const opt = [...sel.options].find(o => String(o.value) === String(selectedValue));
     if (!opt || !opt.value) return;
 
@@ -483,7 +620,6 @@ function prefillFromLastAppt(selectedValue) {
         d.setDate(d.getDate() + 7);
         const suggested = d.toISOString().split('T')[0];
 
-        // Only set if suggested date is in the future
         const finalDate = suggested >= TODAY ? suggested : TODAY;
         document.getElementById('fu_date').value = finalDate;
 
@@ -495,7 +631,6 @@ function prefillFromLastAppt(selectedValue) {
         document.getElementById('fu_last_text').textContent = label + timeLabel;
         infoBox.style.display = 'flex';
 
-        // Defer so Tom Select setValue has time to update the underlying select
         setTimeout(() => fetchFollowUpSlots(lastTime ? lastTime.substring(0, 5) : null), 50);
     } else {
         infoBox.style.display = 'none';
@@ -508,7 +643,6 @@ function prefillFromLastAppt(selectedValue) {
 }
 
 function fetchFollowUpSlots(preferTime = null) {
-    // Use .value directly on the underlying select — Tom Select keeps it in sync
     const doctor  = document.getElementById('fu_doctor').value;
     const date    = document.getElementById('fu_date').value;
     const service = document.getElementById('fu_service').value;
@@ -520,7 +654,6 @@ function fetchFollowUpSlots(preferTime = null) {
         return;
     }
 
-    // ── Block past dates ──
     if (date < TODAY) {
         wrap.innerHTML = '<p class="fu-slots-hint fu-slots-none">⚠ Please select today or a future date.</p>';
         document.getElementById('fu_time').value = '';
@@ -530,7 +663,6 @@ function fetchFollowUpSlots(preferTime = null) {
     wrap.innerHTML = '<p class="fu-slots-hint fu-slots-loading">⏳ Loading slots…</p>';
     document.getElementById('fu_time').value = '';
 
-    // Uses /get-available-times which already filters by doctor's availability_schedule
     const url = `/get-available-times?doctor_id=${doctor}&date=${date}` + (service ? `&service_id=${service}` : '');
 
     fetch(url)
@@ -564,7 +696,6 @@ function fetchFollowUpSlots(preferTime = null) {
                 btn.onclick = () => selectFollowUpSlot(slot.time, btn);
 
                 if (preferTime && slot.time === preferTime) {
-                    // defer so grid is in DOM first
                     setTimeout(() => selectFollowUpSlot(slot.time, btn), 0);
                 }
 
@@ -594,6 +725,7 @@ window.onclick = e => {
     if (e.target === document.getElementById('bookingModal'))      closeModal();
     if (e.target === document.getElementById('cancelReasonModal')) closeCancelReason();
     if (e.target === document.getElementById('followUpModal'))     closeFollowUpModal();
+    if (e.target === document.getElementById('patientPanel'))      closePatientPanelFull();
 };
 
 /* ── INIT ── */

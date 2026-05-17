@@ -327,6 +327,7 @@ tr[data-status]:hover td { background: #fafff2; cursor: pointer; }
   transition: background 0.15s;
 }
 .reason-confirm-btn:hover { background: #dc2626; }
+
 /* ══════════════════════════════════════════
    FOLLOW-UP APPOINTMENT BUTTON & MODAL
 ══════════════════════════════════════════ */
@@ -475,6 +476,7 @@ tr[data-status]:hover td { background: #fafff2; cursor: pointer; }
   transition: background 0.15s;
 }
 .fu-confirm-btn:hover { background: #6d9229; }
+
 /* ══════════════════════════════════════════
    FOLLOW-UP SLOT GRID
 ══════════════════════════════════════════ */
@@ -502,3 +504,109 @@ tr[data-status]:hover td { background: #fafff2; cursor: pointer; }
 .fu-slots-loading { color: #80a833; }
 .fu-slots-none    { color: #e05; }
 .fu-slots-warn    { color: #b45309; background: #fffbe6; border-radius: 5px; padding: 4px 8px; }
+
+/* ══════════════════════════════════════════
+   VIEW PATIENT BUTTON & PATIENT INFO PANEL
+══════════════════════════════════════════ */
+
+/* Button inside booking modal */
+.view-patient-btn {
+  width: 100%;
+  padding: 9px 16px;
+  background: #f0f7e6;
+  border: 1.5px solid #c5e09b;
+  border-radius: 8px;
+  color: #4a7c10;
+  font-size: 0.85rem;
+  font-family: 'DM Sans', sans-serif;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+  text-align: left;
+}
+.view-patient-btn:hover {
+  background: #e2f0cc;
+  border-color: #80a833;
+  color: #3a6000;
+}
+
+/* Patient panel modal sizing */
+.patient-panel-content {
+  max-width: 460px;
+}
+
+/* Back button inside panel header */
+.patient-panel-back-btn {
+  background: none;
+  border: none;
+  color: #80a833;
+  font-size: 0.85rem;
+  font-family: 'DM Sans', sans-serif;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+  transition: color 0.15s;
+}
+.patient-panel-back-btn:hover { color: #5a7a20; }
+
+/* Loading state */
+.patient-panel-loading {
+  text-align: center;
+  padding: 28px 16px;
+  color: #aaa;
+  font-size: 0.85rem;
+}
+
+/* Section titles inside panel */
+.patient-section-title {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #80a833;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  margin: 18px 0 4px;
+}
+.patient-section-title:first-child { margin-top: 2px; }
+
+/* Info rows */
+.patient-info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 8px 0;
+  border-bottom: 1px solid #f3f3f3;
+  font-size: 0.86rem;
+  gap: 12px;
+}
+.patient-info-row:last-child { border-bottom: none; }
+
+.pir-label {
+  color: #888;
+  font-weight: 500;
+  min-width: 130px;
+  flex-shrink: 0;
+}
+.pir-value {
+  color: #333;
+  font-weight: 600;
+  text-align: right;
+}
+.pir-value.pir-empty {
+  color: #ccc;
+  font-weight: 400;
+  font-style: italic;
+}
+
+/* Allergy badges */
+.patient-allergy-badge {
+  display: inline-block;
+  background: #fff1f2;
+  border: 1px solid #fda4af;
+  color: #be123c;
+  border-radius: 6px;
+  padding: 3px 9px;
+  font-size: 0.76rem;
+  font-weight: 600;
+  margin: 2px 3px 2px 0;
+}
