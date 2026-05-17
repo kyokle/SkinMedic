@@ -187,6 +187,7 @@ class StaffBookingsController extends Controller
             ->leftJoin('users as d',     'doc.user_id',     '=', 'd.user_id')
             ->selectRaw("
                 a.appointment_id,
+                a.user_id,
                 s.name AS service_name,
                 CONCAT(p.firstName,' ',p.lastName) AS patient_name,
                 CONCAT(d.firstName,' ',d.lastName) AS doctor_name,
@@ -490,5 +491,37 @@ class StaffBookingsController extends Controller
 
         return redirect()->route('staff.bookings')
             ->with('success', "Follow-up appointment scheduled for {$patient?->firstName} {$patient?->lastName} on {$request->appointment_date} at {$request->appointment_time}.");
+    }
+
+    // ── GET /staff/patient-info/{userId} ──────────────────────
+    public function patientInfo(int $userId)
+    {
+        if (!in_array(Session::get('role'), ['staff', 'admin'])) {
+            return response()->json(['error' => 'Unauthorized'], 403);
+        }
+
+        $patient = DB::table('users')
+            ->where('user_id', $userId)
+            ->where('role', 'patient')
+            ->select(
+                'user_id',
+                'firstName',
+                'lastName',
+                'email',
+                'phone_no',
+                'gender',
+                'address',
+                'medical_history',
+                'allergies',
+                'emergency_contact_name',
+                'emergency_contact_phone'
+            )
+            ->first();
+
+        if (!$patient) {
+            return response()->json(['error' => 'Patient not found'], 404);
+        }
+
+        return response()->json($patient);
     }
 }
