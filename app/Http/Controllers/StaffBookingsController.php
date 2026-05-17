@@ -500,21 +500,23 @@ class StaffBookingsController extends Controller
             return response()->json(['error' => 'Unauthorized'], 403);
         }
 
-        $patient = DB::table('users')
-            ->where('user_id', $userId)
-            ->where('role', 'patient')
+        $patient = DB::table('users as u')
+            ->leftJoin('patient as p', 'u.user_id', '=', 'p.user_id')
+            ->where('u.user_id', $userId)
+            ->where('u.role', 'patient')
             ->select(
-                'user_id',
-                'firstName',
-                'lastName',
-                'email',
-                'phone_no',
-                'gender',
-                'address',
-                'medical_history',
-                'allergies',
-                'emergency_contact_name',
-                'emergency_contact_phone'
+                'u.user_id',
+                'u.firstName',
+                'u.lastName',
+                'u.email',
+                'u.phone_no',
+                'u.gender',
+                'u.address',
+                'p.patient_id',
+                'p.medical_history',
+                'p.allergies',
+                'p.emergency_contact_name',
+                'p.emergency_contact_phone'
             )
             ->first();
 
