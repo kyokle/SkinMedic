@@ -73,12 +73,18 @@ class StaffProfileController extends Controller
 
     public function updateEmployment(Request $request)
     {
+        $request->validate([
+            'position'       => 'nullable|in:Assistant,Receptionist,Record Staff',
+            'shift_schedule' => 'nullable|string|max:255',
+            'hire_date'      => 'nullable|date',
+        ]);
+
         DB::update("
             UPDATE staff SET position=?, department=?, shift_schedule=?, hire_date=?
             WHERE user_id=?
         ", [
             $request->input('position'),
-            $request->input('department'),
+            'Staff',
             $request->input('shift_schedule'),
             $request->input('hire_date'),
             session('user_id'),

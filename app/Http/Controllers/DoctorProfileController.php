@@ -41,7 +41,7 @@ class DoctorProfileController extends Controller
         : 'uploads/default.png';
 
     // ── ADD THIS ──
-    $specializations = ['Dermatologist', 'General Physician', 'Aesthetic Doctor'];
+    $specializations = ['Dermatologist'];
 
     $sidebarData = $this->sidebarData();
 

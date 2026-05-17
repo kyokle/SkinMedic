@@ -107,11 +107,18 @@
                 </div>
                 <div class="form-row">
                     <label>Position</label>
-                    <input type="text" name="position" value="{{ $staff->position }}">
+                    <select name="position">
+                        <option value="">-- Select Position --</option>
+                        @foreach(['Assistant', 'Receptionist', 'Record Staff'] as $pos)
+                            <option value="{{ $pos }}" {{ $staff->position === $pos ? 'selected' : '' }}>
+                                {{ $pos }}
+                            </option>
+                        @endforeach
+                    </select>
                 </div>
                 <div class="form-row">
                     <label>Department</label>
-                    <input type="text" name="department" value="{{ $staff->department }}">
+                    <input type="text" name="department" value="Staff" readonly>
                 </div>
                 <div class="form-row">
                     <label>Shift Schedule</label>
