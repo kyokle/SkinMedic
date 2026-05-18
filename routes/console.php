@@ -9,6 +9,9 @@ Artisan::command('inspire', function () {
 })->purpose('Display an inspiring quote');
 
 // ── Auto-cancel pending appointments that have passed without approval ──
+Schedule::command('inspire')
+    ->cron('* * * * *');
+
 Schedule::command('appointments:cancel-expired')
     ->cron('* * * * *')
     ->withoutOverlapping();
