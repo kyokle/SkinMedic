@@ -13,5 +13,4 @@ Schedule::command('inspire')
     ->cron('* * * * *');
 
 Schedule::command('appointments:cancel-expired')
-    ->cron('* * * * *')
-    ->withoutOverlapping();
+    ->cron('* * * * *');
