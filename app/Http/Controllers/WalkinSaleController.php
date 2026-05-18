@@ -343,9 +343,31 @@ class WalkinSaleController extends Controller
     public function checkSlot(Request $request)
     {
         $doctorRow = DB::table('doctor')->where('user_id', $request->doctor_id)->first();
-        if (!$doctorRow) return response()->json(['available' => false]);
+        if (!$doctorRow) return response()->json(['available' => false, 'reason' => 'Doctor not found.']);
 
-        // Normalize time to H:i:s — browser sends "15:00", DB stores "15:00:00"
+        // ── 1. Check if time falls within doctor's working hours ──
+        $schedule = $doctorRow->availability_schedule ?? null;
+        if ($schedule) {
+            $s = strtoupper(preg_replace('/\s+/', '', $schedule));
+            if (preg_match('/(\d{1,2}(?::\d{2})?(?:AM|PM)?)-(\d{1,2}(?::\d{2})?(?:AM|PM)?)/', $s, $m)) {
+                $startHour = $this->parseScheduleHour($m[1], $m[2]);
+                $endHour   = $this->parseScheduleHour($m[2], $m[1]);
+
+                [$h, $i] = explode(':', date('H:i', strtotime($request->time)));
+                $inputMinutes = ((int)$h * 60) + (int)$i;
+                $startMinutes = $startHour * 60;
+                $endMinutes   = $endHour   * 60;
+
+                if ($inputMinutes < $startMinutes || $inputMinutes >= $endMinutes) {
+                    return response()->json([
+                        'available' => false,
+                        'reason'    => "Outside doctor's working hours ({$schedule}).",
+                    ]);
+                }
+            }
+        }
+
+        // ── 2. Check for booking conflicts (exact time match) ──
         $normalizedTime = date('H:i:s', strtotime($request->time));
 
         $query = DB::table('appointments')
@@ -354,13 +376,38 @@ class WalkinSaleController extends Controller
             ->whereRaw("TIME(appointment_time) = ?", [$normalizedTime])
             ->whereNotIn('status', ['cancelled']);
 
-        // Exclude the prefilled appointment's own slot so it doesn't
-        // falsely report itself as taken when the billing form loads.
         if ($request->filled('exclude_appointment_id')) {
             $query->where('appointment_id', '!=', (int) $request->exclude_appointment_id);
         }
 
-        return response()->json(['available' => !$query->exists()]);
+        return response()->json([
+            'available' => !$query->exists(),
+            'reason'    => $query->exists() ? 'That time slot is already booked.' : null,
+        ]);
+    }
+
+    /**
+     * Parse one side of a schedule string (e.g. "8:00AM", "7PM", "13") into a 24h integer hour.
+     * Mirrors the global parseScheduleTime() helper in AppointmentController.
+     */
+    private function parseScheduleHour(string $time, string $other = ''): int
+    {
+        $time  = strtoupper(trim($time));
+        $other = strtoupper(trim($other));
+
+        preg_match('/(\d{1,2})(?::(\d{2}))?/', $time, $m);
+        $hour = (int) $m[1];
+
+        if (str_contains($time, 'PM') && $hour !== 12) {
+            $hour += 12;
+        } elseif (str_contains($time, 'AM') && $hour === 12) {
+            $hour = 0;
+        } elseif (!str_contains($time, 'AM') && !str_contains($time, 'PM')) {
+            if (str_contains($other, 'PM') && $hour < 12) $hour += 12;
+            elseif ($hour <= 7) $hour += 12;
+        }
+
+        return $hour;
     }
 
     private function notifyStockLevel($product, int $newQty): void

@@ -642,35 +642,32 @@ function updateSvcPriceByEl(sel) {
 
 // ── Slot checker ─────────────────────────────────────────
 function checkSlotFromLine(line) {
-    // Get values, accounting for Tom Select
-    const docSel   = line.querySelector('.svc-doctor');
-    const svcSel   = line.querySelector('.svc-select');
-    const doctor   = tsInstances.has(docSel) ? tsInstances.get(docSel).getValue() : docSel?.value;
-    const service  = tsInstances.has(svcSel) ? tsInstances.get(svcSel).getValue() : svcSel?.value;
-    const date     = line.querySelector('.svc-date')?.value;
-    const time     = line.querySelector('.svc-time')?.value;
-    const status   = line.querySelector('.svc-slot-status');
+    const docSel  = line.querySelector('.svc-doctor');
+    const date    = line.querySelector('.svc-date')?.value;
+    const time    = line.querySelector('.svc-time')?.value;
+    const status  = line.querySelector('.svc-slot-status');
+    const doctor  = tsInstances.has(docSel) ? tsInstances.get(docSel).getValue() : docSel?.value;
 
     if (!doctor || !date || !time) { status.textContent = ''; return; }
 
     status.textContent = 'Checking…';
     status.className   = 'svc-slot-status checking';
 
-    fetch(`/get-available-times?doctor_id=${doctor}&date=${date}&service_id=${service}`)
-        .then(r => r.json())
-        .then(slots => {
-            const timeShort = time.substring(0, 5);
-            const slot = slots.find(s => s.time === timeShort);
+    // Build URL — include exclude_appointment_id for prefilled slots
+    const excludeInput = line.querySelector('input[name*="existing_appointment_id"]');
+    const excludeId    = excludeInput?.value || '';
+    let url = `/staff/walkin/check-slot?doctor_id=${doctor}&date=${date}&time=${time}`;
+    if (excludeId) url += `&exclude_appointment_id=${excludeId}`;
 
-            if (!slot) {
-                status.textContent = '✕ Outside doctor\'s schedule';
-                status.className   = 'svc-slot-status taken';
-            } else if (slot.taken) {
-                status.textContent = '✕ Slot taken';
-                status.className   = 'svc-slot-status taken';
-            } else {
+    fetch(url)
+        .then(r => r.json())
+        .then(data => {
+            if (data.available) {
                 status.textContent = '✓ Slot available';
                 status.className   = 'svc-slot-status available';
+            } else {
+                status.textContent = '✕ ' + (data.reason || 'Slot unavailable');
+                status.className   = 'svc-slot-status taken';
             }
         })
         .catch(() => { status.textContent = ''; });
